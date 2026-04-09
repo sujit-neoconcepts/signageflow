@@ -91,8 +91,8 @@ class User extends Authenticatable
     {
         try {
             $details = [
-                'title' => 'Welcome To NeonFlow CRM',
-                'subject' => 'Welcome To NeonFlow CRM',
+                'title' => 'Welcome To SignageFlow CRM',
+                'subject' => 'Welcome To SignageFlow CRM',
                 'body' =>   'Email : ' . $mailcontents['user']->email . '<br>' .
                     'Password : ' . $mailcontents['password'] . '<br>' .
                     'IP : ' . $mailcontents['ip'] . '<br>' .

@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>NeonFlow</title>
+    <title>SignageFlow</title>
 </head>
 
 <body>
@@ -10,7 +10,7 @@
     <p>{!! $mailData['body'] !!}</p>
 
     <p>Thank you</p>
-    <p>NeonFlow</p>
+    <p>SignageFlow</p>
 </body>
 
 </html>

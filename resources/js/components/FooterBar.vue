@@ -10,7 +10,7 @@ const year = new Date().getFullYear();
     <footer class="py-0 px-6" :class="containerMaxW">
         <BaseLevel>
             <div class="text-center md:text-left">
-                ©2023, NeonFlow
+                ©{{ year }}, SignageFlow
                 <slot />
             </div>
         </BaseLevel>

@@ -70,7 +70,7 @@ class SupplierController extends Controller
 
         return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo) {
             $table->withGlobalSearch();
-            $table->column('id', 'ID', sortable: true);
+            //$table->column('id', 'ID', sortable: true);
             foreach (array_keys($formInfo) as $key) {
                 $table->column($key, $formInfo[$key]['label'], searchable: true, sortable: true);
             }

@@ -26,7 +26,7 @@ onMounted(() => {
             <div
                 class="flex items-center justify-center text-2xl uppercase text-white dark:text-black lg:text-9xl lg:h-screen lg:bg-[url('/images/banner.png')] bg-no-repeat lg:bg-center lg:-indent-[500%]"
             >
-                NeonFlow
+                SignageFlow
             </div>
         </div>
 
@@ -37,7 +37,7 @@ onMounted(() => {
                 class="h-screen flex flex-col sm:justify-center items-center md:px-4 px-4 pt-6 sm:pt-0 bg-gray-50 dark:bg-slate-800 dark:text-slate-100"
             >
                 <div class="w-full sm:max-w-md">
-                    <h1 class="font-bold">Welcome To NeonFlow ERP</h1>
+                    <h1 class="font-bold">Welcome To SignageFlow ERP</h1>
                     <p class="mt-2 text-xs">{{ title }}</p>
                 </div>
 

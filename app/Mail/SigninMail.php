@@ -29,7 +29,7 @@ class SigninMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'NeonFlow Sigin Attempt Mail ',
+            subject: 'SignageFlow Sigin Attempt Mail ',
         );
     }
 

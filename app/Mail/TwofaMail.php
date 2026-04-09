@@ -29,7 +29,7 @@ class TwofaMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'NeonFlow 2FA Mail',
+            subject: 'SignageFlow 2FA Mail',
         );
     }
 

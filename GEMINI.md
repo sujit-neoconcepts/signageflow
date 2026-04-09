@@ -1,10 +1,10 @@
 # Gemini Project Instructions
 
-This document provides instructions for interacting with the NeonFlow project.
+This document provides instructions for interacting with the SignageFlow project.
 
 ## Project Overview
 
-NeonFlow is a web application built with the TALL stack:
+SignageFlow is a web application built with the TALL stack:
 
 -   **Laravel 12:** A PHP web application framework.
 -   **Vue.js:** A progressive JavaScript framework for building user interfaces.
@@ -24,7 +24,7 @@ NeonFlow is a web application built with the TALL stack:
 
 1. **Clone the repository:**
     ```bash
-    git clone https://github.com/user/neonflow.git
+    git clone git@github.com:sujit-neoconcepts/signageflow.git
     ```
 2. **Install PHP dependencies:**
     ```bash
