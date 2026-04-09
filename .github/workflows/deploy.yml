@@ -1,4 +1,4 @@
-name: Deploy NeonFlow (Main)
+name: Deploy SignageFlow (Main)
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
           echo "" >> ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
           chmod 644 ~/.ssh/known_hosts
           cat > ~/.ssh/config << SSHCONFIG
           Host *
@@ -55,9 +55,9 @@ jobs:
       - name: Rsync built public assets to server
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_HOST: ${{ secrets.HOST }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
-          REMOTE_BASE="/var/www/signageflow.neo-concepts.net/NeonFlow"
+          REMOTE_BASE="/var/www/signageflowv4.neo-concepts.net/signageflow"
 
           echo "Pushing public/build to ${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_BASE}/public/build (branch main)"
 
@@ -71,9 +71,9 @@ jobs:
       - name: Trigger server-side git pull, composer, migrate, optimize
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_HOST: ${{ secrets.HOST }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
-          REMOTE_BASE="/var/www/signageflow.neo-concepts.net/NeonFlow"
+          REMOTE_BASE="/var/www/signageflowv4.neo-concepts.net/signageflow"
           GIT_BRANCH="main"
 
           echo "SSH to server to update codebase at $REMOTE_BASE (branch: $GIT_BRANCH)"
