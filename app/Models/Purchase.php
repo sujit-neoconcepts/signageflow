@@ -1,0 +1,103 @@
+<?php
+
+namespace App\Models;
+
+use App\Models\Munit;
+use Illuminate\Support\Carbon;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\FinancialYearScope;
+
+class Purchase extends Model
+{
+    use HasFactory, FinancialYearScope;
+    const DATE_COLUMN = 'pur_date';
+    protected $fillable = ['pur_date', 'received_date', 'pur_inv', 'pur_supplier', 'pur_pr_id', 'pur_pr_detail', 'pur_pr_hsn', 'pur_pr_detail_int', 'pur_qty', 'pur_qty_int', 'pur_unit', 'pur_unint_int', 'pur_gst', 'pur_amnt', 'pur_gst_amnt', 'pur_amnt_total', 'pur_rate', 'pur_rate_int', 'pur_qty_alt', 'pur_unit_alt', 'pur_qty_int_alt', 'pur_unint_int_alt', 'pur_unit_conv_rate', 'pur_incharge', 'pur_loc', 'entry_type', 'remark'];
+
+    public function scopePurDateStart($query, $sd)
+    {
+        $start = ($sd instanceof Carbon) ? $sd : Carbon::parse($sd);
+        return $query->where('pur_date', '>=', $start->startOfDay());
+    }
+    public function scopePurDateEnd($query, $ed)
+    {
+        $end   = ($ed instanceof Carbon) ? $ed : Carbon::parse($ed);
+        return $query->where('pur_date', '<=', $end->endOfDay());
+    }
+
+    public function scopeReceivedDateStart($query, $sd)
+    {
+        $start = ($sd instanceof Carbon) ? $sd : Carbon::parse($sd);
+        return $query->where('received_date', '>=', $start->startOfDay());
+    }
+    public function scopeReceivedDateEnd($query, $ed)
+    {
+        $end   = ($ed instanceof Carbon) ? $ed : Carbon::parse($ed);
+        return $query->where('received_date', '<=', $end->endOfDay());
+    }
+    public static function formInfo()
+    {
+        $allsuppliers = Supplier::select('sp_name')->orderBy('sp_name')->get()->pluck('sp_name');
+        $formInfo = [
+            'pur_date' => ['label' => 'Purchase Date', 'sortable' => true, 'vRule' => 'required', 'type' => 'datepicker'],
+            'received_date' => ['label' => 'Received Date', 'sortable' => true, 'vRule' => 'nullable', 'type' => 'datepicker'],
+            'pur_inv' => ['label' => 'Invoice No', 'searchable' => true, 'sortable' => true, 'vRule' => 'required|unique:purchases,pur_inv'],
+            'pur_supplier' => ['label' => 'Supplier Name',  'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => $allsuppliers, 'vRule' => 'required',],
+        ];
+        return $formInfo;
+    }
+    public static function formInfoMulti()
+    {
+        $allunits = Munit::select('name')->orderBy('name')->get()->pluck('name');
+        $formInfo = [
+            'pur_pr_detail' => ['label' => 'Name As Per Invoice', 'searchable' => true, 'sortable' => true, 'type' => 'select', 'options' => Product::getAllOption(), 'vRule' => 'required', 'colspan' => 3, 'addAndRefresh' => true],
+
+            'pur_pr_hsn' => ['label' => 'HSN Code', 'searchable' => true, 'sortable' => true, 'readonly' => true],
+
+            'pur_pr_detail_int' => ['label' => 'Internal Name', 'searchable' => true, 'sortable' => true, 'vRule' => 'required', 'readonly' => true, 'colspan' => 2],
+
+            'pur_incharge' => ['label' => 'Incharge',  'sortable' => true, 'vRule' => 'required', 'type' => 'select', 'optionType' => 'array', 'options' =>  User::role('supervisor')->select('name')->orderBy('name')->get()->pluck('name'),],
+
+            'pur_loc' => ['label' => 'Location', 'searchable' => true, 'sortable' => true, 'vRule' => 'required',  'type' => 'select', 'optionType' => 'array', 'options' =>  Location::select('name')->orderBy('name')->get()->pluck('name'),],
+
+            'pur_qty' => ['label' => 'Billed Qty', 'searchable' => true, 'sortable' => true, 'vRule' => 'required|numeric', 'align' => 'right', 'showTotal' => true],
+
+            'pur_unit' => ['label' => 'Qty Unit',  'sortable' => true,  'vRule' => 'required', 'readonly' => true, 'options' => $allunits,],
+
+            'pur_qty_alt' => ['label' => 'Billed Qty Alt', 'searchable' => true, 'sortable' => true, 'align' => 'right', 'showTotal' => true],
+
+            'pur_unit_alt' => ['label' => 'Qty Unit Alt',  'sortable' => true,   'readonly' => true],
+
+            'pur_unit_conv_rate' => ['label' => 'Conversion Rate', 'sortable' => true, 'hidden' => true, 'align' => 'right'],
+
+            'pur_qty_int' => ['label' => 'Internal Qty', 'searchable' => true, 'sortable' => true, 'vRule' => 'required|numeric',  'align' => 'right', 'showTotal' => true],
+
+            'pur_unint_int' => ['label' => 'Internal Unit',  'sortable' => true,  'vRule' => 'required', 'readonly' => true, 'options' => $allunits,],
+
+            'pur_qty_int_alt' => ['label' => 'Internal Qty Alt', 'searchable' => true, 'sortable' => true, 'align' => 'right', 'showTotal' => true],
+
+            'pur_unint_int_alt' => ['label' => 'Internal Unit Alt',  'sortable' => true,   'readonly' => true],
+
+            'pur_rate' => ['label' => 'Billed Rate', 'searchable' => true, 'sortable' => true, 'vRule' => 'required|numeric', 'align' => 'right'],
+
+            'pur_rate_int' => ['label' => 'Internal Rate', 'searchable' => true, 'sortable' => true, 'vRule' => 'required|numeric', 'align' => 'right'],
+
+            'pur_amnt' => ['label' => 'Internal Amount', 'searchable' => true, 'sortable' => true, 'readonly' => true, 'align' => 'right', 'showTotal' => true],
+
+            'pur_gst_amnt' => ['label' => 'Gst Amount', 'searchable' => true, 'sortable' => true, 'readonly' => true, 'align' => 'right', 'showTotal' => true],
+
+            'pur_amnt_total' => ['label' => 'Bill Value', 'searchable' => true, 'sortable' => true, 'readonly' => true, 'align' => 'right', 'showTotal' => true],
+            'remark' => ['label' => 'Remark', 'searchable' => true, 'sortable' => true],
+        ];
+        return $formInfo;
+    }
+    public static function getAllOption()
+    {
+        $alldatas = Purchase::select('*', 'pur_pr_detail')->groupBy('pur_pr_detail')->get();
+        $allOpt = [];
+        foreach ($alldatas as $alldata) {
+            $allOpt[] = ['id' => $alldata->pur_pr_id, 'label' => $alldata->pur_pr_detail, 'data' => $alldata];
+        }
+        return $allOpt;
+    }
+}

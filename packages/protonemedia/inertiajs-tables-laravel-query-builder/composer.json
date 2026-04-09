@@ -1,0 +1,50 @@
+{
+    "name": "protonemedia/inertiajs-tables-laravel-query-builder",
+    "description": "Inertia.js Front-end Components for Spatie's Laravel Query Builder",
+    "homepage": "https://github.com/protonemedia/inertiajs-tables-laravel-query-builder",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Pascal Baljet",
+            "email": "pascal@protone.media"
+        }
+    ],
+    "require": {
+        "php": "^8.0",
+        "illuminate/support": "^12.0"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.8",
+        "inertiajs/inertia-laravel": "^1.0",
+        "orchestra/testbench": "^7.0|^8.0",
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "ProtoneMedia\\LaravelQueryBuilderInertiaJs\\": "php"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ProtoneMedia\\LaravelQueryBuilderInertiaJs\\Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test-coverage": "vendor/bin/phpunit --coverage-html coverage",
+        "php-cs-fixer": "vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --verbose"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "extra": {
+        "laravel": {
+            "providers": [
+                "ProtoneMedia\\LaravelQueryBuilderInertiaJs\\InertiaTableServiceProvider"
+            ]
+        }
+    }
+}

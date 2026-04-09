@@ -1,0 +1,123 @@
+name: Deploy NeonFlow (Main)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code (for build)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install frontend deps & build
+        if: ${{ hashFiles('package.json') != '' }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
+          echo "" >> ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          chmod 644 ~/.ssh/known_hosts
+          cat > ~/.ssh/config << SSHCONFIG
+          Host *
+            IdentityFile ~/.ssh/id_rsa
+            IdentitiesOnly yes
+            PubkeyAuthentication yes
+            PasswordAuthentication no
+            PreferredAuthentications publickey
+            StrictHostKeyChecking no
+          SSHCONFIG
+          chmod 600 ~/.ssh/config
+
+      - name: Rsync built public assets to server
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.HOST }}
+        run: |
+          REMOTE_BASE="/var/www/signageflow.neo-concepts.net/NeonFlow"
+
+          echo "Pushing public/build to ${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_BASE}/public/build (branch main)"
+
+          ssh ${DEPLOY_USER}@${DEPLOY_HOST} "mkdir -p ${REMOTE_BASE}/public/build && sudo chown -R ${DEPLOY_USER}:www-data ${REMOTE_BASE} || true"
+
+          rsync -avz --delete --omit-dir-times --no-perms \
+            --exclude='.DS_Store' \
+            -e "ssh" \
+            public/build/ ${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_BASE}/public/build/
+
+      - name: Trigger server-side git pull, composer, migrate, optimize
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.HOST }}
+        run: |
+          REMOTE_BASE="/var/www/signageflow.neo-concepts.net/NeonFlow"
+          GIT_BRANCH="main"
+
+          echo "SSH to server to update codebase at $REMOTE_BASE (branch: $GIT_BRANCH)"
+
+          ssh ${DEPLOY_USER}@${DEPLOY_HOST} bash -s "${REMOTE_BASE}" "${GIT_BRANCH}" "${DEPLOY_USER}" <<'EOF'
+          set -e
+          REMOTE_BASE="$1"
+          GIT_BRANCH="$2"
+          DEPLOY_USER="$3"
+          echo "[remote] Deploy start: ${REMOTE_BASE} (branch ${GIT_BRANCH})"
+
+          cd "${REMOTE_BASE}" || { echo "[remote] ERROR: remote dir missing: ${REMOTE_BASE}"; exit 2; }
+
+          # Ensure working tree is clean-ish; fetch latest and hard-reset to remote branch
+          git fetch origin --prune
+          git reset --hard origin/${GIT_BRANCH}
+
+          # Install PHP dependencies on server
+          if command -v composer >/dev/null 2>&1; then
+            composer install --optimize-autoloader --no-dev --no-interaction --prefer-dist --ignore-platform-reqs
+          else
+            echo "[remote] composer not found - please install composer on server"
+          fi
+
+          # Run database migrations
+          php artisan migrate --force
+
+          # Clear all Laravel caches
+          php artisan optimize:clear || true
+          php artisan cache:clear || true
+
+          # Rebuild optimized caches (config, routes, views)
+          php artisan config:cache || true
+          php artisan route:cache || true
+          php artisan view:cache || true
+
+          # Fix permissions so webserver (www-data) can read/write where necessary
+          sudo chown -R ${DEPLOY_USER}:www-data "${REMOTE_BASE}" || true
+          sudo chmod -R ug+rw,o+r "${REMOTE_BASE}/storage" "${REMOTE_BASE}/bootstrap/cache" || true
+          sudo find "${REMOTE_BASE}/storage" -type d -exec chmod ug+x {} + || true
+          sudo find "${REMOTE_BASE}/bootstrap/cache" -type d -exec chmod ug+x {} + || true
+
+          # Restart PHP-FPM to clear OPcache and pick up new code
+          sudo systemctl restart php8.3-fpm || true
+
+          echo "[remote] Deploy completed successfully"
+          EOF

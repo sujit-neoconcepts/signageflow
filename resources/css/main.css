@@ -1,0 +1,65 @@
+/*/@import "tailwind/_base.css";
+//@import "tailwind/_components.css";
+//@import "tailwind/_utilities.css";
+*/
+
+@import "tailwindcss";
+
+@import "./_checkbox-radio-switch.css";
+@import "./_progress.css";
+@import "./_scrollbars.css";
+@import "./_table.css";
+
+@plugin "@tailwindcss/forms";
+
+@custom-variant dark (&:where(.dark, .dark *));
+/* Firefox */
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(51, 65, 85, .7) transparent;
+    
+
+}
+
+/* Chrome, Edge, and Safari */
+*::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: rgba(51, 65, 85, .7);
+    border-radius: 9px;
+}
+
+@layer base {
+  button {
+    @apply cursor-pointer;
+  }
+}
+/* Global print styles */
+@media print {
+    button,
+    .footer div,
+    .nav,
+    aside,
+    header {
+        display: none !important;
+    }
+    .code-item {
+        page-break-inside: avoid;
+    }
+    main {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .print-area {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+}
