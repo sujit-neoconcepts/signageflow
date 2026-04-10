@@ -202,6 +202,12 @@ const onChangeFunc = (index, fkey) => {
             form["multi"][index].out_product.data.current_stock +
             " " +
             form["multi"][index].out_product.data.pur_unint_int;
+
+        form["multi"][index].out_qty_alt = 1;
+        form["multi"][index].out_qty =
+            parseFloat(form["multi"][index].out_qty_alt) /
+            (parseFloat(form["multi"][index].out_product.data.pur_qty_int_alt) /
+                parseFloat(form["multi"][index].out_product.data.pur_qty_int));
     } else if (fkey == "out_qty") {
         form["multi"][index].out_qty_alt =
             parseFloat(form["multi"][index].out_qty) *
