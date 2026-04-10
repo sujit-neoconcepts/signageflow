@@ -61,8 +61,8 @@ class EnquiryController extends Controller
         $perPage = request()->query('perPage') ?? 10;
 
         $query = Enquiry::select('enquiries.*', 'clients.cl_name as client_name')
-            ->leftJoin('clients', 'clients.id', '=', 'enquiries.client_id')
-            ->inFinancialYear();
+            ->leftJoin('clients', 'clients.id', '=', 'enquiries.client_id');
+            //->inFinancialYear();
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('-id')

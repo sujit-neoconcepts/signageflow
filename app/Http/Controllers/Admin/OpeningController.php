@@ -76,7 +76,7 @@ class OpeningController extends Controller
         }
         $query = Purchase::select('purchases.*', 'pgroups.name as groupinfo_name')->where('entry_type', 1)->leftJoin('products', 'products.id', 'purchases.pur_pr_id', 'left')->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left');
 
-        $query->inFinancialYear();
+        //$query->inFinancialYear();
 
         if (\Auth::user()->can('all') || \Auth::user()->can('opening_list_for_all')) {
         } else {

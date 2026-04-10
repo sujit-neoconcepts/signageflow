@@ -63,7 +63,7 @@ class OutwardController extends Controller
                 ->where('out_incharge', Auth::user()->name);
         }
 
-        $query->inFinancialYear();
+        //$query->inFinancialYear();
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('-out_date')
@@ -240,7 +240,7 @@ class OutwardController extends Controller
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
             ->where('pgroups.sgroup', 'Stock Item')
-            ->inFinancialYear()
+            //->inFinancialYear()
             ->groupBy('purchases.pur_pr_detail_int', 'consumable_internal_names.unitPrice', 'consumable_internal_names.unitName', 'consumable_internal_names.unitAltName')
             ->orderBy('purchases.pur_pr_detail_int');
 
@@ -440,7 +440,7 @@ class OutwardController extends Controller
             ->selectRaw('SUM(out_qty) as total_out_qty')
             ->where('out_incharge', $incharge)
             ->where('out_loc', $location)
-            ->inFinancialYear()
+            //->inFinancialYear()
             ->groupBy('out_product');
 
         // 2. Calculate Current Stock per Product (Total Purchases - Total Outwards)
@@ -449,7 +449,7 @@ class OutwardController extends Controller
             ->where('purchases.pur_incharge', $incharge)
             ->where('purchases.pur_loc', $location)
             ->leftJoinSub($outwardsQuery, 'outwards_sum', 'purchases.pur_pr_detail_int', '=', 'outwards_sum.out_product')
-            ->inFinancialYear()
+            //->inFinancialYear()
             ->groupBy('purchases.pur_pr_detail_int');
 
         // 3. Get Latest Purchase ID per Product (to ensure unique products and get latest details)
@@ -479,7 +479,7 @@ class OutwardController extends Controller
             // Join with Stock calculation
             ->leftJoinSub($stockSubQuery, 'stock_query', 'purchases.pur_pr_detail_int', '=', 'stock_query.pur_pr_detail_int')
             ->where('products.groupinfo', $groupId)
-            ->inFinancialYear()
+            //->inFinancialYear()
             ->orderBy('purchases.pur_pr_detail_int')
             ->get();
 
@@ -557,7 +557,7 @@ class OutwardController extends Controller
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
             ->where('pgroups.sgroup', 'Stock Item')
-            ->inFinancialYear()
+            //->inFinancialYear()
             ->groupBy('purchases.pur_pr_detail_int', 'consumable_internal_names.unitPrice', 'consumable_internal_names.unitName', 'consumable_internal_names.unitAltName')
             ->orderBy('purchases.pur_pr_detail_int');
 
@@ -596,7 +596,7 @@ class OutwardController extends Controller
         $incharges = Purchase::where('pur_pr_detail_int', $productName)
             ->select('pur_incharge')
             ->distinct()
-            ->inFinancialYear()
+            //->inFinancialYear()
             ->orderBy('pur_incharge')
             ->pluck('pur_incharge');
 
@@ -614,8 +614,8 @@ class OutwardController extends Controller
 
         $query = Purchase::where('pur_pr_detail_int', $productName)
             ->select('pur_loc')
-            ->distinct()
-            ->inFinancialYear();
+            ->distinct();
+            //->inFinancialYear();
 
         if ($incharge) {
             $query->where('pur_incharge', $incharge);
@@ -640,8 +640,8 @@ class OutwardController extends Controller
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
             ->where('pgroups.sgroup', 'Stock Item')
-            ->select('pgroups.id as group_id', 'pgroups.name as group_name')
-            ->inFinancialYear();
+            ->select('pgroups.id as group_id', 'pgroups.name as group_name');
+            //->inFinancialYear();
 
         if ($incharge) {
             $query->where('pur_incharge', $incharge);

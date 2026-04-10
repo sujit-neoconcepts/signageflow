@@ -51,7 +51,7 @@ class PurchaseController extends Controller
         }
         $query = Purchase::select('purchases.*', 'pgroups.name as groupinfo_name', 'pgroups.sgroup as groupinfo_sname')->where('entry_type', 0)->leftJoin('products', 'products.id', 'purchases.pur_pr_id', 'left')->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left');
 
-        $query->inFinancialYear();
+        //$query->inFinancialYear();
 
         if (\Auth::user()->can('all') || \Auth::user()->can('purchase_list_for_all')) {
         } else {

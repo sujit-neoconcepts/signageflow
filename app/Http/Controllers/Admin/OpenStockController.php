@@ -125,7 +125,7 @@ class OpenStockController extends Controller
             ->where('pgroups.sgroup', 'Stock Item')
             ->whereNotNull('purchases.pur_pr_detail_int')
             ->where('purchases.pur_pr_detail_int', '!=', '')
-            ->inFinancialYear()
+            //->inFinancialYear()
             ->orderBy('purchases.pur_pr_detail_int');
 
         if (!(Auth::user()->can('all') || Auth::user()->can('outward_add_for_all'))) {

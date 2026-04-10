@@ -78,16 +78,16 @@ class StocksController extends Controller
 
         $subq1 = Purchase::select('pur_pr_detail_int')->selectRaw('ifnull(sum(pur_qty_int),0) as qtysum , ifnull(sum(pur_qty_int_alt),0) as qtysumalt')->where('entry_type', 0)->groupBy('pur_pr_detail_int');
 
-        $subq1->inFinancialYear();
+        //$subq1->inFinancialYear();
 
         //opening
         $subq2 = Purchase::select('pur_pr_detail_int')->selectRaw('ifnull(sum(pur_qty_int),0) as qtysum , ifnull(sum(pur_qty_int_alt),0) as qtysumalt')->where('entry_type', 1)->groupBy('pur_pr_detail_int');
 
-        $subq2->inFinancialYear();
+        //$subq2->inFinancialYear();
 
         $subq3 = Outward::select('out_product')->selectRaw('ifnull(sum(out_qty),0) as qtysum , ifnull(sum(out_qty_alt),0) as qtysumalt')->groupBy('out_product');
 
-        $subq3->inFinancialYear();
+        //$subq3->inFinancialYear();
 
         if (\Auth::user()->can('all') || \Auth::user()->can('stocks_list_for_all')) {
             if (isset($inc_u['pur_incharge'])) {
@@ -271,7 +271,7 @@ class StocksController extends Controller
             $outSubQuery->where('out_date', '<=', $inc_u['stock_date']);
         }
 
-        $outSubQuery->inFinancialYear();
+        //$outSubQuery->inFinancialYear();
 
         $inSubQuery = Purchase::select('pur_pr_detail_int', 'pur_loc', 'pur_incharge', 'subq1.qtysum as outqtysum', 'subq1.qtysumalt as outqtysumalt')
             ->selectRaw('ifnull(sum(pur_qty_int),0) as qtysum , ifnull(sum(pur_qty_int_alt),0) as qtysumalt')
@@ -299,7 +299,7 @@ class StocksController extends Controller
             $inSubQuery->where('pur_date', '<=', $inc_u['stock_date']);
         }
 
-        $inSubQuery->inFinancialYear();
+        //$inSubQuery->inFinancialYear();
 
 
         $query = Product::select('products.pr_detail_int', 'insubq1.pur_loc as location', 'insubq1.pur_incharge as incharge')
@@ -381,8 +381,12 @@ class StocksController extends Controller
     }
     public function StockDetail(Request $request)
     {
-        $subq1 = Purchase::select('*')->inFinancialYear()->where('pur_pr_detail_int', $request->name)->get();
-        $subq3 = Outward::select('*')->inFinancialYear()->where('out_product', $request->name)->get();
+        $subq1 = Purchase::select('*')
+        //->inFinancialYear()
+        ->where('pur_pr_detail_int', $request->name)->get();
+        $subq3 = Outward::select('*')
+        //->inFinancialYear()
+        ->where('out_product', $request->name)->get();
 
         // Merge the collections
         $merged = $subq1->merge($subq3);
@@ -409,9 +413,9 @@ class StocksController extends Controller
         $subq3 = Outward::select('out_product')->selectRaw('ifnull(sum(out_qty),0) as qtysum , ifnull(sum(out_qty_alt),0) as qtysumalt')->groupBy('out_product');
 
 
-        $subq1->inFinancialYear();
-        $subq2->inFinancialYear();
-        $subq3->inFinancialYear();
+        //$subq1->inFinancialYear();
+        //$subq2->inFinancialYear();
+        //$subq3->inFinancialYear();
 
         $subq1->where('pur_incharge', $request->superviser_from);
         $subq2->where('pur_incharge', $request->superviser_from);
@@ -528,13 +532,13 @@ class StocksController extends Controller
         // Get current stock levels using existing query logic
         $subq1 = Purchase::select('pur_pr_detail_int')
             ->selectRaw('ifnull(sum(pur_qty_int),0) as qtysum')
-            ->groupBy('pur_pr_detail_int')
-            ->inFinancialYear();
+            ->groupBy('pur_pr_detail_int');
+            //->inFinancialYear();
 
         $subq3 = Outward::select('out_product')
             ->selectRaw('ifnull(sum(out_qty),0) as qtysum')
-            ->groupBy('out_product')
-            ->inFinancialYear();
+            ->groupBy('out_product');
+            //->inFinancialYear();
 
         $query = Product::select('products.pr_detail_int')
             ->selectRaw('MAX(products.id) as id')
