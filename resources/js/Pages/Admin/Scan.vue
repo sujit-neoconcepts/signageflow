@@ -15,6 +15,8 @@ import FormFieldsMulti from "@/components/FormFieldsMulti.vue";
 import BarcodeScanner from "@/components/BarcodeScanner.vue";
 import CardBoxModal from "@/components/CardBoxModal.vue";
 import axios from "axios";
+import { useToast } from "vue-toast-notification";
+import "vue-toast-notification/dist/theme-sugar.css";
 
 const message = computed(() => usePage().props.flash.message);
 const msg_type = computed(() => usePage().props.flash.msg_type ?? "warning");
@@ -376,6 +378,7 @@ const onBarcodeDetected = (barcode) => {
     if (form.multi[currentIndex.value]) {
         const options =
             multiDatas.value[currentIndex.value]["out_product"]["options"];
+        let found = false;
         for (const opkey in options) {
             if (options[opkey].label == barcode) {
                 form["multi"][currentIndex.value]["out_product"] =
@@ -383,9 +386,21 @@ const onBarcodeDetected = (barcode) => {
                 onChangeFunc(currentIndex.value, "out_product");
                 form["multi"][currentIndex.value]["out_qty_alt"] = 1;
                 onChangeFunc(currentIndex.value, "out_qty_alt");
-                isModalActive.value = false;
-                currentIndex.value = null;
+                found = true;
+                break;
             }
+        }
+
+        isModalActive.value = false;
+        currentIndex.value = null;
+
+        if (!found) {
+            const $toast = useToast();
+            $toast.open({
+                message: "Code Detected but not in list",
+                type: "error",
+                position: "top-right",
+            });
         }
     }
 };
