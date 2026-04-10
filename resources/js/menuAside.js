@@ -204,18 +204,21 @@ export default [
             
             {
                 route: "stocks.index",
+                routeParams: { "filter[sgroup]": "Stock Item" },
                 icon: mdiInvoiceList,
                 label: "Stocks Summary",
                 resource: "stocks",
             },
             {
                 route: "stocks.owner",
+                routeParams: { "filter[sgroup]": "Stock Item" },
                 icon: mdiInvoiceList,
                 label: "Stocks Ownership",
                 resource: "stocks",
             },
             {
                 route: "stocks.level",
+                routeParams: { "filter[sgroup]": "Stock Item" },
                 icon: mdiInvoiceList,
                 label: "Stocks Level",
                 resource: "stocks",

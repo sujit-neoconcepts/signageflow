@@ -10,7 +10,7 @@ import AsideMenuList from "@/components/AsideMenuList.vue";
 import { can } from '@/utils/permissions';
 
 const itemHref = computed(() =>
-  props.item.route ? route(props.item.route) : props.item.href
+  props.item.route ? route(props.item.route, props.item.routeParams ?? {}) : props.item.href
 );
 
 // Add activeInactiveStyle
