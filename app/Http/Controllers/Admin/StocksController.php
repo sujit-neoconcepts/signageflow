@@ -15,6 +15,7 @@ use App\Http\Controllers\Controller;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
+use App\Models\Pgroup;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\ActivityLog;
 
@@ -35,7 +36,6 @@ class StocksController extends Controller
             [
 
                 'pr_detail_int' => ['label' => 'Internal Product Name', 'searchable' => true, 'sortable' => true],
-
                 'qty_sum_op' => ['label' => 'Qty Opn',  'align' => 'right', 'showTotal' => true],
 
                 'qty_sum_pur' => ['label' => 'Qty Pur',  'align' => 'right', 'showTotal' => true],
@@ -57,6 +57,8 @@ class StocksController extends Controller
                 'balsumalt' => ['label' => 'Qty Bal Alt',   'align' => 'right', 'showTotal' => true],
 
                 'pr_int_unit_alt' => ['label' => 'Qty Unit Alt',],
+                'groupinfo_name' => ['label' => 'Prod Group', 'sortable' => true],
+                'groupinfo_sname' => ['label' => 'Sub Group', 'sortable' => true],
 
             ];
         $formInfoMulti = [];
@@ -142,7 +144,6 @@ class StocksController extends Controller
                     $query->where('subq1.qtysum', '>', 0)->orWhere('subq2.qtysum', '>', 0)->orWhere('subq3.qtysum', '>', 0);
                 }
             )
-            ->where('pgroups.sgroup', 'Stock Item')
             //->whereRaw('(ifnull(subq2.qtysum,0)+ifnull(subq1.qtysum,0)-ifnull(subq3.qtysum,0))!=0')
 
             ->groupBy('pr_detail_int');
@@ -150,6 +151,8 @@ class StocksController extends Controller
         $un_list = [];
         $un_list['users'] = User::role('supervisor')->select('name')->orderBy('name')->get()->pluck('name');
         $un_list['locs'] = Location::select('name')->orderBy('name')->get()->pluck('name');
+        $un_list['sgroups'] = Pgroup::distinct()->pluck('sgroup', 'sgroup')->toArray();
+        $un_list['gnames'] = Pgroup::distinct()->pluck('name', 'name')->toArray();
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('pr_detail_int')
@@ -160,6 +163,8 @@ class StocksController extends Controller
                     AllowedFilter::exact('pur_incharge')->ignore($un_list['users']),
                     AllowedFilter::exact('pur_loc')->ignore($un_list['locs']),
                     AllowedFilter::exact('stock_date')->ignore([!null, null]),
+                    AllowedFilter::exact('sgroup', 'pgroups.sgroup'),
+                    AllowedFilter::exact('group_name', 'pgroups.name'),
                     $globalSearch
                 ]
             ))
@@ -196,14 +201,13 @@ class StocksController extends Controller
             foreach ($un_list['locs'] as  $opt) {
                 $opt && $fresult4[$opt] = $opt;
             }
-            $table
-                ->column(label: 'Prod Group', key: 'groupinfo_name');
-
             if (\Auth::user()->can('all') || \Auth::user()->can('stocks_list_for_all')) {
                 $table->selectFilter(key: 'pur_incharge', label: 'Incharge', options: $fresult2, noFilterOptionLabel: 'All');
             }
             $table
                 ->selectFilter(key: 'pur_loc', label: 'Location', options: $fresult4, noFilterOptionLabel: 'All')
+                ->selectFilter(key: 'group_name', label: 'Prod Group', options: $un_list['gnames'], noFilterOptionLabel: 'All')
+                ->selectFilter(key: 'sgroup', label: 'Sub Group', options: $un_list['sgroups'], noFilterOptionLabel: 'All')
                 ->dateFilter(key: 'stock_date', label: 'Stock As Of Date')
                 ->perPageOptions([10, 15, 30, 50, 100, 10000]);
         });
@@ -214,7 +218,6 @@ class StocksController extends Controller
             [
 
                 'pr_detail_int' => ['label' => 'Internal Product Name', 'searchable' => true, 'sortable' => true],
-
                 'location' => ['label' => 'Location', 'sortable' => true],
                 'incharge' => ['label' => 'Incharge', 'sortable' => true],
 
@@ -235,6 +238,9 @@ class StocksController extends Controller
                 'balsumalt' => ['label' => 'Qty Bal Alt',   'align' => 'right', 'showTotal' => true],
 
                 'pr_int_unit_alt' => ['label' => 'Qty Unit Alt',],
+                'groupinfo_name' => ['label' => 'Prod Group', 'sortable' => true],
+                'groupinfo_sname' => ['label' => 'Sub Group', 'sortable' => true],
+
 
             ];
         $formInfoMulti = [];
@@ -307,6 +313,7 @@ class StocksController extends Controller
             ->selectRaw('MAX(pr_int_unit_alt) as pr_int_unit_alt')
             ->selectRaw('MAX(pr_int_unit) as pr_int_unit')
             ->selectRaw('MAX(pgroups.name) as groupinfo_name')
+            ->selectRaw('MAX(pgroups.sgroup) as groupinfo_sname')
             ->selectRaw('ifnull(MAX(insubq1.qtysum),0) as qty_sum_op , ifnull(MAX(insubq1.outqtysum),0) as qty_sum_out , ifnull(MAX(insubq1.qtysumalt),0) as qty_alt_sum_op, ifnull(MAX(insubq1.outqtysumalt),0) as qty_alt_sum_out')
 
             ->selectRaw('ifnull(MAX(insubq1.qtysum),0)-ifnull(MAX(insubq1.outqtysum),0) as balsum, ifnull(MAX(insubq1.qtysumalt),0)-ifnull(MAX(insubq1.outqtysumalt),0) as balsumalt')
@@ -316,11 +323,12 @@ class StocksController extends Controller
                 $join->on('products.pr_detail_int', '=', 'insubq1.pur_pr_detail_int');
             })
             ->groupBy('pr_detail_int', 'location', 'incharge')
-            ->where('pgroups.sgroup', 'Stock Item')
             ->havingRaw('(ifnull(MAX(insubq1.qtysum),0)-ifnull(MAX(insubq1.outqtysum),0))!=0');
         $un_list = [];
         $un_list['users'] = User::role('supervisor')->select('name')->orderBy('name')->get()->pluck('name');
         $un_list['locs'] = Location::select('name')->orderBy('name')->get()->pluck('name');
+        $un_list['sgroups'] = Pgroup::distinct()->pluck('sgroup', 'sgroup')->toArray();
+        $un_list['gnames'] = Pgroup::distinct()->pluck('name', 'name')->toArray();
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('pr_detail_int')
@@ -329,6 +337,8 @@ class StocksController extends Controller
                 AllowedFilter::exact('pur_incharge')->ignore($un_list['users']),
                 AllowedFilter::exact('pur_loc')->ignore($un_list['locs']),
                 AllowedFilter::exact('stock_date')->ignore([!null, null]),
+                AllowedFilter::exact('sgroup', 'pgroups.sgroup'),
+                AllowedFilter::exact('group_name', 'pgroups.name'),
                 $globalSearch
             ]))
             ->paginate($perPage)
@@ -367,14 +377,13 @@ class StocksController extends Controller
                 $opt && $fresult4[$opt] = $opt;
             }
 
-            $table
-                ->column(label: 'Prod Group', key: 'groupinfo_name');
-
             if (\Auth::user()->can('all') || \Auth::user()->can('stocks_list_for_all')) {
                 $table->selectFilter(key: 'pur_incharge', label: 'Incharge', options: $fresult2, noFilterOptionLabel: 'All');
             }
             $table
                 ->selectFilter(key: 'pur_loc', label: 'Location', options: $fresult4, noFilterOptionLabel: 'All')
+                ->selectFilter(key: 'group_name', label: 'Prod Group', options: $un_list['gnames'], noFilterOptionLabel: 'All')
+                ->selectFilter(key: 'sgroup', label: 'Sub Group', options: $un_list['sgroups'], noFilterOptionLabel: 'All')
                 ->dateFilter(key: 'stock_date', label: 'Stock As Of Date')
                 ->perPageOptions([10, 15, 30, 50, 100, 10000]);
         });
@@ -559,7 +568,6 @@ class StocksController extends Controller
                 $join->on('products.pr_detail_int', '=', 'subq3.out_product');
             })
             ->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left')
-            ->where('pgroups.sgroup', 'Stock Item')
             ->groupBy('pr_detail_int');
 
         $globalSearch = AllowedFilter::callback('global', function ($query, $value) {
@@ -573,7 +581,7 @@ class StocksController extends Controller
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('pr_detail_int')
             ->allowedSorts(['pr_detail_int', 'balsum', 'threshold_qty', 'difference'])
-            ->allowedFilters([$globalSearch])
+            ->allowedFilters([$globalSearch, AllowedFilter::exact('sgroup', 'pgroups.sgroup'), AllowedFilter::exact('group_name', 'pgroups.name')])
             ->paginate($perPage)
             ->withQueryString();
 
@@ -584,11 +592,16 @@ class StocksController extends Controller
             $this->resourceNeo['bulkActions']['csvExport'] = [];
         }
 
+        $sgroups = Pgroup::distinct()->pluck('sgroup', 'sgroup')->toArray();
+        $gnames = Pgroup::distinct()->pluck('name', 'name')->toArray();
+
         return Inertia::render('Admin/StockLevelsView', [
             'resourceData' => $resourceData,
             'resourceNeo' => $this->resourceNeo
-        ])->table(function (InertiaTable $table) use ($formInfo) {
-            $table->withGlobalSearch();
+        ])->table(function (InertiaTable $table) use ($formInfo, $sgroups, $gnames) {
+            $table->withGlobalSearch()
+                ->selectFilter(key: 'group_name', label: 'Prod Group', options: $gnames, noFilterOptionLabel: 'All')
+                ->selectFilter(key: 'sgroup', label: 'Sub Group', options: $sgroups, noFilterOptionLabel: 'All');
             foreach ($formInfo as $key => $config) {
                 $table->column(
                     key: $key,

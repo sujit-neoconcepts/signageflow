@@ -44,6 +44,10 @@ const filterList = computed(
     () => usePage().props.queryBuilderProps.default.filters
 );
 const filterValue = (list) => (list && list["value"]) ?? "";
+const getFilterValue = (key) => {
+    const filter = filterList.value?.find(f => f.key === key);
+    return filterValue(filter);
+};
 const filteroOption = (list) => {
     const temp = [];
     for (var key in list) {
@@ -71,8 +75,8 @@ const form = useForm({
 const isModalTransferActive = ref(false);
 const tansferStock = () => {
     form.stocks = selectedRowsele.value;
-    form.superviser_from = filterValue(filterList.value[0] ?? []);
-    form.location_from = filterValue(filterList.value[1] ?? []);
+    form.superviser_from = getFilterValue("pur_incharge");
+    form.location_from = getFilterValue("pur_loc");
 
     // Only validate quantities if doing partial transfer (5 or fewer items)
     if (selectedRowsele.value.length <= maxitemforpartial) {
@@ -231,9 +235,10 @@ const getMaxQuantity = (stockId) => {
                             class="order-8 sm:order-2 mx-2 pt-1"
                             v-if="
                                 selectedRowsele.length &&
-                                filterValue(filterList[0]) != '' &&
-                                filterValue(filterList[1]) != '' &&
-                                filterValue(filterList[3]) == '' &&  can(props.resourceNeo.resourceName + '_transfer')
+                                (can('all') || can('stocks_list_for_all') ? getFilterValue('pur_incharge') != '' : true) &&
+                                getFilterValue('pur_loc') != '' &&
+                                getFilterValue('stock_date') == '' &&
+                                can(props.resourceNeo.resourceName + '_transfer')
                             "
                         >
                             <button
@@ -441,7 +446,7 @@ const getMaxQuantity = (stockId) => {
                         v-model="form.superviser"
                         :options="
                             filteroOption(
-                                (filterList[0] && filterList[0].options) ?? []
+                                (filterList.value?.find(f => f.key === 'pur_incharge')?.options) ?? []
                             )
                         "
                         placeholder=""
@@ -452,7 +457,7 @@ const getMaxQuantity = (stockId) => {
                         v-model="form.location"
                         :options="
                             filteroOption(
-                                (filterList[1] && filterList[1].options) ?? []
+                                (filterList.value?.find(f => f.key === 'pur_loc')?.options) ?? []
                             )
                         "
                         placeholder=""
