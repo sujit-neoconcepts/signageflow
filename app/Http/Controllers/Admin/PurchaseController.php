@@ -39,6 +39,7 @@ class PurchaseController extends Controller
                         $query->orWhere($key, 'LIKE', "%{$value}%");
                     }
                     foreach (array_keys($formInfoMulti) as $key) {
+                        if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) continue;
                         $query->orWhere($key, 'LIKE', "%{$value}%");
                     }
                 });
@@ -92,6 +93,7 @@ class PurchaseController extends Controller
                 $table->column($key, $formInfo[$key]['label'], searchable: $formInfo[$key]['searchable'] ?? false, sortable: $formInfo[$key]['sortable'] ?? false, hidden: $formInfo[$key]['hidden'] ?? false, extra: ['type' => $formInfo[$key]['type'] ?? '', 'options' => [], 'align' => $formInfo[$key]['align'] ?? 'left', 'showTotal' => $formInfo[$key]['showTotal'] ?? false]);
             }
             foreach (array_keys($formInfoMulti) as $key) {
+                if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) continue;
                 $table->column($key, $formInfoMulti[$key]['label'], searchable: $formInfoMulti[$key]['searchable'] ?? false, sortable: $formInfoMulti[$key]['sortable'] ?? false, hidden: $formInfoMulti[$key]['hidden'] ?? false, extra: ['align' => $formInfoMulti[$key]['align'] ?? 'left', 'showTotal' => $formInfoMulti[$key]['showTotal'] ?? false]);
             }
             $fresult = [];
