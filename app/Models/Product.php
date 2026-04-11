@@ -132,11 +132,49 @@ class Product extends Model
     public static function getAllOptionInternal()
     {
         $alldatas = ConsumableInternalName::select('*')->orderBy('name')->get();
+        $names = $alldatas->pluck('name')->toArray();
+
+        // Efficiently fetch stock and rates in bulk for internal names
+        $purSub = \DB::table('purchases')
+            ->whereIn('pur_pr_detail_int', $names)
+            ->select('pur_pr_detail_int')
+            ->selectRaw('SUM(CASE WHEN entry_type = 0 THEN pur_qty_int WHEN entry_type = 1 THEN pur_qty_int ELSE 0 END) as total_in')
+            ->groupBy('pur_pr_detail_int')
+            ->get()->pluck('total_in', 'pur_pr_detail_int');
+
+        $outSub = \DB::table('outwards')
+            ->whereIn('out_product', $names)
+            ->select('out_product')
+            ->selectRaw('SUM(out_qty) as total_out')
+            ->groupBy('out_product')
+            ->get()->pluck('total_out', 'out_product');
+
+        $lastRates = \DB::table('purchases')
+            ->whereIn('pur_pr_detail_int', $names)
+            ->select('pur_rate', 'pur_pr_detail_int')
+            ->whereIn('id', function($query) {
+                $query->selectRaw('MAX(id)')
+                    ->from('purchases')
+                    ->where('entry_type', 0)
+                    ->groupBy('pur_pr_detail_int');
+            })
+            ->get()->pluck('pur_rate', 'pur_pr_detail_int');
+            
+        $minIds = Product::select('pr_detail_int', \DB::raw('MIN(id) as min_id'))
+            ->whereIn('pr_detail_int', $names)
+            ->groupBy('pr_detail_int')
+            ->get()->pluck('min_id', 'pr_detail_int');
+
         $allOpt = []; 
-        
         foreach ($alldatas as $alldata) {
-            $minId = Product::select('id')->where('pr_detail_int', '=', $alldata->name)->min('id');
-            $allOpt[] = ['id' => $minId, 'label' => $alldata->name, 'data' => $alldata];
+            $in = $purSub[$alldata->name] ?? 0;
+            $out = $outSub[$alldata->name] ?? 0;
+            
+            $alldata->available_qty = $in - $out;
+            $alldata->last_rate = $lastRates[$alldata->name] ?? 0;
+            $alldata->unit_rate = $alldata->unitPrice ?? 0;
+            
+            $allOpt[] = ['id' => $minIds[$alldata->name] ?? null, 'label' => $alldata->name, 'data' => $alldata];
         }
         return $allOpt;
     }

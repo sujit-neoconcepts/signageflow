@@ -64,6 +64,7 @@ class OpeningController extends Controller
                         $query->orWhere($key, 'LIKE', "%{$value}%");
                     }
                     foreach (array_keys($formInfoMulti) as $key) {
+                        if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) continue;
                         $query->orWhere($key, 'LIKE', "%{$value}%");
                     }
                 });
@@ -129,6 +130,7 @@ class OpeningController extends Controller
                 $table->column($key, $formInfo[$key]['label'], searchable: $formInfo[$key]['searchable'] ?? false, sortable: $formInfo[$key]['sortable'] ?? false, hidden: $formInfo[$key]['hidden'] ?? false, extra: ['type' => $formInfo[$key]['type'] ?? '', 'options' => [], 'align' => $formInfo[$key]['align'] ?? 'left', 'showTotal' => $formInfo[$key]['showTotal'] ?? false]);
             }
             foreach (array_keys($formInfoMulti) as $key) {
+                if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) continue;
                 $table->column($key, $formInfoMulti[$key]['label'], searchable: $formInfoMulti[$key]['searchable'] ?? false, sortable: $formInfoMulti[$key]['sortable'] ?? false, hidden: $formInfoMulti[$key]['hidden'] ?? false, extra: ['align' => $formInfoMulti[$key]['align'] ?? 'left', 'showTotal' => $formInfoMulti[$key]['showTotal'] ?? false]);
             }
 
@@ -195,6 +197,9 @@ class OpeningController extends Controller
         //unset($resourceNeo['formInfoMulti']['pur_amnt']);
         unset($resourceNeo['formInfoMulti']['pur_gst_amnt']);
         unset($resourceNeo['formInfoMulti']['pur_amnt_total']);
+        unset($resourceNeo['formInfoMulti']['last_rate']);
+        unset($resourceNeo['formInfoMulti']['unit_rate']);
+        unset($resourceNeo['formInfoMulti']['available_qty']);
 
         return Inertia::render('Admin/OpeningAddEditView', compact('resourceNeo'));
     }
@@ -216,7 +221,7 @@ class OpeningController extends Controller
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
             $savedArray[$key] = $request->{$key};
         }
-        foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate', 'pur_gst_amnt', 'pur_amnt_total']) as $key) {
+        foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate', 'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty']) as $key) {
             $attributeNames['multi.*.' . $key] = $formInfoMulti[$key]['label'];
             isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.' . $key] = $formInfoMulti[$key]['vRule'];
         }
@@ -226,7 +231,7 @@ class OpeningController extends Controller
 
 
         foreach ($request->multi as $ml) {
-            foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate', 'pur_gst_amnt', 'pur_amnt_total']) as $key) {
+            foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate', 'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty']) as $key) {
                 $savedArray[$key] = $ml[$key];
             }
             $savedArray['pur_pr_detail_int'] = $ml['pur_pr_detail_int']['label'];
@@ -274,6 +279,9 @@ class OpeningController extends Controller
         //unset($formInfoMulti['pur_amnt']);
         unset($formInfoMulti['pur_gst_amnt']);
         unset($formInfoMulti['pur_amnt_total']);
+        unset($formInfoMulti['last_rate']);
+        unset($formInfoMulti['unit_rate']);
+        unset($formInfoMulti['available_qty']);
         
         foreach (array_keys($formInfoMulti) as $key) {
             $temp[$key] = $purchase->{$key};
@@ -308,7 +316,7 @@ class OpeningController extends Controller
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
         }
-        foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate',  'pur_gst_amnt', 'pur_amnt_total']) as $key) {
+        foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate',  'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty']) as $key) {
             $attributeNames['multi.*.' . $key] = $formInfoMulti[$key]['label'];
             isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.' . $key] = $formInfoMulti[$key]['vRule'];
         }
@@ -318,7 +326,7 @@ class OpeningController extends Controller
         }
         $purchase->pur_date = $purchase->received_date = date('Y-m-d', strtotime($request->pur_date));
         foreach ($request->multi as $ml) {
-            foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate',  'pur_gst_amnt', 'pur_amnt_total']) as $key) {
+            foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate',  'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty']) as $key) {
                 $purchase->{$key} = $ml[$key];
             }
         }

@@ -139,6 +139,13 @@ const fetchProd = (index) => {
             form["multi"][index].pur_pr_detail_int.data.unitAltName;
         form["multi"][index].pur_rate_int =
             form["multi"][index].pur_pr_detail_int.data.unitPrice;
+        
+        form["multi"][index].available_qty =
+            form["multi"][index].pur_pr_detail_int.data.available_qty ?? 0;
+        form["multi"][index].last_rate =
+            form["multi"][index].pur_pr_detail_int.data.last_rate ?? 0;
+        form["multi"][index].unit_rate =
+            form["multi"][index].pur_pr_detail_int.data.unit_rate ?? 0;
     }
 };
 </script>
