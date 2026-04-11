@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Outward;
 use App\Models\Pgroup;
 use App\Models\Purchase;
+use Spatie\QueryBuilder\AllowedSort;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
@@ -46,17 +47,45 @@ class ProductController extends Controller
                 });
             });
         });
-        $query = Product::select('products.*', 'pgroups.name as groupinfo_name', 'pgroups.sgroup as groupinfo_sname')->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left');
+        $query = Product::select('products.*', 'pgroups.name as groupinfo_name', 'pgroups.sgroup as groupinfo_sname', 'cin.id as cin_id', 'cin.unitName as cin_unitName', 'cin.unitAltName as cin_unitAltName')
+            ->selectRaw("(CASE 
+                WHEN products.pr_detail_int IS NULL OR products.pr_detail_int = '' THEN 0
+                WHEN cin.id IS NULL THEN 0
+                WHEN products.pr_int_unit != cin.unitName THEN 0
+                WHEN IFNULL(products.pr_int_unit_alt, '') != IFNULL(cin.unitAltName, '') THEN 0
+                ELSE 1
+            END) as validation_status_raw")
+            ->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left')
+            ->leftJoin('consumable_internal_names as cin', 'cin.name', '=', 'products.pr_detail_int');
         $perPage = request()->query('perPage') ?? 10;
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('pr_detail')
-            ->allowedSorts(array_merge(array_keys($formInfo), array_keys($formInfoMulti), ['groupinfo_name', 'groupinfo_sname']))
+            ->allowedSorts(array_merge(array_keys($formInfo), array_keys($formInfoMulti), ['groupinfo_name', 'groupinfo_sname', AllowedSort::field('validation', 'validation_status_raw')]))
             ->allowedFilters(array_merge(
                 array_diff(array_merge(array_keys($formInfo), array_keys($formInfoMulti)), ['groupinfo']), 
                 [AllowedFilter::exact('groupinfo'), AllowedFilter::exact('groupinfo_sname', 'pgroups.sgroup'), $globalSearch]
             ))
             ->paginate($perPage)
-            ->withQueryString();
+            ->withQueryString()
+            ->through(function ($product) {
+                $errors = [];
+                if (empty($product->pr_detail_int)) {
+                    $errors[] = "Internal Name is empty";
+                } elseif (!$product->cin_id) {
+                    $errors[] = "Internal Name '{$product->pr_detail_int}' does not exist in master";
+                } else {
+                    if ($product->pr_int_unit !== $product->cin_unitName) {
+                        $errors[] = "Internal Unit mismatch. Product: '{$product->pr_int_unit}', Master: '{$product->cin_unitName}'";
+                    }
+                    if ($product->pr_int_unit_alt !== $product->cin_unitAltName) {
+                        $errors[] = "Internal Unit Alt mismatch. Product: '{$product->pr_int_unit_alt}', Master: '{$product->cin_unitAltName}'";
+                    }
+                }
+                
+                $product->validation_status = (bool)$product->validation_status_raw;
+                $product->validation_error = implode(' | ', $errors);
+                return $product;
+            });
 
         if (\Auth::user()->can('product_delete')) {
             $this->resourceNeo['bulkActions'] = ['bulk_delete' => []];
@@ -76,7 +105,7 @@ class ProductController extends Controller
             ]
         ];
 
-        return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo, $formInfoMulti) {
+        return Inertia::render('Admin/ProductIndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo, $formInfoMulti) {
             $table->withGlobalSearch();
             $arrKey = array_diff(array_keys($formInfo), ['subgroup','groupinfo']);
             $table->column('groupinfo_sname', 'Product Sub Group', searchable: false, sortable: true);
@@ -115,6 +144,7 @@ class ProductController extends Controller
                 $opt && $fresult3[$opt] = $opt;
             }
             $table
+                ->column('validation', 'Validation', sortable: true, extra: ['align' => 'center', 'width' => '100px'])
                 ->column(label: 'Actions')
                 ->selectFilter(key: 'pr_pur_unit', label: $formInfo['pr_pur_unit']['label'], options: $fresult, noFilterOptionLabel: 'All')
                 ->selectFilter(key: 'pr_pur_unit_alt', label: $formInfo['pr_pur_unit_alt']['label'], options: $fresult, noFilterOptionLabel: 'All')

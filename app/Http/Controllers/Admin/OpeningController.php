@@ -504,8 +504,8 @@ class OpeningController extends Controller
                 'pur_incharge.required' => 'Incharge is required',
                 'pur_loc.required' => 'Location is required',
                 'pur_loc.exists' => 'Location does not exist',
-                'pur_pr_detail_int.required' => 'Product Internal Name is required',
-                'pur_pr_detail_int.exists' => 'Product Internal Name does not exist',
+                'pur_pr_detail_int.required' => 'Internal Name(pur_pr_detail_int) is required',
+                'pur_pr_detail_int.exists' => 'Internal Name does not exist in Product Master',
                 'pur_qty_int.required' => 'Quantity is required',
                 'pur_qty_int.numeric' => 'Quantity must be numeric',
                 'pur_unint_int.required' => 'Unit is required',
@@ -519,10 +519,10 @@ class OpeningController extends Controller
                     $product = Product::where('pr_detail_int', $data['pur_pr_detail_int'])->first();
                     if ($product) {
                         if (isset($data['pur_unint_int']) && $data['pur_unint_int'] !== $product->pr_int_unit) {
-                            $validator->errors()->add('pur_unint_int', "Internal Unit must be '{$product->pr_int_unit}' for this product.");
+                            $validator->errors()->add('pur_unint_int', "As per Product Master Internal Unit must be '{$product->pr_int_unit}' for this product.");
                         }
                         if (isset($data['pur_unint_int_alt']) && !empty($data['pur_unint_int_alt']) && $data['pur_unint_int_alt'] !== $product->pr_int_unit_alt) {
-                            $validator->errors()->add('pur_unint_int_alt', "Internal Unit Alt must be '{$product->pr_int_unit_alt}' for this product.");
+                            $validator->errors()->add('pur_unint_int_alt', "As per Product Master Internal Unit Alt must be '{$product->pr_int_unit_alt}' for this product.");
                         }
                     }
                 }
