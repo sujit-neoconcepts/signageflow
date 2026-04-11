@@ -190,6 +190,7 @@ class PurchaseController extends Controller
 
         foreach ($request->multi as $ml) {
             foreach (array_keys($formInfoMulti) as $key) {
+                if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) continue;
                 $savedArray[$key] = $ml[$key];
             }
             $savedArray['pur_pr_detail'] = $ml['pur_pr_detail']['label'];
@@ -269,6 +270,7 @@ class PurchaseController extends Controller
         $purchase->received_date = date('Y-m-d', strtotime($request->received_date));
         foreach ($request->multi as $ml) {
             foreach (array_keys($formInfoMulti) as $key) {
+                if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) continue;
                 $purchase->{$key} = $ml[$key];
             }
             $purchase->pur_pr_detail = $ml['pur_pr_detail']['label'];

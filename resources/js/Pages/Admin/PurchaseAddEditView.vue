@@ -237,6 +237,13 @@ const fetchProd = (index) => {
 
         form["multi"][index].pur_unit_conv_rate =
             form["multi"][index].pur_pr_detail.data.pr_min_unit;
+        
+        form["multi"][index].available_qty =
+            form["multi"][index].pur_pr_detail.data.available_qty ?? 0;
+        form["multi"][index].last_rate =
+            form["multi"][index].pur_pr_detail.data.last_rate ?? 0;
+        form["multi"][index].unit_rate =
+            form["multi"][index].pur_pr_detail.data.unit_rate ?? 0;
     }
 };
 </script>

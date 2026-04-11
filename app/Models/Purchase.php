@@ -50,9 +50,35 @@ class Purchase extends Model
     {
         $allunits = Munit::select('name')->orderBy('name')->get()->pluck('name');
         $formInfo = [
-            'pur_pr_detail' => ['label' => 'Name As Per Invoice', 'searchable' => true, 'sortable' => true, 'type' => 'select', 'options' => Product::getAllOption(), 'vRule' => 'required', 'colspan' => 3, 'addAndRefresh' => true],
+            'pur_pr_detail' => [
+                'label' => 'Name As Per Invoice', 
+                'searchable' => true, 
+                'sortable' => true, 
+                'type' => 'select', 
+                'options' => Product::getAllOption(), 
+                'vRule' => 'required', 
+                'colspan' => 3, 
+                'addAndRefresh' => true,
+                'autoFill' => [
+                    'pur_pr_hsn' => 'data.pr_hsn',
+                    'pur_pr_detail_int' => 'data.pr_detail_int',
+                    'pur_unit' => 'data.pr_pur_unit',
+                    'pur_unit_alt' => 'data.pr_pur_unit_alt',
+                    'pur_unint_int' => 'data.pr_int_unit',
+                    'pur_unint_int_alt' => 'data.pr_int_unit_alt',
+                    'pur_unit_conv_rate' => 'data.pr_min_unit',
+                    'pur_gst' => 'data.pr_gst_rate',
+                    'last_rate' => 'data.last_rate',
+                    'unit_rate' => 'data.unit_rate',
+                    'available_qty' => 'data.available_qty'
+                ]
+            ],
 
             'pur_pr_hsn' => ['label' => 'HSN Code', 'searchable' => true, 'sortable' => true, 'readonly' => true],
+            
+            'last_rate' => ['label' => 'Last Rate', 'readonly' => true, 'align' => 'right'],
+            'unit_rate' => ['label' => 'Unit Rate', 'readonly' => true, 'align' => 'right'],
+            'available_qty' => ['label' => 'Available Qty', 'readonly' => true, 'align' => 'right'],
 
             'pur_pr_detail_int' => ['label' => 'Internal Name', 'searchable' => true, 'sortable' => true, 'vRule' => 'required', 'readonly' => true, 'colspan' => 2],
 

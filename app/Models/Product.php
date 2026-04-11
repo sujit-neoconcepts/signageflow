@@ -79,10 +79,52 @@ class Product extends Model
 
     public static function getAllOption()
     {
-        $alldatas = Product::all();
-        $allOpt = []; // [['id' => 0, 'label' => 'Products']];
+        $alldatas = Product::leftJoin('consumable_internal_names as cin', 'cin.name', '=', 'products.pr_detail_int')
+            ->select('products.*', 'cin.unitPrice as master_unit_price')
+            ->get();
+
+        // Efficiently fetch stock and rates in bulk by Internal Name (to match /admin/stocks)
+        $purSub = \DB::table('purchases')
+            ->select('pur_pr_detail_int')
+            ->selectRaw('SUM(CASE WHEN entry_type = 0 THEN pur_qty_int WHEN entry_type = 1 THEN pur_qty_int ELSE 0 END) as total_in')
+            ->groupBy('pur_pr_detail_int')
+            ->get()
+            ->pluck('total_in', 'pur_pr_detail_int');
+
+        $outSub = \DB::table('outwards')
+            ->select('out_product')
+            ->selectRaw('SUM(out_qty) as total_out')
+            ->groupBy('out_product')
+            ->get()
+            ->pluck('total_out', 'out_product');
+
+        // Last rates by Internal Name
+        $lastRates = \DB::table('purchases')
+            ->select('pur_rate', 'pur_pr_detail_int')
+            ->whereIn('id', function($query) {
+                $query->selectRaw('MAX(id)')
+                    ->from('purchases')
+                    ->where('entry_type', 0)
+                    ->groupBy('pur_pr_detail_int');
+            })
+            ->get()
+            ->pluck('pur_rate', 'pur_pr_detail_int');
+
+        $allOpt = [];
         foreach ($alldatas as $alldata) {
-            $allOpt[] = ['id' => $alldata->id, 'label' => $alldata->pr_detail, 'data' => $alldata];
+            $in = $purSub[$alldata->pr_detail_int] ?? 0;
+            $out = $outSub[$alldata->pr_detail_int] ?? 0;
+            $balance = $in - $out;
+
+            $alldata->last_rate = $lastRates[$alldata->pr_detail_int] ?? 0;
+            $alldata->available_qty = $balance;
+            $alldata->unit_rate = $alldata->master_unit_price ?? 0;
+
+            $allOpt[] = [
+                'id' => $alldata->id, 
+                'label' => $alldata->pr_detail, 
+                'data' => $alldata
+            ];
         }
         return $allOpt;
     }
