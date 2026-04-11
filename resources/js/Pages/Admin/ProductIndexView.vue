@@ -183,16 +183,20 @@ const checkConditions = (item, conditions) => {
                 >
                     <template #cell(validation)="{ item }">
                         <div class="flex justify-center">
-                            <BaseIcon
+                            <BaseButton
                                 v-if="item.validation_status"
-                                :path="mdiCheck"
-                                class="text-green-600"
+                                :icon="mdiCheck"
+                                color="success"
+                                small
+                                rounded-full
                                 title="Correct"
                             />
-                            <BaseIcon
+                            <BaseButton
                                 v-else
-                                :path="mdiClose"
-                                class="text-red-600"
+                                :icon="mdiClose"
+                                color="danger"
+                                small
+                                rounded-full
                                 :title="item.validation_error"
                             />
                         </div>
