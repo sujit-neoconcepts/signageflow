@@ -53,6 +53,10 @@ const props = defineProps({
     borderless: Boolean,
     transparent: Boolean,
     ctrlKFocus: Boolean,
+    color: {
+        type: String,
+        default: null,
+    },
 });
 
 const emit = defineEmits(["update:modelValue", "setRef", "focus", "blur"]);
@@ -70,7 +74,7 @@ const inputElClass = computed(() => {
         "dark:placeholder-gray-400",
         computedType.value === "textarea" ? "h-24" : "h-10",
         props.borderless ? "border-0" : "border",
-        props.transparent ? "bg-transparent" : "bg-white dark:bg-slate-800",
+        props.color ? props.color : (props.transparent ? "bg-transparent" : "bg-white dark:bg-slate-800"),
     ];
 
     if (props.icon) {

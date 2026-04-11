@@ -93,6 +93,7 @@ const filteredOptionMulti = (source, sKey, sFetch, compVal, key, pkey) => {
         type="number"
         :name="fkey"
         :readonly="formField.readonly"
+        :color="formField.color"
         v-model="multiDatasModel[pkey][fkey]"
         @update:modelValue="onChangeFunc(pkey, fkey)"
     />
@@ -100,6 +101,7 @@ const filteredOptionMulti = (source, sKey, sFetch, compVal, key, pkey) => {
         v-else-if="formField.type == 'password'"
         type="password"
         :name="fkey"
+        :color="formField.color"
         v-model="multiDatasModel[pkey][fkey]"
         @update:modelValue="onChangeFunc(pkey, fkey)"
     />
@@ -122,6 +124,7 @@ const filteredOptionMulti = (source, sKey, sFetch, compVal, key, pkey) => {
         v-model="multiDatasModel[pkey][fkey]"
         :disabled="formField.disabled"
         :readonly="formField.readonly"
+        :color="formField.color"
         @update:modelValue="onChangeFunc(pkey, fkey)"
     />
 </template>

@@ -76,9 +76,9 @@ class Purchase extends Model
 
             'pur_pr_hsn' => ['label' => 'HSN Code', 'searchable' => true, 'sortable' => true, 'readonly' => true],
             
-            'last_rate' => ['label' => 'Last Rate', 'readonly' => true, 'align' => 'right'],
-            'unit_rate' => ['label' => 'Unit Rate', 'readonly' => true, 'align' => 'right'],
-            'available_qty' => ['label' => 'Available Qty', 'readonly' => true, 'align' => 'right'],
+            'last_rate' => ['label' => 'Last Rate', 'readonly' => true, 'align' => 'right', 'color' => 'bg-yellow-100/50 dark:bg-yellow-900/40 text-blue-600 dark:text-blue-400 font-bold'],
+            'unit_rate' => ['label' => 'Unit Rate', 'readonly' => true, 'align' => 'right', 'color' => 'bg-yellow-100/50 dark:bg-yellow-900/40 text-blue-600 dark:text-blue-400 font-bold'],
+            'available_qty' => ['label' => 'Available Qty', 'readonly' => true, 'align' => 'right', 'color' => 'bg-yellow-100/50 dark:bg-yellow-900/40 text-blue-600 dark:text-blue-400 font-bold'],
 
             'pur_pr_detail_int' => ['label' => 'Internal Name', 'searchable' => true, 'sortable' => true, 'vRule' => 'required', 'readonly' => true, 'colspan' => 2],
 
