@@ -190,6 +190,10 @@
             <td class="amount">{{ number_format((float) $transportGst, 2, '.', '') }}</td>
         </tr>
         <tr>
+            <td class="label">Roundoff</td>
+            <td class="amount">{{ number_format((float) $salesOrder->roundoff, 2, '.', '') }}</td>
+        </tr>
+        <tr>
             <td class="label">Total Amount</td>
             <td class="amount">{{ number_format((float) $salesOrder->total_amount, 2, '.', '') }}</td>
         </tr>

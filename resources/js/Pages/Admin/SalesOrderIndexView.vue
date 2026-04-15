@@ -364,6 +364,7 @@ const detailTransportGst = computed(() => Number(detailData.value?.transport_gst
                     <div><b>Order GST %:</b> {{ detailData.gst_percent }}</div>
                     <div><b>Transport:</b> {{ detailTransport }}</div>
                     <div><b>Transport GST:</b> {{ detailTransportGst }}</div>
+                    <div><b>Roundoff:</b> {{ detailData.roundoff }}</div>
                     <div class="md:col-span-3"><b>Remark:</b> {{ detailData.remark || "-" }}</div>
                 </div>
 
@@ -412,6 +413,7 @@ const detailTransportGst = computed(() => Number(detailData.value?.transport_gst
                     <div>Items GST: {{ detailItemsGstTotal }}</div>
                     <div>Transport: {{ detailTransport }}</div>
                     <div>Transport GST: {{ detailTransportGst }}</div>
+                    <div>Roundoff: {{ detailData.roundoff }}</div>
                     <div>Total Amount: {{ detailData.total_amount }}</div>
                 </div>
             </div>

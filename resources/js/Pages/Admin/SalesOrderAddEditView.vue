@@ -44,6 +44,7 @@ const form = useForm({
     remark: "",
     transport_charge: "0",
     gst_percent: "18",
+    roundoff: "0",
     items: [],
     enquiry_id: "",
 });
@@ -189,7 +190,8 @@ const totalAmount = computed(() => {
         parseFloat(itemsTaxableTotal.value || 0) +
         parseFloat(itemsGstTotal.value || 0) +
         parseFloat(form.transport_charge || 0) +
-        parseFloat(transportGst.value || 0)
+        parseFloat(transportGst.value || 0) +
+        parseFloat(form.roundoff || 0)
     ).toFixed(2);
 });
 
@@ -219,6 +221,7 @@ onBeforeMount(() => {
     form.remark = props.formdata.remark ?? "";
     form.transport_charge = String(props.formdata.transport_charge ?? "0");
     form.gst_percent = String(props.formdata.gst_percent ?? "18");
+    form.roundoff = String(props.formdata.roundoff ?? "0");
     form.enquiry_id = props.formdata.enquiry_id ?? "";
 
     if (props.formdata.items && props.formdata.items.length > 0) {
@@ -256,6 +259,7 @@ const submitform = () => {
         remark: form.remark,
         transport_charge: form.transport_charge,
         gst_percent: form.gst_percent,
+        roundoff: form.roundoff,
         enquiry_id: form.enquiry_id || null,
         items: form.items.map((line) => ({
             cost_sheet_id: line.cost_sheet_id,
@@ -386,7 +390,18 @@ const submitform = () => {
                             <div v-if="form.errors.gst_percent" class="text-red-500 text-xs mt-1">{{ form.errors.gst_percent }}</div>
                         </div>
 
-                        <div class="lg:col-span-2">
+                        <div>
+                            <label class="text-sm font-medium">Roundoff (+/-)</label>
+                            <input
+                                v-model="form.roundoff"
+                                class="w-full mt-1 border rounded px-3 py-2 text-right"
+                                type="number"
+                                step="0.01"
+                            />
+                            <div v-if="form.errors.roundoff" class="text-red-500 text-xs mt-1">{{ form.errors.roundoff }}</div>
+                        </div>
+
+                        <div class="lg:col-span-1">
                             <label class="text-sm font-medium">Remark</label>
                             <input v-model="form.remark" class="w-full mt-1 border rounded px-3 py-2" type="text" />
                         </div>
@@ -532,11 +547,12 @@ const submitform = () => {
                 </CardBox>
 
                 <CardBox class="mt-4">
-                    <div class="grid grid-cols-1 lg:grid-cols-5 gap-3 text-sm font-semibold">
+                    <div class="grid grid-cols-1 lg:grid-cols-6 gap-3 text-sm font-semibold">
                         <div>Items Taxable Total: {{ itemsTaxableTotal }}</div>
                         <div>Items GST Total: {{ itemsGstTotal }}</div>
                         <div>Transport: {{ Number(form.transport_charge || 0).toFixed(2) }}</div>
                         <div>Transport GST: {{ Number(transportGst || 0).toFixed(2) }}</div>
+                        <div>Roundoff: {{ Number(form.roundoff || 0).toFixed(2) }}</div>
                         <div>Total Amount: {{ totalAmount }}</div>
                     </div>
                 </CardBox>

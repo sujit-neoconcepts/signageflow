@@ -144,6 +144,7 @@ class SalesOrderController extends Controller
             'items_taxable_total' => $salesOrder->items_taxable_total,
             'items_gst_total' => $salesOrder->items_gst_total,
             'transport_gst' => $transportGst,
+            'roundoff' => $salesOrder->roundoff,
             'total_amount' => $salesOrder->total_amount,
             'items' => $salesOrder->items->map(function ($item) {
                 return [
@@ -203,6 +204,7 @@ class SalesOrderController extends Controller
         $items = $this->normalizeItems($request->items ?? []);
         $transportCharge = round((float) ($validated['transport_charge'] ?? 0), 2);
         $orderGstPercent = round((float) ($validated['gst_percent'] ?? 18), 2);
+        $roundoff = round((float) ($validated['roundoff'] ?? 0), 2);
 
         if (count($items) === 0) {
             return redirect()->back()->withErrors(['items' => 'Add at least one item.'])->withInput();
@@ -239,13 +241,15 @@ class SalesOrderController extends Controller
                     $lineResult['items_taxable_total'] +
                     $lineResult['items_gst_total'] +
                     $transportCharge +
-                    $transportGst,
+                    $transportGst +
+                    $roundoff,
                     2
                 );
 
                 $order->update([
                     'transport_charge'    => $transportCharge,
                     'gst_percent'         => $orderGstPercent,
+                    'roundoff'            => $roundoff,
                     'items_taxable_total' => $lineResult['items_taxable_total'],
                     'items_gst_total'     => $lineResult['items_gst_total'],
                     'total_amount'        => $totalAmount,
@@ -299,6 +303,7 @@ class SalesOrderController extends Controller
             'remark' => $salesOrder->remark,
             'transport_charge' => $salesOrder->transport_charge,
             'gst_percent' => $salesOrder->gst_percent,
+            'roundoff' => $salesOrder->roundoff,
             'items' => $salesOrder->items->map(function ($item) {
                 return [
                     'cost_sheet_id' => $item->cost_sheet_id,
@@ -330,6 +335,7 @@ class SalesOrderController extends Controller
         $items = $this->normalizeItems($request->items ?? []);
         $transportCharge = round((float) ($validated['transport_charge'] ?? 0), 2);
         $orderGstPercent = round((float) ($validated['gst_percent'] ?? 18), 2);
+        $roundoff = round((float) ($validated['roundoff'] ?? 0), 2);
 
         if (count($items) === 0) {
             return redirect()->back()->withErrors(['items' => 'Add at least one item.'])->withInput();
@@ -347,6 +353,7 @@ class SalesOrderController extends Controller
                 'remark' => $validated['remark'] ?? null,
                 'transport_charge' => $transportCharge,
                 'gst_percent' => $orderGstPercent,
+                'roundoff' => $roundoff,
                 'items_taxable_total' => 0,
                 'items_gst_total' => 0,
                 'total_amount' => 0
@@ -365,7 +372,8 @@ class SalesOrderController extends Controller
                     $lineResult['items_taxable_total'] +
                     $lineResult['items_gst_total'] +
                     $transportCharge +
-                    $transportGst,
+                    $transportGst +
+                    $roundoff,
                     2
                 ),
             ]);
@@ -450,6 +458,7 @@ class SalesOrderController extends Controller
             'remark' => 'nullable|string',
             'transport_charge' => 'nullable|numeric|min:0',
             'gst_percent' => 'nullable|numeric|min:0',
+            'roundoff' => 'nullable|numeric',
             'items' => 'nullable|array',
             'items.*.cost_sheet_id' => 'required_with:items|exists:cost_sheets,id',
             'items.*.qty' => 'nullable|numeric|min:0',

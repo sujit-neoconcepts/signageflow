@@ -25,6 +25,7 @@ class SalesOrder extends Model
         'remark',
         'transport_charge',
         'gst_percent',
+        'roundoff',
         'items_taxable_total',
         'items_gst_total',
         'total_amount',
