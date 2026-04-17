@@ -414,6 +414,9 @@ const submitform = () => {
                     </div>
 
                     <div v-if="form.errors.items" class="text-red-500 text-xs mb-2">{{ form.errors.items }}</div>
+                    <div class="mb-3">
+                        <BaseButton label="+ Add Item" type="button" color="success" small @click="addItemLine" />
+                    </div>
                     <div>
                         <table class="w-full text-sm border">
                             <thead class="bg-gray-100">
@@ -539,10 +542,6 @@ const submitform = () => {
                                 </tr>
                             </tbody>
                         </table>
-                    </div>
-
-                    <div class="mt-3">
-                        <BaseButton label="+ Add Item" type="button" color="success" small @click="addItemLine" />
                     </div>
                 </CardBox>
 

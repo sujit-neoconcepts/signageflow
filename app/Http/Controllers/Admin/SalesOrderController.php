@@ -89,6 +89,7 @@ class SalesOrderController extends Controller
         }
 
         $this->resourceNeo['showTotal'] = true;
+        $this->resourceNeo['showall'] = true;
 
         return Inertia::render('Admin/SalesOrderIndexView', [
             'resourceData' => $resourceData,
