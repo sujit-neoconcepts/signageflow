@@ -41,6 +41,7 @@ class OpeningController extends Controller
         $formInfo = Purchase::formInfo();
         $formInfo['pur_inv'] = ['label' => 'Comment', 'searchable' => true, 'sortable' => true, 'vRule' => 'required', 'default' => 'Opening-' . date('d-m-Y H:i:s')];
         unset($formInfo['pur_supplier']);
+        unset($formInfo['roundoff']);
         $formInfoMulti = Purchase::formInfoMulti();
 
         unset($formInfoMulti['pur_pr_detail']);
@@ -179,6 +180,7 @@ class OpeningController extends Controller
         unset($resourceNeo['formInfo']['received_date']);
         $resourceNeo['formInfo']['pur_inv'] = ['label' => 'Comment', 'searchable' => true, 'sortable' => true, 'vRule' => 'required', 'default' => 'Opening-' . date('d-m-Y H:i:s')];
         unset($resourceNeo['formInfo']['pur_supplier']);
+        unset($resourceNeo['formInfo']['roundoff']);
 
         $resourceNeo['formInfoMulti'] = Purchase::formInfoMulti();
 
@@ -216,7 +218,7 @@ class OpeningController extends Controller
         $attributeNames = [];
         $validateRule = [];
         $savedArray = [];
-        foreach (array_diff(array_keys($formInfo), ['pur_supplier']) as $key) {
+        foreach (array_diff(array_keys($formInfo), ['pur_supplier', 'roundoff']) as $key) {
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
             $savedArray[$key] = $request->{$key};
@@ -297,6 +299,7 @@ class OpeningController extends Controller
         $resourceNeo['formInfoMulti'] = $formInfoMulti;
         $resourceNeo['formInfo']['pur_inv'] = ['label' => 'Comment', 'searchable' => true, 'sortable' => true, 'vRule' => 'required', 'default' => 'Opening-' . date('d-m-Y H:i:s')];
         unset($resourceNeo['formInfo']['pur_supplier']);
+        unset($resourceNeo['formInfo']['roundoff']);
         $resourceNeo['formInfoMulti']['pur_pr_detail_int']['colspan'] = 3;
 
         return Inertia::render('Admin/OpeningAddEditView', compact('formdata', 'resourceNeo'));
@@ -312,7 +315,7 @@ class OpeningController extends Controller
         $formInfoMulti = Purchase::formInfoMulti();
         $attributeNames = [];
         $validateRule = [];
-        foreach (array_diff(array_keys($formInfo), ['pur_inv', 'pur_supplier']) as $key) {
+        foreach (array_diff(array_keys($formInfo), ['pur_inv', 'pur_supplier', 'roundoff']) as $key) {
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
         }
@@ -321,7 +324,7 @@ class OpeningController extends Controller
             isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.' . $key] = $formInfoMulti[$key]['vRule'];
         }
         $request->validate($validateRule, [], $attributeNames);
-        foreach (array_diff(array_keys($formInfo), ['pur_supplier']) as $key) {
+        foreach (array_diff(array_keys($formInfo), ['pur_supplier', 'roundoff']) as $key) {
             $purchase->{$key} = $request->{$key};
         }
         $purchase->pur_date = $purchase->received_date = date('Y-m-d', strtotime($request->pur_date));
