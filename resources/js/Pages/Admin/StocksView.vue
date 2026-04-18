@@ -23,6 +23,7 @@ import "vue-toast-notification/dist/theme-sugar.css";
 import { computed, onMounted, ref } from "vue";
 import { can } from '@/utils/permissions';
 import axios from "axios";
+import { formatDisplayDate } from "@/helpers/helpers";
 
 const message = computed(() => usePage().props.flash.message);
 const msg_type = computed(() => usePage().props.flash.msg_type ?? "warning");
@@ -352,9 +353,9 @@ const getMaxQuantity = (stockId) => {
                 <tr v-for="(data, index) in transaDetailsLive">
                     <td>
                         {{
-                            data.pur_pr_detail_int
+                            formatDisplayDate(data.pur_pr_detail_int
                                 ? data.pur_date
-                                : data.out_date
+                                : data.out_date)
                         }}
                     </td>
                     <td>

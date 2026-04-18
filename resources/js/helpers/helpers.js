@@ -9,6 +9,17 @@ export const formatDate = (date) => {
     return moment(date).format("YYYY-MM-DD");
 };
 
+// Format date for display: YYYY-MM-DD -> DD-MM-YYYY
+export const formatDisplayDate = (date) => {
+    if (!date) return "";
+    // Handle YYYY-MM-DD format directly for better performance
+    const match = String(date).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+        return `${match[3]}-${match[2]}-${match[1]}`;
+    }
+    return moment(date).format("DD-MM-YYYY");
+};
+
 // Get today's date as yyyy-MM-dd string (for VueDatePicker with model-type="yyyy-MM-dd")
 export const getTodayString = () => {
     return moment().format("YYYY-MM-DD");

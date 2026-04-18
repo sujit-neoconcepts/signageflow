@@ -11,6 +11,8 @@ import { computed, onBeforeMount, ref } from "vue";
 import Multiselect from "vue-multiselect";
 import "../../../css/vue-multiselect.css";
 import { getTodayString } from "@/helpers/helpers";
+import VueDatePicker from "@vuepic/vue-datepicker";
+import "@vuepic/vue-datepicker/dist/main.css";
 
 const props = defineProps({
     formdata: {
@@ -335,7 +337,18 @@ const submitform = () => {
 
                         <div>
                             <label class="text-sm font-medium">Order Date</label>
-                            <input v-model="form.order_date" class="w-full mt-1 border rounded px-3 py-2" type="date" />
+                            <VueDatePicker
+                                v-model="form.order_date"
+                                input-class-name="text-gray-500 dark:!text-white shadow-sm text-sm !bg-white dark:!bg-slate-800 !border-gray-700"
+                                :month-change-on-scroll="false"
+                                :range="false"
+                                :enable-time-picker="false"
+                                arrow-navigation
+                                format="dd-MM-yyyy"
+                                model-type="yyyy-MM-dd"
+                                auto-apply
+                                class="mt-1"
+                            />
                             <div v-if="form.errors.order_date" class="text-red-500 text-xs mt-1">{{ form.errors.order_date }}</div>
                         </div>
 

@@ -499,7 +499,7 @@
                                                 :item="item"
                                                 :skey="key"
                                             >
-                                                {{ item[column.key] }}
+                                                {{ column.extra.type === 'datepicker' || column.extra.type === 'datePicker' ? formatDisplayDate(item[column.key]) : item[column.key] }}
                                             </slot>
                                         </div>
                                     </td>
@@ -711,7 +711,7 @@
             :range="false"
             :enable-time-picker="false"
             arrow-navigation
-            format="yyyy-MM-dd"
+            format="dd-MM-yyyy"
             model-type="yyyy-MM-dd"
             auto-apply
             v-if="editPopupFieldType === 'datePicker'"
@@ -917,7 +917,7 @@ import { mdiReload } from "@mdi/js";
 import BaseIcon from "@/components/BaseIcon.vue";
 import CardBox from "@/components/CardBox.vue";
 import axios from "axios";
-import { formatedDate } from "@/helpers/helpers";
+import { formatedDate, formatDisplayDate } from "@/helpers/helpers";
 const message = computed(() => usePage().props.flash.message);
 const msg_type = computed(() => usePage().props.flash.msg_type ?? "warning");
 

@@ -23,6 +23,7 @@ import { computed, onMounted, ref, onUnmounted, watch } from "vue";
 import ActionMenu from "@/components/ActionMenu.vue";
 import { can } from '@/utils/permissions';
 import axios from "axios";
+import { formatDisplayDate } from "@/helpers/helpers";
 
 const message = computed(() => usePage().props.flash.message);
 const msg_type = computed(() => usePage().props.flash.msg_type ?? "warning");
@@ -388,7 +389,7 @@ const detailTransportGst = computed(() => Number(detailData.value?.transport_gst
         >
             <div v-if="detailData" class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                    <div><b>Date:</b> {{ detailData.enquiry_date }}</div>
+                    <div><b>Date:</b> {{ formatDisplayDate(detailData.enquiry_date) }}</div>
                     <div><b>Client:</b> {{ detailData.client }}</div>
                     <div><b>Type:</b> {{ detailData.product_type }}</div>
                     <div class="md:col-span-3"><b>Remark:</b> {{ detailData.remark || "-" }}</div>

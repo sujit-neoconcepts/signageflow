@@ -7,7 +7,7 @@
         input-class-name="!border-gray-700 text-gray-400 dark:text-slate-200 dark:placeholder-gray-400 shadow-sm text-sm bg-gray-100 dark:bg-slate-800"
         model-type="yyyy-MM-dd"
         @update:model-value="setFilterValue(`${filter.key}_start`, $event)" :month-change-on-scroll="false" :range="false"
-        :enable-time-picker="false" format="yyyy-MM-dd" auto-apply :model-value="computedValue[`${filter.key}_start`]"
+        :enable-time-picker="false" format="dd-MM-yyyy" auto-apply :model-value="computedValue[`${filter.key}_start`]"
         :name="`${filter.key}_start`" :placeholder="`${filter.label}  From`"
         v-if="getColumn(filter.key).type === 'datePicker'">
       </VueDatePicker>
@@ -15,7 +15,7 @@
         input-class-name="!border-gray-700 text-gray-400 dark:text-slate-200 dark:placeholder-gray-400 shadow-sm text-sm bg-gray-100 dark:bg-slate-800"
         model-type="yyyy-MM-dd"
         @update:model-value="setFilterValue(`${filter.key}_end`, $event)" :month-change-on-scroll="false" :range="false"
-        :enable-time-picker="false" format="yyyy-MM-dd" auto-apply :model-value="computedValue[`${filter.key}_end`]"
+        :enable-time-picker="false" format="dd-MM-yyyy" auto-apply :model-value="computedValue[`${filter.key}_end`]"
         :name="`${filter.key}_end`" :placeholder="`${filter.label}  To`"
         v-if="getColumn(filter.key).type === 'datePicker'">
       </VueDatePicker>
