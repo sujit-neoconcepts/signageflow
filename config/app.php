@@ -297,6 +297,7 @@ return [
         'expuser' => 'Expense User',
         'expcate' => 'Expense Category',
         'consumableInternalName' => 'Consumable Internal Name',
+        'consumableInternalNameReport' => 'Product Internal Price',
 
         // Consumables Operational Modules
         'product' => 'Product',
