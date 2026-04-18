@@ -68,6 +68,20 @@ class DashboardController extends Controller
         $totalExpense = (float) $expenseQuery->sum('amount');
         $totalDeposit = (float) $depositQuery->sum('amount');
 
+        // Fetch expenses by category for the new graph
+        $expensesByCategoryQuery = clone $expenseQuery; // Use the same base query with date and role filters
+        $expensesByCategory = $expensesByCategoryQuery
+            ->select('exp_cate', DB::raw('SUM(amount) as total_value'))
+            ->groupBy('exp_cate')
+            ->orderByDesc('total_value')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'exp_cate' => $item->exp_cate ?: 'Uncategorized',
+                    'total_value' => (float) $item->total_value,
+                ];
+            });
+
         $expensesData = [
             'total_purchase_value' => $totalPurchaseValue,
             'total_outward_value' => $totalOutwardValue,
@@ -121,6 +135,7 @@ class DashboardController extends Controller
             'expensesData' => $expensesData,
             'monthlyTrend' => $monthlyTrend,
             'topSuppliers' => $topSuppliers,
+            'expensesByCategory' => $expensesByCategory,
         ]);
     }
 

@@ -51,6 +51,7 @@ const props = defineProps({
     expensesData: Object,
     monthlyTrend: Array,
     topSuppliers: Array,
+    expensesByCategory: Array,
     financialYear: Object,
     startDate: String,
     endDate: String,
@@ -159,6 +160,58 @@ const chartOptions = {
         },
     },
     indexAxis: "y",
+};
+
+const expenseChartHeight = computed(() => {
+    // 384px is equivalent to Tailwind's h-96
+    const minHeight = 384; 
+    // Allocate ~45px per bar so they remain thick and clickable, plus 60px for axes/padding
+    const dynamicHeight = props.expensesByCategory.length * 45 + 60; 
+    return Math.max(minHeight, dynamicHeight) + 'px';
+});
+
+const expenseCategoryData = computed(() => ({
+    labels: props.expensesByCategory.map((exp) => exp.exp_cate),
+    datasets: [
+        {
+            label: "Total Expense",
+            data: props.expensesByCategory.map((exp) => exp.total_value),
+            backgroundColor: [
+                "#EF4444", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6",
+                "#EC4899", "#14B8A6", "#F97316", "#84CC16", "#6366F1",
+            ],
+            borderWidth: 1,
+        },
+    ],
+}));
+
+const expenseCategoryOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: "y",
+    plugins: {
+        legend: { display: false },
+        tooltip: {
+            callbacks: {
+                label: function(context) {
+                    return `₹${new Intl.NumberFormat("en-IN").format(Math.round(context.raw))} (Click to view)`;
+                }
+            }
+        }
+    },
+    onClick: (event, elements, chart) => {
+        if (elements && elements.length > 0) {
+            const index = elements[0].index;
+            const category = chart.data.labels[index];
+            router.get(route('expense.index'), {
+                'filter[amt_type]': 'Expense',
+                'filter[exp_cate]': category
+            });
+        }
+    },
+    onHover: (event, chartElement) => {
+        event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+    }
 };
 
 // Helper functions
@@ -347,11 +400,11 @@ const formatCurrency = (amount) => {
                     </h3>
                     <div class="grid grid-cols-2 gap-4">
                         <a
-                            href="/admin/product"
+                            href="/admin/consumableInternalNameReport"
                             class="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg text-center transition"
                         >
-                            <p class="font-semibold text-blue-700">Products</p>
-                            <p class="text-sm text-gray-600">Manage Products</p>
+                            <p class="font-semibold text-blue-700">Product Price</p>
+                            <p class="text-sm text-gray-600">View Price</p>
                         </a>
                         <a
                             href="/admin/purchase"
@@ -409,6 +462,21 @@ const formatCurrency = (amount) => {
                     </h3>
                     <div class="h-64">
                         <Bar :data="topSuppliersData" :options="chartOptions" />
+                    </div>
+                </CardBox>
+            </div>
+
+            <!-- Charts Row 2 -->
+            <div class="grid grid-cols-1 gap-6 mb-6">
+                <!-- Expenses by Category Chart -->
+                <CardBox>
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <BaseIcon :path="mdiChartBar" class="mr-2 text-red-600" />
+                        Expenses by Category (Click to View)
+                    </h3>
+                    <div class="text-sm text-gray-500 mb-2">Click on any bar to open the filtered expense report for that category.</div>
+                    <div :style="{ height: expenseChartHeight }">
+                        <Bar :data="expenseCategoryData" :options="expenseCategoryOptions" />
                     </div>
                 </CardBox>
             </div>
