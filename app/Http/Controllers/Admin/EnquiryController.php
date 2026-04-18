@@ -193,8 +193,9 @@ class EnquiryController extends Controller
 
         $clients = $this->getClients();
         $costSheetOptions = $this->getCostSheetOptions();
+        $munits = \App\Models\Munit::select('name')->orderBy('name')->pluck('name')->values()->toArray();
 
-        return Inertia::render('Admin/EnquiryAddEditView', compact('resourceNeo', 'clients', 'costSheetOptions'));
+        return Inertia::render('Admin/EnquiryAddEditView', compact('resourceNeo', 'clients', 'costSheetOptions', 'munits'));
     }
 
     public function pushToSalesOrder(Enquiry $enquiry)
@@ -233,8 +234,9 @@ class EnquiryController extends Controller
 
         $clients = (new \App\Http\Controllers\Admin\SalesOrderController)->getClients();
         $costSheetOptions = (new \App\Http\Controllers\Admin\SalesOrderController)->getCostSheetOptions();
+        $munits = \App\Models\Munit::select('name')->orderBy('name')->pluck('name')->values()->toArray();
 
-        return Inertia::render('Admin/SalesOrderAddEditView', compact('formdata', 'resourceNeo', 'clients', 'costSheetOptions'));
+        return Inertia::render('Admin/SalesOrderAddEditView', compact('formdata', 'resourceNeo', 'clients', 'costSheetOptions', 'munits'));
     }
 
 
@@ -400,8 +402,9 @@ class EnquiryController extends Controller
 
         $clients = $this->getClients();
         $costSheetOptions = $this->getCostSheetOptions();
+        $munits = \App\Models\Munit::select('name')->orderBy('name')->pluck('name')->values()->toArray();
 
-        return Inertia::render('Admin/EnquiryAddEditView', compact('formdata', 'resourceNeo', 'clients', 'costSheetOptions'));
+        return Inertia::render('Admin/EnquiryAddEditView', compact('formdata', 'resourceNeo', 'clients', 'costSheetOptions', 'munits'));
     }
 
     public function update(Request $request, Enquiry $enquiry)

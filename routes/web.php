@@ -130,16 +130,19 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::post('/openStock/detail', [OpenStockController::class, 'detail'])->name('openStock.detail');
     Route::get('signageCostSheet-import', [SignageCostSheetController::class, 'importView'])->name('signageCostSheet.import');
     Route::post('signageCostSheet-import', [SignageCostSheetController::class, 'import']);
+    Route::post('signageCostSheet-quick-store', [SignageCostSheetController::class, 'quickStore'])->name('signageCostSheet.quickStore');
     Route::resource('signageCostSheet', SignageCostSheetController::class)
         ->parameters(['signageCostSheet' => 'costSheet']);
     Route::delete('signageCostSheet-bulk-destroy', [SignageCostSheetController::class, 'bulkDestroy'])->name('signageCostSheet.bulkDestroy');
     Route::get('cabinetCostSheet-import', [CabinetCostSheetController::class, 'importView'])->name('cabinetCostSheet.import');
     Route::post('cabinetCostSheet-import', [CabinetCostSheetController::class, 'import']);
+    Route::post('cabinetCostSheet-quick-store', [CabinetCostSheetController::class, 'quickStore'])->name('cabinetCostSheet.quickStore');
     Route::resource('cabinetCostSheet', CabinetCostSheetController::class)
         ->parameters(['cabinetCostSheet' => 'costSheet']);
     Route::delete('cabinetCostSheet-bulk-destroy', [CabinetCostSheetController::class, 'bulkDestroy'])->name('cabinetCostSheet.bulkDestroy');
     Route::get('lettersCostSheet-import', [LettersCostSheetController::class, 'importView'])->name('lettersCostSheet.import');
     Route::post('lettersCostSheet-import', [LettersCostSheetController::class, 'import']);
+    Route::post('lettersCostSheet-quick-store', [LettersCostSheetController::class, 'quickStore'])->name('lettersCostSheet.quickStore');
     Route::resource('lettersCostSheet', LettersCostSheetController::class)
         ->parameters(['lettersCostSheet' => 'costSheet']);
     Route::delete('lettersCostSheet-bulk-destroy', [LettersCostSheetController::class, 'bulkDestroy'])->name('lettersCostSheet.bulkDestroy');

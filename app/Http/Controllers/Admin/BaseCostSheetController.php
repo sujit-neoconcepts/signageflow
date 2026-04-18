@@ -149,6 +149,47 @@ abstract class BaseCostSheetController extends Controller
         ]);
     }
 
+    /**
+     * Quick store for inline creation from Enquiry/SalesOrder forms.
+     * Returns the newly created cost sheet item as JSON.
+     */
+    public function quickStore(Request $request)
+    {
+        $prodType = $this->prodType();
+
+        $validated = $request->validate([
+            'name'     => ['required', 'max:255', Rule::unique('cost_sheets', 'name')->where(fn ($q) => $q->where('prod_type', $prodType))],
+            'qty_unit' => 'required|max:100',
+            'alt_units' => 'nullable|max:100',
+            'rate'     => 'nullable|numeric|min:0',
+        ]);
+
+        $item = CostSheet::create([
+            'prod_type' => $prodType,
+            'name'      => $validated['name'],
+            'qty_unit'  => $validated['qty_unit'],
+            'alt_units' => $validated['alt_units'] ?? null,
+            'rate'      => $validated['rate'] ?? 0,
+        ]);
+
+        \ActivityLog::add([
+            'action'   => 'added',
+            'module'   => $this->resourceName(),
+            'data_key' => $item->name,
+        ]);
+
+        return response()->json([
+            'id'        => $item->id,
+            'label'     => $item->name,
+            'name'      => $item->name,
+            'prod_type' => $item->prod_type,
+            'qty_unit'  => $item->qty_unit,
+            'alt_units' => $item->alt_units,
+            'rate'      => (float) $item->rate,
+        ], 201);
+    }
+
+
     public function show(CostSheet $costSheet)
     {
     }

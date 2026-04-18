@@ -194,8 +194,9 @@ class SalesOrderController extends Controller
 
         $clients = $this->getClients();
         $costSheetOptions = $this->getCostSheetOptions();
+        $munits = \App\Models\Munit::select('name')->orderBy('name')->pluck('name')->values()->toArray();
 
-        return Inertia::render('Admin/SalesOrderAddEditView', compact('resourceNeo', 'clients', 'costSheetOptions'));
+        return Inertia::render('Admin/SalesOrderAddEditView', compact('resourceNeo', 'clients', 'costSheetOptions', 'munits'));
     }
 
     public function store(Request $request)
@@ -325,8 +326,9 @@ class SalesOrderController extends Controller
 
         $clients = $this->getClients();
         $costSheetOptions = $this->getCostSheetOptions();
+        $munits = \App\Models\Munit::select('name')->orderBy('name')->pluck('name')->values()->toArray();
 
-        return Inertia::render('Admin/SalesOrderAddEditView', compact('formdata', 'resourceNeo', 'clients', 'costSheetOptions'));
+        return Inertia::render('Admin/SalesOrderAddEditView', compact('formdata', 'resourceNeo', 'clients', 'costSheetOptions', 'munits'));
     }
 
     public function update(Request $request, SalesOrder $salesOrder)

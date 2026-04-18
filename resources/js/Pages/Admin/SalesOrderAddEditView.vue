@@ -7,12 +7,14 @@ import BaseButton from "@/components/BaseButton.vue";
 import CardBox from "@/components/CardBox.vue";
 import NotificationBar from "@/components/NotificationBar.vue";
 import { mdiFormatListBulleted } from "@mdi/js";
-import { computed, onBeforeMount, ref } from "vue";
+import { computed, onBeforeMount, ref, reactive } from "vue";
 import Multiselect from "vue-multiselect";
 import "../../../css/vue-multiselect.css";
 import { getTodayString } from "@/helpers/helpers";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
+import CardBoxModal from "@/components/CardBoxModal.vue";
+import axios from "axios";
 
 const props = defineProps({
     formdata: {
@@ -28,6 +30,10 @@ const props = defineProps({
         default: () => [],
     },
     costSheetOptions: {
+        type: Array,
+        default: () => [],
+    },
+    munits: {
         type: Array,
         default: () => [],
     },
@@ -64,9 +70,12 @@ const clientOptions = computed(() => {
     }));
 });
 
+// Make costSheetOptions reactive so newly added items appear immediately
+const localCostSheetOptions = ref([...props.costSheetOptions]);
+
 const costSheetMap = computed(() => {
     const map = {};
-    props.costSheetOptions.forEach((item) => {
+    localCostSheetOptions.value.forEach((item) => {
         map[item.id] = item;
     });
     return map;
@@ -74,8 +83,66 @@ const costSheetMap = computed(() => {
 
 const filteredCostSheets = computed(() => {
     if (!form.product_type) return [];
-    return props.costSheetOptions.filter((item) => item.prod_type === form.product_type);
+    return localCostSheetOptions.value.filter((item) => item.prod_type === form.product_type);
 });
+
+// ─── Quick-Add Item Modal ───
+const quickAddModal = ref(false);
+const quickAddTargetLine = ref(null);
+const quickAddSearchText = ref("");
+const quickAddForm = reactive({ name: "", qty_unit: "", alt_units: "", rate: "0" });
+const quickAddErrors = reactive({ name: "", qty_unit: "", alt_units: "" });
+const quickAddLoading = ref(false);
+
+const openQuickAdd = (line, searchText = "") => {
+    quickAddTargetLine.value = line;
+    quickAddForm.name = searchText;
+    quickAddForm.qty_unit = "";
+    quickAddForm.alt_units = "";
+    quickAddForm.rate = "0";
+    quickAddErrors.name = "";
+    quickAddErrors.qty_unit = "";
+    quickAddErrors.alt_units = "";
+    quickAddModal.value = true;
+};
+
+const routeForProductType = (type) => {
+    const map = { signage: "signageCostSheet", cabinet: "cabinetCostSheet", letters: "lettersCostSheet" };
+    return map[type] ?? "signageCostSheet";
+};
+
+const submitQuickAdd = async () => {
+    quickAddErrors.name = "";
+    quickAddErrors.qty_unit = "";
+    if (!quickAddForm.name.trim()) { quickAddErrors.name = "Name is required."; return; }
+    if (!quickAddForm.qty_unit) { quickAddErrors.qty_unit = "Unit is required."; return; }
+
+    quickAddLoading.value = true;
+    try {
+        const routeName = routeForProductType(form.product_type);
+        const response = await axios.post(
+            route(routeName + ".quickStore"),
+            { name: quickAddForm.name.trim(), qty_unit: quickAddForm.qty_unit, alt_units: quickAddForm.alt_units, rate: quickAddForm.rate || 0 },
+            { headers: { Accept: "application/json" } }
+        );
+        const newItem = response.data;
+        localCostSheetOptions.value.push(newItem);
+        // Auto-select in the row that triggered the modal
+        if (quickAddTargetLine.value) {
+            quickAddTargetLine.value.selected_cost_sheet = newItem;
+            onItemChange(quickAddTargetLine.value);
+        }
+        quickAddModal.value = false;
+    } catch (e) {
+        const errs = e.response?.data?.errors;
+        if (errs?.name) quickAddErrors.name = errs.name[0];
+        if (errs?.qty_unit) quickAddErrors.qty_unit = errs.qty_unit[0];
+        if (errs?.alt_units) quickAddErrors.alt_units = errs.alt_units[0];
+        if (!errs) alert("Error: " + (e.response?.data?.message || e.message));
+    } finally {
+        quickAddLoading.value = false;
+    }
+};
 
 const isDimensionUnit = (unit) => {
     const u = String(unit || "")
@@ -427,9 +494,6 @@ const submitform = () => {
                     </div>
 
                     <div v-if="form.errors.items" class="text-red-500 text-xs mb-2">{{ form.errors.items }}</div>
-                    <div class="mb-3">
-                        <BaseButton label="+ Add Item" type="button" color="success" small @click="addItemLine" />
-                    </div>
                     <div>
                         <table class="w-full text-sm border">
                             <thead class="bg-gray-100">
@@ -451,17 +515,27 @@ const submitform = () => {
                             <tbody>
                                 <tr v-for="(line, idx) in form.items" :key="idx" :class="{ 'bg-red-50': itemRowHasError(idx) }">
                                     <td class="border p-2 min-w-52">
-                                        <Multiselect
-                                            v-model="line.selected_cost_sheet"
-                                            placeholder="Select Item"
-                                            track-by="id"
-                                            label="label"
-                                            select-label=""
-                                            :disabled="!form.product_type"
-                                            :options="filteredCostSheets"
-                                            @select="onItemChange(line)"
-                                            @remove="onItemChange(line)"
-                                        />
+                                        <div class="flex items-center gap-1">
+                                            <Multiselect
+                                                v-model="line.selected_cost_sheet"
+                                                placeholder="Select Item"
+                                                track-by="id"
+                                                label="label"
+                                                select-label=""
+                                                :disabled="!form.product_type"
+                                                :options="filteredCostSheets"
+                                                @select="onItemChange(line)"
+                                                @remove="onItemChange(line)"
+                                                class="flex-1"
+                                            />
+                                            <button
+                                                type="button"
+                                                :disabled="!form.product_type"
+                                                class="flex-shrink-0 w-7 h-7 rounded bg-green-600 text-white font-bold text-lg leading-none flex items-center justify-center hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                title="Add new item"
+                                                @click="openQuickAdd(line, line.selected_cost_sheet?.label ?? '')"
+                                            >+</button>
+                                        </div>
                                         <div v-if="itemFieldError(idx, 'cost_sheet_id')" class="text-red-500 text-xs mt-1">
                                             {{ itemFieldError(idx, "cost_sheet_id") }}
                                         </div>
@@ -556,6 +630,9 @@ const submitform = () => {
                             </tbody>
                         </table>
                     </div>
+                    <div class="mt-3">
+                        <BaseButton label="+ Add Item" type="button" color="success" small @click="addItemLine" />
+                    </div>
                 </CardBox>
 
                 <CardBox class="mt-4">
@@ -577,5 +654,54 @@ const submitform = () => {
                 </div>
             </form>
         </SectionMain>
+
+        <!-- Quick-Add Item Modal -->
+        <CardBoxModal
+            v-model="quickAddModal"
+            title="Add New Item"
+            hasCancel
+            @confirm="submitQuickAdd"
+        >
+            <div class="space-y-4">
+                <div>
+                    <label class="text-sm font-medium block mb-1">Item Name <span class="text-red-500">*</span></label>
+                    <input
+                        v-model="quickAddForm.name"
+                        type="text"
+                        class="w-full border rounded px-3 py-2 text-sm"
+                        placeholder="Enter item name"
+                    />
+                    <div v-if="quickAddErrors.name" class="text-red-500 text-xs mt-1">{{ quickAddErrors.name }}</div>
+                </div>
+                <div>
+                    <label class="text-sm font-medium block mb-1">Unit <span class="text-red-500">*</span></label>
+                    <select v-model="quickAddForm.qty_unit" class="w-full border rounded px-3 py-2 text-sm">
+                        <option value="">-- Select Unit --</option>
+                        <option v-for="unit in props.munits" :key="unit" :value="unit">{{ unit }}</option>
+                    </select>
+                    <div v-if="quickAddErrors.qty_unit" class="text-red-500 text-xs mt-1">{{ quickAddErrors.qty_unit }}</div>
+                </div>
+                <div>
+                    <label class="text-sm font-medium block mb-1">Alt Units</label>
+                    <select v-model="quickAddForm.alt_units" class="w-full border rounded px-3 py-2 text-sm">
+                        <option value="">-- Select Alt Unit --</option>
+                        <option v-for="unit in props.munits" :key="unit" :value="unit">{{ unit }}</option>
+                    </select>
+                    <div v-if="quickAddErrors.alt_units" class="text-red-500 text-xs mt-1">{{ quickAddErrors.alt_units }}</div>
+                </div>
+                <div>
+                    <label class="text-sm font-medium block mb-1">Default Rate</label>
+                    <input
+                        v-model="quickAddForm.rate"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        class="w-full border rounded px-3 py-2 text-sm"
+                        placeholder="0.00"
+                    />
+                </div>
+                <div v-if="quickAddLoading" class="text-sm text-blue-600">Saving...</div>
+            </div>
+        </CardBoxModal>
     </LayoutAuthenticated>
 </template>
