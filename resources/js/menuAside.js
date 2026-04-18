@@ -225,6 +225,16 @@ export default [
             },
         ],
     },
-    
-    
+    {
+        label: "Reports",
+        icon: mdiInvoiceList,
+        menu: [
+            {
+                route: "consumableInternalNameReport.index",
+                label: "Product Internal Name Report",
+                icon: mdiFormatListBulletedType,
+                resource: "consumableInternalNameReport",
+            },
+        ],
+    },
 ];

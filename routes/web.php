@@ -57,6 +57,9 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
         Route::get('consumableInternalName/sync', [ConsumableInternalNameController::class, 'sync'])->name('consumableInternalName.sync');
         Route::resource('consumableInternalName', ConsumableInternalNameController::class);
         Route::delete('consumableInternalName-bulk-destroy', [ConsumableInternalNameController::class, 'bulkDestroy'])->name('consumableInternalName.bulkDestroy');
+        
+        // consumableInternalNameReport Route
+        Route::get('consumableInternalNameReport', [\App\Http\Controllers\Admin\ConsumableInternalNameReportController::class, 'index'])->name('consumableInternalNameReport.index');
 
         // CostSheet Compositions
         Route::get('costSheet/{costSheet}/compositions', [\App\Http\Controllers\Admin\CostSheetCompositionController::class, 'index'])->name('costSheetCompositions.index');
