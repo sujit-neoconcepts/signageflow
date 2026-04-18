@@ -35,7 +35,7 @@ class ConsumableInternalNameReportController extends Controller
         unset($formInfo['openStockMarginPercent']);
         
         $formInfo['unitPriceWithMargin'] = [
-            'label' => 'Unit Price (Incl. Margin)', 
+            'label' => 'Unit Price', 
             'sortable' => true, 
             'searchable' => true,
             'align' => 'right'
