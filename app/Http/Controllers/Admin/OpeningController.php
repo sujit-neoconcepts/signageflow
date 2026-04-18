@@ -210,7 +210,7 @@ class OpeningController extends Controller
     public function store(Request $request)
     {
         $formInfo = Purchase::formInfo();
-        $resourceNeo['formInfo']['pur_inv']['vRule'] = 'required';
+        $formInfo['pur_inv']['vRule'] = 'required';
 
         $formInfoMulti = Purchase::formInfoMulti();
         $attributeNames = [];

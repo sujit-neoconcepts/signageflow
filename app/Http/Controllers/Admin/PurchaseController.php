@@ -2,17 +2,19 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Inertia\Inertia;
+use App\Http\Controllers\Controller;
 use App\Models\Purchase;
+use App\Models\PurchaseInfo;
+use App\Services\AverageUnitPriceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
-use Spatie\QueryBuilder\AllowedSort;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
-use App\Services\AverageUnitPriceService;
-
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class PurchaseController extends Controller
 {
@@ -20,18 +22,142 @@ class PurchaseController extends Controller
 
     public function __construct()
     {
-        $this->middleware('can:purchase_list', ['only' => ['index', 'show']]);
+        $this->middleware('can:purchase_list', ['only' => ['index', 'itemwiseIndex', 'show']]);
         $this->middleware('can:purchase_delete', ['only' => ['destroy', 'bulkDestroy']]);
         $this->middleware('can:purchase_edit', ['only' => ['edit', 'update']]);
         $this->middleware('can:purchase_delete', ['only' => ['destroy']]);
     }
+
     /**
-     * Display a listing of the resource.
+     * Display grouped invoice listing for purchases.
      */
     public function index()
     {
+        $formInfo = [
+            'pur_inv' => ['label' => 'Invoice No', 'searchable' => true, 'sortable' => true],
+            'pur_date' => ['label' => 'Purchase Date', 'sortable' => true, 'type' => 'datepicker'],
+            'received_date' => ['label' => 'Received Date', 'sortable' => true, 'type' => 'datepicker'],
+            'pur_supplier' => ['label' => 'Supplier Name', 'searchable' => true, 'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => Purchase::formInfo()['pur_supplier']['options']],
+            'line_count' => ['label' => 'Item Count', 'sortable' => true, 'align' => 'right'],
+            'sum_total' => ['label' => 'Sum Total', 'sortable' => true, 'align' => 'right', 'showTotal' => true],
+        ];
+
+        $globalSearch = AllowedFilter::callback('global', function ($query, $value) use ($formInfo) {
+            $query->where(function ($query) use ($value, $formInfo) {
+                Collection::wrap($value)->each(function ($value) use ($query, $formInfo) {
+                    foreach (array_keys($formInfo) as $key) {
+                        if ($key === 'line_count' || $key === 'sum_total') {
+                            continue;
+                        }
+                        $query->orWhere($key, 'LIKE', "%{$value}%");
+                    }
+                });
+            });
+        });
+
+        $perPage = request()->query('perPage') ?? 10;
+        $filterArray = [];
+        foreach (array_keys($formInfo) as $fvalue) {
+            if ($fvalue === 'line_count') {
+                continue;
+            }
+            $filterArray[] = AllowedFilter::exact($fvalue);
+        }
+
+        $lineAggQuery = Purchase::query()
+            ->select([
+                'purchase_info_id',
+                DB::raw('COUNT(*) as line_count'),
+                DB::raw('MIN(id) as id'),
+            ])
+            ->where('entry_type', 0)
+            ->groupBy('purchase_info_id');
+
+        if (!(Auth::user()->can('all') || Auth::user()->can('purchase_list_for_all'))) {
+            $lineAggQuery->where('pur_incharge', Auth::user()->name);
+        }
+
+        $query = PurchaseInfo::query()
+            ->select([
+                'purchases_info.pur_inv',
+                'purchases_info.pur_date',
+                'purchases_info.received_date',
+                'purchases_info.pur_supplier',
+                'purchases_info.sum_total',
+                'line_agg.line_count',
+                'line_agg.id',
+            ])
+            ->joinSub($lineAggQuery, 'line_agg', function ($join) {
+                $join->on('line_agg.purchase_info_id', '=', 'purchases_info.id');
+            });
+
+        $resourceData = QueryBuilder::for($query)
+            ->defaultSort('-pur_date')
+            ->allowedSorts(array_keys($formInfo))
+            ->allowedFilters(array_merge($filterArray, [AllowedFilter::scope('pur_date_start'), AllowedFilter::scope('pur_date_end'), AllowedFilter::scope('received_date_start'), AllowedFilter::scope('received_date_end'), $globalSearch]))
+            ->paginate($perPage)
+            ->withQueryString();
+
+        if (Auth::user()->can('purchase_delete')) {
+            $this->resourceNeo['bulkActions'] = ['bulk_delete' => []];
+        }
+
+        if (Auth::user()->can('purchase_export')) {
+            $this->resourceNeo['bulkActions']['csvExport'] = [];
+        }
+
+        $this->resourceNeo['extraMainLinks'] = [
+            [
+                'label' => 'Itemwise List',
+                'link' => 'purchase.itemwise',
+                'icon' => 'M3,13H11V11H3M3,6V8H21V6M3,18H11V16H3V18M13,18H21V16H13M13,13H21V11H13V13Z',
+            ],
+        ];
+        $this->resourceNeo['detailModal'] = true;
+        $this->resourceNeo['detailModalRoute'] = 'purchase.detailView';
+        $this->resourceNeo['detailModalTitle'] = 'Purchase Details';
+
+        $this->resourceNeo['showTotal'] = true;
+        $this->resourceNeo['showall'] = true;
+
+        return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo) {
+            $table->withGlobalSearch();
+
+            foreach (array_keys($formInfo) as $key) {
+                $table->column(
+                    $key,
+                    $formInfo[$key]['label'],
+                    searchable: $formInfo[$key]['searchable'] ?? false,
+                    sortable: $formInfo[$key]['sortable'] ?? false,
+                    hidden: $formInfo[$key]['hidden'] ?? false,
+                    extra: ['type' => $formInfo[$key]['type'] ?? '', 'options' => [], 'align' => $formInfo[$key]['align'] ?? 'left', 'showTotal' => $formInfo[$key]['showTotal'] ?? false]
+                );
+            }
+
+            $fresult = [];
+            foreach ($formInfo['pur_supplier']['options'] as $opt) {
+                $opt && $fresult[$opt] = $opt;
+            }
+
+            $table
+                ->column(label: 'Actions')
+                ->dateFilter(key: 'pur_date_start', label: 'Pur. Date From')
+                ->dateFilter(key: 'pur_date_end', label: 'Pur. Date To')
+                ->dateFilter(key: 'received_date_start', label: 'Received Date From')
+                ->dateFilter(key: 'received_date_end', label: 'Received Date To')
+                ->selectFilter(key: 'pur_supplier', label: $formInfo['pur_supplier']['label'], options: $fresult, noFilterOptionLabel: 'All')
+                ->perPageOptions([10, 15, 30, 50, 100, 10000]);
+        });
+    }
+
+    /**
+     * Display the legacy row-wise listing for purchases.
+     */
+    public function itemwiseIndex()
+    {
         $formInfo = Purchase::formInfo();
         $formInfoMulti = Purchase::formInfoMulti();
+
         $globalSearch = AllowedFilter::callback('global', function ($query, $value) use ($formInfo, $formInfoMulti) {
             $query->where(function ($query) use ($value, $formInfo, $formInfoMulti) {
                 Collection::wrap($value)->each(function ($value) use ($query, $formInfo, $formInfoMulti) {
@@ -39,40 +165,54 @@ class PurchaseController extends Controller
                         $query->orWhere($key, 'LIKE', "%{$value}%");
                     }
                     foreach (array_keys($formInfoMulti) as $key) {
-                        if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) continue;
+                        if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) {
+                            continue;
+                        }
                         $query->orWhere($key, 'LIKE', "%{$value}%");
                     }
                 });
             });
         });
+
         $perPage = request()->query('perPage') ?? 10;
-        $filter_array = [];
+        $filterArray = [];
         foreach (array_merge(array_diff(array_keys($formInfo), []), array_keys($formInfoMulti)) as $fvalue) {
-            $filter_array[] = AllowedFilter::exact($fvalue);
+            $filterArray[] = AllowedFilter::exact($fvalue);
         }
-        $query = Purchase::select('purchases.*', 'pgroups.name as groupinfo_name', 'pgroups.sgroup as groupinfo_sname')->where('entry_type', 0)->leftJoin('products', 'products.id', 'purchases.pur_pr_id', 'left')->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left');
 
-        //$query->inFinancialYear();
+        $query = Purchase::select('purchases.*', 'pgroups.name as groupinfo_name', 'pgroups.sgroup as groupinfo_sname')
+            ->where('entry_type', 0)
+            ->leftJoin('products', 'products.id', 'purchases.pur_pr_id', 'left')
+            ->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left');
 
-        if (\Auth::user()->can('all') || \Auth::user()->can('purchase_list_for_all')) {
-        } else {
-            $query = $query->where('pur_incharge', \Auth::user()->name);
+        if (!(Auth::user()->can('all') || Auth::user()->can('purchase_list_for_all'))) {
+            $query = $query->where('pur_incharge', Auth::user()->name);
         }
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('-pur_date')
             ->allowedSorts(array_merge(array_diff(array_keys($formInfo), []), array_keys($formInfoMulti), []))
-            ->allowedFilters(array_merge($filter_array, [AllowedFilter::scope('pur_date_start'), AllowedFilter::scope('pur_date_end'), AllowedFilter::scope('received_date_start'), AllowedFilter::scope('received_date_end'), AllowedFilter::exact('groupinfo_sname', 'pgroups.sgroup'), $globalSearch]))
+            ->allowedFilters(array_merge($filterArray, [AllowedFilter::scope('pur_date_start'), AllowedFilter::scope('pur_date_end'), AllowedFilter::scope('received_date_start'), AllowedFilter::scope('received_date_end'), AllowedFilter::exact('groupinfo_sname', 'pgroups.sgroup'), $globalSearch]))
             ->paginate($perPage)
             ->withQueryString();
 
-        if (\Auth::user()->can('purchase_delete')) {
+        if (Auth::user()->can('purchase_delete')) {
             $this->resourceNeo['bulkActions'] = ['bulk_delete' => []];
         }
 
-        if (\Auth::user()->can('purchase_export')) {
+        if (Auth::user()->can('purchase_export')) {
             $this->resourceNeo['bulkActions']['csvExport'] = [];
         }
+        $this->resourceNeo['actions'] = ['r'];
+
+        $this->resourceNeo['extraMainLinks'] = [
+            [
+                'label' => 'Grouped List',
+                'link' => 'purchase.index',
+                'icon' => 'M3,13H11V11H3M3,6V8H21V6M3,18H11V16H3V18M13,18H21V16H13M13,13H21V11H13V13Z',
+            ],
+        ];
+
         $this->resourceNeo['extraLinks'] = [
             [
                 'label' => 'Generate Barcode',
@@ -83,49 +223,50 @@ class PurchaseController extends Controller
                 'compvl' => '*'
             ]
         ];
+
         $this->resourceNeo['showTotal'] = true;
         $this->resourceNeo['showall'] = true;
 
         return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo, $formInfoMulti) {
             $table->withGlobalSearch();
+
             $arrKey = array_diff(array_keys($formInfo), []);
             foreach ($arrKey as $key) {
                 $table->column($key, $formInfo[$key]['label'], searchable: $formInfo[$key]['searchable'] ?? false, sortable: $formInfo[$key]['sortable'] ?? false, hidden: $formInfo[$key]['hidden'] ?? false, extra: ['type' => $formInfo[$key]['type'] ?? '', 'options' => [], 'align' => $formInfo[$key]['align'] ?? 'left', 'showTotal' => $formInfo[$key]['showTotal'] ?? false]);
             }
+
             foreach (array_keys($formInfoMulti) as $key) {
-                if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) continue;
+                if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) {
+                    continue;
+                }
                 $table->column($key, $formInfoMulti[$key]['label'], searchable: $formInfoMulti[$key]['searchable'] ?? false, sortable: $formInfoMulti[$key]['sortable'] ?? false, hidden: $formInfoMulti[$key]['hidden'] ?? false, extra: ['align' => $formInfoMulti[$key]['align'] ?? 'left', 'showTotal' => $formInfoMulti[$key]['showTotal'] ?? false]);
             }
+
             $fresult = [];
-            foreach ($formInfo['pur_supplier']['options'] as  $opt) {
+            foreach ($formInfo['pur_supplier']['options'] as $opt) {
                 $opt && $fresult[$opt] = $opt;
             }
+
             $fresult2 = [];
-            foreach ($formInfoMulti['pur_incharge']['options'] as  $opt) {
+            foreach ($formInfoMulti['pur_incharge']['options'] as $opt) {
                 $opt && $fresult2[$opt] = $opt;
             }
+
             $fresult3 = [];
-            foreach ($formInfoMulti['pur_unit']['options'] as  $opt) {
+            foreach ($formInfoMulti['pur_unit']['options'] as $opt) {
                 $opt && $fresult3[$opt] = $opt;
             }
+
             $fresult4 = [];
-            foreach ($formInfoMulti['pur_loc']['options'] as  $opt) {
+            foreach ($formInfoMulti['pur_loc']['options'] as $opt) {
                 $opt && $fresult4[$opt] = $opt;
             }
+
             $fresult5 = [];
-            foreach ([
-  'Capex',
-  'Consumable Item',
-  'Indirect Expense/Purchase',
-  'Opex',
-  'Plant & Machinery Item',
-  'Services Purchase',
-  'Services Sale',
-  'Stock Item',
-  'Tools'
-] as  $opt) {
+            foreach (['Capex', 'Consumable Item', 'Indirect Expense/Purchase', 'Opex', 'Plant & Machinery Item', 'Services Purchase', 'Services Sale', 'Stock Item', 'Tools'] as $opt) {
                 $opt && $fresult5[$opt] = $opt;
             }
+
             $table
                 ->column(label: 'Prod Group', key: 'groupinfo_name')
                 ->column(label: 'Used Type', key: 'groupinfo_sname')
@@ -135,7 +276,8 @@ class PurchaseController extends Controller
                 ->dateFilter(key: 'received_date_start', label: 'Received Date From')
                 ->dateFilter(key: 'received_date_end', label: 'ReceivedDate To')
                 ->selectFilter(key: 'pur_supplier', label: $formInfo['pur_supplier']['label'], options: $fresult, noFilterOptionLabel: 'All');
-            if (\Auth::user()->can('all') || \Auth::user()->can('purchase_list_for_all')) {
+
+            if (Auth::user()->can('all') || Auth::user()->can('purchase_list_for_all')) {
                 $table->selectFilter(key: 'pur_incharge', label: $formInfoMulti['pur_incharge']['label'], options: $fresult2, noFilterOptionLabel: 'All');
             }
 
@@ -156,12 +298,13 @@ class PurchaseController extends Controller
     {
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['Multilabel'] = 'Line items';
-        $resourceNeo['fColumn'] = 4;
+        $resourceNeo['fColumn'] = 5;
         $resourceNeo['fColumnMulti'] = 8;
         $resourceNeo['AllowMore'] = true;
         $resourceNeo['AllowDel'] = true;
         $resourceNeo['formInfo'] = Purchase::formInfo();
         $resourceNeo['formInfoMulti'] = Purchase::formInfoMulti();
+
         return Inertia::render('Admin/PurchaseAddEditView', compact('resourceNeo'));
     }
 
@@ -175,41 +318,61 @@ class PurchaseController extends Controller
         $attributeNames = [];
         $validateRule = [];
         $savedArray = [];
+
         foreach (array_keys($formInfo) as $key) {
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
             $savedArray[$key] = $request->{$key};
         }
+
         foreach (array_keys($formInfoMulti) as $key) {
             $attributeNames['multi.*.' . $key] = $formInfoMulti[$key]['label'];
             isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.' . $key] = $formInfoMulti[$key]['vRule'];
         }
 
         $request->validate($validateRule, [], $attributeNames);
+
         $savedArray['pur_date'] = date('Y-m-d', strtotime($request->pur_date));
         $savedArray['received_date'] = date('Y-m-d', strtotime($request->received_date));
 
+        DB::transaction(function () use ($request, $formInfoMulti, $savedArray) {
+            $purchaseInfo = PurchaseInfo::create([
+                'pur_date' => $savedArray['pur_date'],
+                'received_date' => $savedArray['received_date'],
+                'pur_inv' => $savedArray['pur_inv'],
+                'pur_supplier' => $savedArray['pur_supplier'],
+                'roundoff' => $savedArray['roundoff'] ?? 0,
+                'sum_total' => 0,
+            ]);
 
-        foreach ($request->multi as $ml) {
-            foreach (array_keys($formInfoMulti) as $key) {
-                if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) continue;
-                $savedArray[$key] = $ml[$key];
+            foreach ($request->multi as $ml) {
+                $lineData = $savedArray;
+                foreach (array_keys($formInfoMulti) as $key) {
+                    if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) {
+                        continue;
+                    }
+                    $lineData[$key] = $ml[$key];
+                }
+
+                $lineData['pur_pr_detail'] = $ml['pur_pr_detail']['label'];
+                $lineData['pur_pr_id'] = $ml['pur_pr_detail']['id'];
+                $lineData['purchase_info_id'] = $purchaseInfo->id;
+                $lineData['entry_type'] = 0;
+
+                if (!empty($lineData['pur_pr_detail_int']) && !empty($lineData['pur_qty_int']) && !empty($lineData['pur_rate_int'])) {
+                    $averagePriceService = new AverageUnitPriceService();
+                    $averagePriceService->calculateAndUpdateAveragePrice(
+                        $lineData['pur_pr_detail_int'],
+                        $lineData['pur_qty_int'],
+                        $lineData['pur_rate_int']
+                    );
+                }
+
+                Purchase::create($lineData);
             }
-            $savedArray['pur_pr_detail'] = $ml['pur_pr_detail']['label'];
-            $savedArray['pur_pr_id'] = $ml['pur_pr_detail']['id'];
 
-            // Update average unit price BEFORE saving to avoid double-counting
-            if (!empty($savedArray['pur_pr_detail_int']) && !empty($savedArray['pur_qty_int']) && !empty($savedArray['pur_rate_int'])) {
-                $averagePriceService = new AverageUnitPriceService();
-                $averagePriceService->calculateAndUpdateAveragePrice(
-                    $savedArray['pur_pr_detail_int'],
-                    $savedArray['pur_qty_int'],
-                    $savedArray['pur_rate_int']
-                );
-            }
-
-            Purchase::create($savedArray);
-        }
+            $this->syncPurchaseInfoTotals($purchaseInfo->id);
+        });
 
         \ActivityLog::add(['action' => 'added', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->{array_keys($formInfo)[1]}]);
 
@@ -229,21 +392,45 @@ class PurchaseController extends Controller
      */
     public function edit(Purchase $purchase)
     {
-        $formdata = $purchase;
-        $temp = [];
-        $formInfoMulti = Purchase::formInfoMulti();
-        foreach (array_keys($formInfoMulti) as $key) {
-            $temp[$key] = $purchase->{$key};
+        $invoiceQuery = $this->getInvoiceLinesQuery($purchase);
+        $invoiceLines = $invoiceQuery->orderBy('id')->get();
+
+        if ($invoiceLines->isEmpty()) {
+            return redirect()->route('purchase.index')->with(['message' => 'Purchase not found for the selected invoice.', 'msg_type' => 'danger']);
         }
-        $formdata->multi = [$temp];
+
+        $headerRow = $invoiceLines->first();
+        $purchaseInfo = $headerRow->purchaseInfo;
+        $formdata = new \stdClass();
+        $formdata->id = $headerRow->id;
+        $formdata->pur_date = $headerRow->pur_date;
+        $formdata->received_date = $headerRow->received_date;
+        $formdata->pur_inv = $headerRow->pur_inv;
+        $formdata->pur_supplier = $headerRow->pur_supplier;
+        $formdata->roundoff = $purchaseInfo ? $purchaseInfo->roundoff : 0;
+        $formdata->multi = [];
+
+        $formInfoMulti = Purchase::formInfoMulti();
+
+        foreach ($invoiceLines as $line) {
+            $temp = [];
+            foreach (array_keys($formInfoMulti) as $key) {
+                $temp[$key] = $line->{$key};
+            }
+            $temp['id'] = $line->id;
+            $temp['pur_pr_id'] = $line->pur_pr_id;
+            $formdata->multi[] = $temp;
+        }
+
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['Multilabel'] = 'Line items';
-        $resourceNeo['fColumn'] = 4;
+        $resourceNeo['fColumn'] = 5;
         $resourceNeo['fColumnMulti'] = 8;
-        $resourceNeo['AllowMore'] = false;
-        $resourceNeo['AllowDel'] = false;
+        $resourceNeo['AllowMore'] = true;
+        $resourceNeo['AllowDel'] = true;
         $resourceNeo['formInfo'] = Purchase::formInfo();
         $resourceNeo['formInfoMulti'] = $formInfoMulti;
+
         return Inertia::render('Admin/PurchaseAddEditView', compact('formdata', 'resourceNeo'));
     }
 
@@ -256,43 +443,109 @@ class PurchaseController extends Controller
         $formInfoMulti = Purchase::formInfoMulti();
         $attributeNames = [];
         $validateRule = [];
-        foreach (array_diff(array_keys($formInfo), ['pur_inv']) as $key) {
+
+        $purchaseInfo = $purchase->purchaseInfo;
+        if (!$purchaseInfo && !empty($purchase->pur_inv)) {
+            $purchaseInfo = PurchaseInfo::where('pur_inv', $purchase->pur_inv)->first();
+        }
+
+        $purchaseInfoId = $purchaseInfo?->id;
+
+        foreach (array_keys($formInfo) as $key) {
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
         }
+
+        $validateRule['pur_inv'] = [
+            'required',
+            Rule::unique('purchases_info', 'pur_inv')
+                ->ignore($purchaseInfoId),
+        ];
+
         foreach (array_keys($formInfoMulti) as $key) {
             $attributeNames['multi.*.' . $key] = $formInfoMulti[$key]['label'];
             isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.' . $key] = $formInfoMulti[$key]['vRule'];
         }
+
         $request->validate($validateRule, [], $attributeNames);
-        foreach (array_diff(array_keys($formInfo), []) as $key) {
-            $purchase->{$key} = $request->{$key};
-        }
-        $purchase->pur_date = date('Y-m-d', strtotime($request->pur_date));
-        $purchase->received_date = date('Y-m-d', strtotime($request->received_date));
-        foreach ($request->multi as $ml) {
-            foreach (array_keys($formInfoMulti) as $key) {
-                if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) continue;
-                $purchase->{$key} = $ml[$key];
+
+        $headerData = [
+            'pur_date' => date('Y-m-d', strtotime($request->pur_date)),
+            'received_date' => date('Y-m-d', strtotime($request->received_date)),
+            'pur_inv' => $request->pur_inv,
+            'pur_supplier' => $request->pur_supplier,
+            'roundoff' => $request->roundoff ?? 0,
+        ];
+
+        DB::transaction(function () use ($request, $purchase, $purchaseInfo, $formInfoMulti, $headerData) {
+            if (!$purchaseInfo) {
+                $purchaseInfo = PurchaseInfo::create(array_merge($headerData, ['sum_total' => 0]));
+            } else {
+                $purchaseInfo->update($headerData);
             }
-            $purchase->pur_pr_detail = $ml['pur_pr_detail']['label'];
-            $purchase->pur_pr_id = $ml['pur_pr_detail']['id'];
-        }
 
-        // Update average unit price BEFORE saving (service needs OLD values from database)
-        if (!empty($purchase->pur_pr_detail_int) && !empty($purchase->pur_qty_int) && !empty($purchase->pur_rate_int)) {
-            $averagePriceService = new AverageUnitPriceService();
-            $averagePriceService->calculateAndUpdateAveragePrice(
-                $purchase->pur_pr_detail_int,
-                $purchase->pur_qty_int,
-                $purchase->pur_rate_int,
-                $purchase->id  // Service will fetch OLD values from DB before they're overwritten
-            );
-        }
+            $invoiceQuery = $this->getInvoiceLinesQuery($purchase);
+            $existingLines = $invoiceQuery->get()->keyBy('id');
+            $savedIds = [];
 
-        $purchase->save();
+            foreach ($request->multi as $ml) {
+                $lineData = $headerData;
 
-        \ActivityLog::add(['action' => 'updated', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->{array_keys($formInfo)[1]}]);
+                foreach (array_keys($formInfoMulti) as $key) {
+                    if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) {
+                        continue;
+                    }
+                    $lineData[$key] = $ml[$key];
+                }
+
+                $lineData['pur_pr_detail'] = $ml['pur_pr_detail']['label'];
+                $lineData['pur_pr_id'] = $ml['pur_pr_detail']['id'];
+                $lineData['purchase_info_id'] = $purchaseInfo->id;
+
+                $lineId = isset($ml['id']) ? (int) $ml['id'] : 0;
+
+                if ($lineId > 0 && $existingLines->has($lineId)) {
+                    if (!empty($lineData['pur_pr_detail_int']) && !empty($lineData['pur_qty_int']) && !empty($lineData['pur_rate_int'])) {
+                        $averagePriceService = new AverageUnitPriceService();
+                        $averagePriceService->calculateAndUpdateAveragePrice(
+                            $lineData['pur_pr_detail_int'],
+                            $lineData['pur_qty_int'],
+                            $lineData['pur_rate_int'],
+                            $lineId
+                        );
+                    }
+
+                    $existingLines[$lineId]->update($lineData);
+                    $savedIds[] = $lineId;
+                    continue;
+                }
+
+                if (!empty($lineData['pur_pr_detail_int']) && !empty($lineData['pur_qty_int']) && !empty($lineData['pur_rate_int'])) {
+                    $averagePriceService = new AverageUnitPriceService();
+                    $averagePriceService->calculateAndUpdateAveragePrice(
+                        $lineData['pur_pr_detail_int'],
+                        $lineData['pur_qty_int'],
+                        $lineData['pur_rate_int']
+                    );
+                }
+
+                $newLine = Purchase::create($lineData);
+                $savedIds[] = $newLine->id;
+            }
+
+            $toDeleteIds = array_values(array_diff($existingLines->keys()->all(), $savedIds));
+            if (!empty($toDeleteIds)) {
+                Purchase::whereIn('id', $toDeleteIds)->delete();
+            }
+
+            if (Purchase::where('purchase_info_id', $purchaseInfo->id)->where('entry_type', 0)->exists()) {
+                $this->syncPurchaseInfoTotals($purchaseInfo->id);
+            } else {
+                $purchaseInfo->delete();
+            }
+        });
+
+        \ActivityLog::add(['action' => 'updated', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->pur_inv]);
 
         return redirect()->route('purchase.index')->with(['message' => 'Purchase Updated Successfully !!', 'msg_type' => 'info']);
     }
@@ -302,9 +555,27 @@ class PurchaseController extends Controller
      */
     public function destroy(Purchase $purchase)
     {
-        $uname = $purchase->id;
-        $purchase->delete();
-        \ActivityLog::add(['action' => 'deleted', 'module' => 'purchase', 'data_key' => $uname]);
+        $invoiceQuery = $this->getInvoiceLinesQuery($purchase);
+        $invoiceLines = $invoiceQuery->get();
+
+        if ($invoiceLines->isEmpty()) {
+            return redirect()->back()->with('message', 'Purchase Deleted !!');
+        }
+
+        $purchaseInfoId = $invoiceLines->first()->purchase_info_id;
+        $purInv = $invoiceLines->first()->pur_inv;
+        $lineIds = $invoiceLines->pluck('id')->all();
+
+        Purchase::whereIn('id', $lineIds)->delete();
+
+        if (!empty($purchaseInfoId)) {
+            PurchaseInfo::where('id', $purchaseInfoId)->delete();
+        } elseif (!empty($purInv)) {
+            PurchaseInfo::where('pur_inv', $purInv)->delete();
+        }
+
+        \ActivityLog::add(['action' => 'deleted', 'module' => 'purchase', 'data_key' => implode(',', $lineIds)]);
+
         return redirect()->back()->with('message', 'Purchase Deleted !!');
     }
 
@@ -313,9 +584,42 @@ class PurchaseController extends Controller
      */
     public function bulkDestroy()
     {
-        Purchase::whereIn('id', request('ids'))->delete();
-        $uname = (count(request('ids')) > 50) ? 'Many' : $uname = implode(',', request('ids'));
+        $purchaseIds = request('ids', []);
+
+        $purchases = Purchase::whereIn('id', $purchaseIds)->get();
+        $groupMap = [];
+
+        foreach ($purchases as $purchase) {
+            $groupKey = $purchase->purchase_info_id ? 'info:' . $purchase->purchase_info_id : 'inv:' . $purchase->pur_inv;
+            $groupMap[$groupKey] = $purchase;
+        }
+
+        $allDeletedLineIds = [];
+
+        foreach ($groupMap as $purchase) {
+            $invoiceLines = $this->getInvoiceLinesQuery($purchase)->get();
+            if ($invoiceLines->isEmpty()) {
+                continue;
+            }
+
+            $purchaseInfoId = $invoiceLines->first()->purchase_info_id;
+            $purInv = $invoiceLines->first()->pur_inv;
+            $lineIds = $invoiceLines->pluck('id')->all();
+
+            Purchase::whereIn('id', $lineIds)->delete();
+
+            if (!empty($purchaseInfoId)) {
+                PurchaseInfo::where('id', $purchaseInfoId)->delete();
+            } elseif (!empty($purInv)) {
+                PurchaseInfo::where('pur_inv', $purInv)->delete();
+            }
+
+            $allDeletedLineIds = array_merge($allDeletedLineIds, $lineIds);
+        }
+
+        $uname = (count($allDeletedLineIds) > 50) ? 'Many' : implode(',', $allDeletedLineIds);
         \ActivityLog::add(['action' => 'deleted', 'module' => 'purchase', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Selected Purchase Deleted !!');
     }
 
@@ -344,5 +648,93 @@ class PurchaseController extends Controller
                 'group_name' => $productInfo->group_name,
             ]
         ]);
+    }
+
+    public function detailView(Purchase $purchase)
+    {
+        $invoiceLines = $this->getInvoiceLinesQuery($purchase)->orderBy('id')->get();
+        if ($invoiceLines->isEmpty()) {
+            return response()->json(['header' => null, 'columns' => [], 'items' => []]);
+        }
+
+        $formInfo = Purchase::formInfo();
+        $formInfoMulti = Purchase::formInfoMulti();
+        $columns = [];
+        foreach ($formInfo as $key => $meta) {
+            if (!($meta['hidden'] ?? false)) {
+                $columns[] = ['key' => $key, 'label' => $meta['label'], 'align' => $meta['align'] ?? 'left'];
+            }
+        }
+        foreach ($formInfoMulti as $key => $meta) {
+            if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) {
+                continue;
+            }
+            if (!($meta['hidden'] ?? false)) {
+                $columns[] = ['key' => $key, 'label' => $meta['label'], 'align' => $meta['align'] ?? 'left'];
+            }
+        }
+        $columns[] = ['key' => 'groupinfo_name', 'label' => 'Prod Group', 'align' => 'left'];
+        $columns[] = ['key' => 'groupinfo_sname', 'label' => 'Used Type', 'align' => 'left'];
+        $columns[] = ['key' => 'barcode_link', 'label' => 'Barcode', 'align' => 'left'];
+
+        $groupByProduct = DB::table('products')
+            ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
+            ->whereIn('products.id', $invoiceLines->pluck('pur_pr_id')->filter()->unique()->values()->all())
+            ->select('products.id as product_id', 'pgroups.name as groupinfo_name', 'pgroups.sgroup as groupinfo_sname')
+            ->get()
+            ->keyBy('product_id');
+
+        $headerRow = $invoiceLines->first();
+        $items = $invoiceLines->map(function ($line) use ($groupByProduct) {
+            $item = $line->toArray();
+            unset($item['created_at'], $item['updated_at']);
+            $groupInfo = $groupByProduct[$line->pur_pr_id] ?? null;
+            $item['groupinfo_name'] = $groupInfo->groupinfo_name ?? '';
+            $item['groupinfo_sname'] = $groupInfo->groupinfo_sname ?? '';
+            $item['barcode_link'] = route('purchase.barcode', $line->id);
+            return $item;
+        })->values();
+
+        return response()->json([
+            'header' => [
+                'pur_inv' => $headerRow->pur_inv,
+                'pur_date' => $headerRow->pur_date,
+                'received_date' => $headerRow->received_date,
+                'pur_supplier' => $headerRow->pur_supplier,
+                'roundoff' => $headerRow->purchaseInfo?->roundoff ?? 0,
+                'sum_total' => $headerRow->purchaseInfo?->sum_total ?? $invoiceLines->sum('pur_amnt_total'),
+                'item_count' => $invoiceLines->count(),
+            ],
+            'columns' => $columns,
+            'items' => $items,
+        ]);
+    }
+
+    protected function getInvoiceLinesQuery(Purchase $purchase)
+    {
+        return Purchase::query()
+            ->where('entry_type', 0)
+            ->where(function ($query) use ($purchase) {
+                if (!empty($purchase->purchase_info_id)) {
+                    $query->where('purchase_info_id', $purchase->purchase_info_id);
+                } else {
+                    $query->where('pur_inv', $purchase->pur_inv);
+                }
+            });
+    }
+
+    protected function syncPurchaseInfoTotals(int $purchaseInfoId): void
+    {
+        $sumTotal = (float) Purchase::where('entry_type', 0)
+            ->where('purchase_info_id', $purchaseInfoId)
+            ->sum('pur_amnt_total');
+
+        $purchaseInfo = PurchaseInfo::find($purchaseInfoId);
+        if ($purchaseInfo) {
+            $sumTotal += (float) $purchaseInfo->roundoff;
+            $purchaseInfo->update([
+                'sum_total' => $sumTotal,
+            ]);
+        }
     }
 }

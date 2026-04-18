@@ -6,6 +6,7 @@ import {
     mdiAlert,
     mdiFileEdit,
     mdiTrashCan,
+    mdiEye,
 } from "@mdi/js";
 import SectionMain from "@/components/SectionMain.vue";
 import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
@@ -19,6 +20,7 @@ import "vue-toast-notification/dist/theme-sugar.css";
 import { computed, onMounted, ref, onUnmounted, watch } from "vue";
 import ActionMenu from "@/components/ActionMenu.vue";
 import { can } from '@/utils/permissions';
+import axios from "axios";
 
 const message = computed(() => usePage().props.flash.message);
 const msg_type = computed(() => usePage().props.flash.msg_type ?? "warning");
@@ -39,6 +41,9 @@ const props = defineProps({
 
 const delselect = ref(0);
 const isModalDangerActive = ref(false);
+const isModalDetailActive = ref(false);
+const isDetailLoading = ref(false);
+const detailData = ref({ header: null, columns: [], items: [] });
 
 const deleteRecord = () => {
     if (delselect.value != 0) {
@@ -53,6 +58,29 @@ const deleteRecord = () => {
             }
         );
     }
+};
+
+const openDetails = async (dItem) => {
+    if (!props.resourceNeo.detailModal || !props.resourceNeo.detailModalRoute) {
+        return;
+    }
+    isModalDetailActive.value = true;
+    isDetailLoading.value = true;
+    detailData.value = { header: null, columns: [], items: [] };
+    try {
+        const response = await axios.get(
+            route(props.resourceNeo.detailModalRoute, dItem.id)
+        );
+        detailData.value = response.data ?? { header: null, columns: [], items: [] };
+    } catch (e) {
+        detailData.value = { header: null, columns: [], items: [] };
+    } finally {
+        isDetailLoading.value = false;
+    }
+};
+
+const colAlignClass = (align) => {
+    return align === "right" ? "text-right" : "text-left";
 };
 
 onMounted(() => {
@@ -188,6 +216,33 @@ const checkConditions = (item, conditions) => {
                                 :menu-classes="actionClasses"
                                 @toggle="toggleMenu(dItem.id)"
                             >
+                                <button
+                                    v-if="props.resourceNeo.detailModal"
+                                    :class="[
+                                        actionClasses.button,
+                                        {
+                                            'p-2': props.resourceNeo
+                                                .actionExpand,
+                                        },
+                                    ]"
+                                    @click.prevent="openDetails(dItem)"
+                                >
+                                    <BaseButton
+                                        :class="[
+                                            actionClasses.button,
+                                            'w-auto',
+                                        ]"
+                                        color="info"
+                                        :icon="mdiEye"
+                                        small
+                                        :label="
+                                            props.resourceNeo.actionExpand
+                                                ? 'Detail View'
+                                                : ''
+                                        "
+                                        title="Detail View"
+                                    />
+                                </button>
                                 <Link
                                     v-if="
                                         checkConditions(
@@ -288,6 +343,74 @@ const checkConditions = (item, conditions) => {
             @confirm="deleteRecord"
         >
             <p>Are you sure to delete?</p>
+        </CardBoxModal>
+        <CardBoxModal
+            v-model="isModalDetailActive"
+            :title="props.resourceNeo.detailModalTitle || 'Purchase Details'"
+            button-label="Close"
+            button="info"
+            has-cancel
+            :fullWidth="true"
+            @confirm="isModalDetailActive = false"
+        >
+            <div v-if="isDetailLoading">Loading...</div>
+            <div v-else>
+                <div v-if="detailData.header" class="mb-4 text-sm">
+                    <div><b>Invoice:</b> {{ detailData.header.pur_inv }}</div>
+                    <div><b>Purchase Date:</b> {{ detailData.header.pur_date }}</div>
+                    <div><b>Received Date:</b> {{ detailData.header.received_date }}</div>
+                    <div><b>Supplier:</b> {{ detailData.header.pur_supplier }}</div>
+                    <div v-if="detailData.header.roundoff !== undefined"><b>Roundoff:</b> {{ detailData.header.roundoff }}</div>
+                    <div><b>Item Count:</b> {{ detailData.header.item_count }}</div>
+                    <div><b>Sum Total:</b> {{ detailData.header.sum_total }}</div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border border-gray-200 dark:border-slate-700 text-sm">
+                        <thead>
+                            <tr class="bg-gray-100 dark:bg-slate-800">
+                                <th
+                                    v-for="column in detailData.columns"
+                                    :key="`detail-head-${column.key}`"
+                                    class="p-2"
+                                    :class="colAlignClass(column.align)"
+                                >
+                                    {{ column.label }}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="item in detailData.items"
+                                :key="item.id"
+                                class="border-t border-gray-200 dark:border-slate-700"
+                            >
+                                <td
+                                    v-for="column in detailData.columns"
+                                    :key="`detail-cell-${item.id}-${column.key}`"
+                                    class="p-2"
+                                    :class="colAlignClass(column.align)"
+                                >
+                                    <a
+                                        v-if="column.key === 'barcode_link' && item[column.key]"
+                                        :href="item[column.key]"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="text-blue-600 underline"
+                                    >
+                                        Open Barcode
+                                    </a>
+                                    <span v-else>
+                                        {{ item[column.key] ?? "" }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr v-if="!detailData.items || detailData.items.length === 0">
+                                <td class="p-2 text-center" :colspan="detailData.columns?.length || 1">No items found.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </CardBoxModal>
     </LayoutAuthenticated>
 </template>

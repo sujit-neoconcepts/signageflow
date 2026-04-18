@@ -12,7 +12,12 @@ class Purchase extends Model
 {
     use HasFactory, FinancialYearScope;
     const DATE_COLUMN = 'pur_date';
-    protected $fillable = ['pur_date', 'received_date', 'pur_inv', 'pur_supplier', 'pur_pr_id', 'pur_pr_detail', 'pur_pr_hsn', 'pur_pr_detail_int', 'pur_qty', 'pur_qty_int', 'pur_unit', 'pur_unint_int', 'pur_gst', 'pur_amnt', 'pur_gst_amnt', 'pur_amnt_total', 'pur_rate', 'pur_rate_int', 'pur_qty_alt', 'pur_unit_alt', 'pur_qty_int_alt', 'pur_unint_int_alt', 'pur_unit_conv_rate', 'pur_incharge', 'pur_loc', 'entry_type', 'remark'];
+    protected $fillable = ['purchase_info_id', 'pur_date', 'received_date', 'pur_inv', 'pur_supplier', 'pur_pr_id', 'pur_pr_detail', 'pur_pr_hsn', 'pur_pr_detail_int', 'pur_qty', 'pur_qty_int', 'pur_unit', 'pur_unint_int', 'pur_gst', 'pur_amnt', 'pur_gst_amnt', 'pur_amnt_total', 'pur_rate', 'pur_rate_int', 'pur_qty_alt', 'pur_unit_alt', 'pur_qty_int_alt', 'pur_unint_int_alt', 'pur_unit_conv_rate', 'pur_incharge', 'pur_loc', 'entry_type', 'remark'];
+
+    public function purchaseInfo()
+    {
+        return $this->belongsTo(PurchaseInfo::class, 'purchase_info_id');
+    }
 
     public function scopePurDateStart($query, $sd)
     {
@@ -41,8 +46,9 @@ class Purchase extends Model
         $formInfo = [
             'pur_date' => ['label' => 'Purchase Date', 'sortable' => true, 'vRule' => 'required', 'type' => 'datepicker'],
             'received_date' => ['label' => 'Received Date', 'sortable' => true, 'vRule' => 'nullable', 'type' => 'datepicker'],
-            'pur_inv' => ['label' => 'Invoice No', 'searchable' => true, 'sortable' => true, 'vRule' => 'required|unique:purchases,pur_inv'],
+            'pur_inv' => ['label' => 'Invoice No', 'searchable' => true, 'sortable' => true, 'vRule' => 'required|unique:purchases_info,pur_inv'],
             'pur_supplier' => ['label' => 'Supplier Name',  'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => $allsuppliers, 'vRule' => 'required',],
+            'roundoff' => ['label' => 'Roundoff (+/-)', 'sortable' => true, 'vRule' => 'nullable|numeric', 'type' => 'number', 'align' => 'right', 'default' => '0'],
         ];
         return $formInfo;
     }

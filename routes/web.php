@@ -99,6 +99,8 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::get('product-options', [ProductController::class, 'productOptions'])->name('product.options');
 
     Route::resource('purchase', PurchaseController::class);
+    Route::get('purchase-itemwise', [PurchaseController::class, 'itemwiseIndex'])->name('purchase.itemwise');
+    Route::get('purchase/{purchase}/detail-view', [PurchaseController::class, 'detailView'])->name('purchase.detailView');
     Route::delete('purchase-bulk-destroy', [PurchaseController::class, 'bulkDestroy'])->name('purchase.bulkDestroy');
     Route::get('/purchase/{purchase}/barcode', [PurchaseController::class, 'generateBarcode'])->name('purchase.barcode');
 

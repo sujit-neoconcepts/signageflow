@@ -57,6 +57,10 @@ const props = defineProps({
         type: String,
         default: null,
     },
+    step: {
+        type: [String, Number],
+        default: null,
+    },
 });
 
 const emit = defineEmits(["update:modelValue", "setRef", "focus", "blur"]);
@@ -195,6 +199,7 @@ defineExpose({
             :readonly="readonly"
             :placeholder="placeholder"
             :type="computedType"
+            :step="step"
             :class="inputElClass"
             @focus="emit('focus', $event.target.value)"
             @blur="emit('blur', $event.target.value)"

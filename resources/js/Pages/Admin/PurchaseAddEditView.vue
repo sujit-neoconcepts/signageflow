@@ -39,9 +39,12 @@ const form = useForm(() => {
 const calSumTotal = computed(() => {
     let sum = 0;
     for (const key in form["multi"]) {
-        sum += parseFloat(form["multi"][key].pur_amnt_total);
+        if (form["multi"][key].pur_amnt_total) {
+            sum += parseFloat(form["multi"][key].pur_amnt_total);
+        }
     }
-    return sum; // 0.1 + 0.2 = 0.30000000000000004
+    const roundoff = parseFloat(form.roundoff) || 0;
+    return (sum + roundoff).toFixed(2);
 });
 const multiDatas = ref([props.resourceNeo.formInfoMulti]);
 const addMoreMulti = () => {
@@ -81,7 +84,7 @@ onBeforeMount(() => {
                 .options) {
                 if (
                     props.resourceNeo.formInfoMulti.pur_pr_detail.options[opkey]
-                        .id == props.formdata["pur_pr_id"]
+                        .id == (props.formdata["multi"][index]["pur_pr_id"] ?? props.formdata["pur_pr_id"])
                 ) {
                     tepm["pur_pr_detail"] =
                         props.resourceNeo.formInfoMulti.pur_pr_detail.options[

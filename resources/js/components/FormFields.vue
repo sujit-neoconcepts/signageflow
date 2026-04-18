@@ -108,6 +108,7 @@ const filteredOptionObj = (source, sKey, compVal, key) => {
         type="number"
         :disabled="formField.disabled"
         :readonly="formField.readonly"
+        :step="formField.step || 'any'"
         :name="fkey"
         v-model="form[fkey]"
         @update:modelValue="onChangeFunc(fkey)"

@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         // Use the unified permission seeder
         $this->call(BasicAdminPermissionSeeder::class);
         $this->call(UnifiedPermissionSeeder::class);
+        $this->call(PurchaseInfoBackfillSeeder::class);
         //$this->call(settingSeeder::class);
     }
 }
