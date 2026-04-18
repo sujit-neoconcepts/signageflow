@@ -393,7 +393,7 @@ const submitform = () => {
             </div>
 
             <form @submit.prevent="submitform">
-                <CardBox>
+                <CardBox class="sticky top-10 z-20 shadow-md mb-4">
                     <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
                         <div>
                             <label class="text-sm font-medium">Order No</label>

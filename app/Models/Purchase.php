@@ -104,7 +104,7 @@ class Purchase extends Model
 
             'pur_unint_int_alt' => ['label' => 'Internal Unit Alt',  'sortable' => true,   'readonly' => true],
 
-            'pur_rate' => ['label' => 'Billed Rate', 'searchable' => true, 'sortable' => true, 'vRule' => 'required|numeric', 'align' => 'right'],
+            'pur_rate' => ['label' => 'Billed Rate', 'searchable' => true, 'sortable' => true, 'vRule' => 'required|numeric', 'align' => 'right', 'newlineClass' => 'lg:col-start-1'],
 
             'pur_rate_int' => ['label' => 'Internal Rate', 'searchable' => true, 'sortable' => true, 'vRule' => 'required|numeric', 'align' => 'right'],
 

@@ -283,33 +283,37 @@ const fetchProd = (index) => {
 
             <form @submit.prevent="submitform">
                 <CardBox>
-                    <div
-                        class="grid grid-cols-1 gap-6"
-                        :class="[
-                            'lg:grid-cols-' + (props.resourceNeo.fColumn ?? 2),
-                        ]"
-                    >
-                        <FormField
-                            v-for="(formField, key) in props.resourceNeo
-                                .formInfo"
-                            :label="formField.label"
-                            :help="formField.tooltip"
-                            :error="form.errors[key]"
-                            class="!mb-0"
+                    <div class="sticky top-10 z-20 bg-white dark:bg-slate-900 border-b dark:border-slate-700 shadow-sm -mx-6 -mt-6 p-6 pb-2 mb-4">
+                        <div
+                            class="grid grid-cols-1 gap-6"
+                            :class="[
+                                'lg:grid-cols-' + (props.resourceNeo.fColumn ?? 2),
+                            ]"
                         >
-                            <FormFields
-                                :form-field="formField"
-                                :form="form"
-                                :fkey="key"
-                            />
-                        </FormField>
-                    </div>
-                    <h1 class="font-bold text-xl border-b-2 mb-2 mt-2">
-                        {{ props.resourceNeo.Multilabel }}
-                        <div class="float-right">
-                            Sum Total: {{ calSumTotal }}
+                            <FormField
+                                v-for="(formField, key) in props.resourceNeo
+                                    .formInfo"
+                                :label="formField.label"
+                                :help="formField.tooltip"
+                                :error="form.errors[key]"
+                                class="!mb-0"
+                            >
+                                <FormFields
+                                    :form-field="formField"
+                                    :form="form"
+                                    :fkey="key"
+                                />
+                            </FormField>
                         </div>
-                    </h1>
+                        <h1 class="font-bold text-xl mb-2 mt-4">
+                            {{ props.resourceNeo.Multilabel }}
+                            <div class="float-right bg-green-100 dark:bg-green-900 px-3 py-1 rounded text-green-800 dark:text-green-100 text-lg">
+                                Sum Total: {{ calSumTotal }}
+                            </div>
+                        </h1>
+                        <!-- Clear the float so the layout doesn't break underneath it -->
+                        <div class="clear-both"></div>
+                    </div>
                     <div
                         class="grid grid-cols-1 gap-2 border-b mb-2 pb-2"
                         v-for="(multiData, pkey) in multiDatas"
@@ -333,7 +337,7 @@ const fetchProd = (index) => {
                             :help="formField.tooltip"
                             :error="form.errors['multi.' + pkey + '.' + key]"
                             class="!mb-0"
-                            :class="['lg:col-span-' + formField.colspan ?? 1]"
+                            :class="['lg:col-span-' + (formField.colspan || 1), formField.newlineClass || '']"
                             :addFunction="addFunction"
                             :fkey="key"
                             :pkey="pkey"
