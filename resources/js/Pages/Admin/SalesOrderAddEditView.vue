@@ -1,12 +1,12 @@
 <script setup>
-import { Head, Link, useForm, usePage } from "@inertiajs/vue3";
+import { Head, Link, useForm, usePage, router } from "@inertiajs/vue3";
 import LayoutAuthenticated from "@/layouts/LayoutAuthenticated.vue";
 import SectionMain from "@/components/SectionMain.vue";
 import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
 import BaseButton from "@/components/BaseButton.vue";
 import CardBox from "@/components/CardBox.vue";
 import NotificationBar from "@/components/NotificationBar.vue";
-import { mdiFormatListBulleted } from "@mdi/js";
+import { mdiFormatListBulleted, mdiPlusCircle, mdiRefreshCircle } from "@mdi/js";
 import { computed, onBeforeMount, ref, reactive } from "vue";
 import Multiselect from "vue-multiselect";
 import "../../../css/vue-multiselect.css";
@@ -14,7 +14,55 @@ import { getTodayString } from "@/helpers/helpers";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 import CardBoxModal from "@/components/CardBoxModal.vue";
+import IconRounded from "@/components/IconRounded.vue";
 import axios from "axios";
+
+const quickClientModal = ref(false);
+const quickClientForm = reactive({ cl_name: '', contact_person: '', cl_addr: '', cl_addr2: '', pincode: '', cl_phn: '', cl_email: '', cl_gst: '', active: {id: 1, label: 'Yes'} });
+const quickClientErrors = reactive({ cl_name: '', cl_email: '' });
+const quickClientLoading = ref(false);
+
+const addClient = () => {
+    quickClientForm.cl_name = '';
+    quickClientForm.contact_person = '';
+    quickClientForm.cl_addr = '';
+    quickClientForm.cl_addr2 = '';
+    quickClientForm.pincode = '';
+    quickClientForm.cl_phn = '';
+    quickClientForm.cl_email = '';
+    quickClientForm.cl_gst = '';
+    quickClientForm.active = {id: 1, label: 'Yes'};
+    quickClientErrors.cl_name = '';
+    quickClientErrors.cl_email = '';
+    quickClientModal.value = true;
+};
+
+const refreshClients = () => {
+    router.reload({ only: ['clients'], preserveState: true, preserveScroll: true });
+};
+
+const submitClientModal = async () => {
+    quickClientErrors.cl_name = '';
+    quickClientErrors.cl_email = '';
+    if (!quickClientForm.cl_name.trim()) { quickClientErrors.cl_name = 'Client Name is required.'; return; }
+    
+    quickClientLoading.value = true;
+    try {
+        const response = await axios.post(route('client.store'), quickClientForm, {headers: {'Accept': 'application/json'}});
+        const newClient = response.data.data;
+        selectedClient.value = { id: newClient.id, label: newClient.cl_name };
+        form.client_id = newClient.id;
+        refreshClients();
+        quickClientModal.value = false;
+    } catch (e) {
+        const errs = e.response?.data?.errors;
+        if (errs?.cl_name) quickClientErrors.cl_name = errs.cl_name[0];
+        if (errs?.cl_email) quickClientErrors.cl_email = errs.cl_email[0];
+        if (!errs) alert("Error: " + (e.response?.data?.message || e.message));
+    } finally {
+        quickClientLoading.value = false;
+    }
+};
 
 const props = defineProps({
     formdata: {
@@ -224,20 +272,24 @@ const onItemChange = (line) => {
     }
 };
 
+const roundHalfUp = (num) => {
+    return Number(Math.round(parseFloat(num || 0) + "e+2") + "e-2");
+};
+
 const lineTaxable = (line) => {
     const qty = parseFloat(line.qty || 0);
     const rate = parseFloat(line.rate || 0);
-    return +(qty * rate).toFixed(2);
+    return roundHalfUp(qty * rate);
 };
 
 const lineGstAmount = (line) => {
     const taxable = lineTaxable(line);
     const gst = parseFloat(line.gst_percent || 0);
-    return +((taxable * gst) / 100).toFixed(2);
+    return roundHalfUp((taxable * gst) / 100);
 };
 
 const lineTotal = (line) => {
-    return +(lineTaxable(line) + lineGstAmount(line)).toFixed(2);
+    return roundHalfUp(lineTaxable(line) + lineGstAmount(line));
 };
 
 const itemsTaxableTotal = computed(() => {
@@ -251,7 +303,7 @@ const itemsGstTotal = computed(() => {
 const transportGst = computed(() => {
     const transport = parseFloat(form.transport_charge || 0);
     const gst = parseFloat(form.gst_percent || 0);
-    return +((transport * gst) / 100).toFixed(2);
+    return roundHalfUp((transport * gst) / 100);
 });
 
 const totalAmount = computed(() => {
@@ -420,7 +472,27 @@ const submitform = () => {
                         </div>
 
                         <div>
-                                    <label class="text-sm font-medium">Client</label>
+                            <label class="text-sm font-medium flex justify-between items-center mb-1">
+                                <span>Client</span>
+                                <div class="flex items-center gap-1">
+                                    <IconRounded
+                                        :icon="mdiPlusCircle"
+                                        color="light"
+                                        class="cursor-pointer"
+                                        bg
+                                        title="Add New Client"
+                                        @click="addClient" 
+                                    />
+                                    <IconRounded
+                                        :icon="mdiRefreshCircle"
+                                        color="light"
+                                        class="cursor-pointer"
+                                        bg
+                                        title="Refresh Clients"
+                                        @click="refreshClients" 
+                                    />
+                                </div>
+                            </label>
                             <Multiselect
                                 v-model="selectedClient"
                                 class="mt-1"
@@ -701,6 +773,48 @@ const submitform = () => {
                     />
                 </div>
                 <div v-if="quickAddLoading" class="text-sm text-blue-600">Saving...</div>
+            </div>
+        </CardBoxModal>
+
+        <!-- Client Quick Add Modal -->
+        <CardBoxModal v-model="quickClientModal" title="Add New Client" hasCancel @confirm="submitClientModal">
+            <div class="space-y-4">
+                <div>
+                    <label class="text-sm font-medium">Client Name *</label>
+                    <input v-model="quickClientForm.cl_name" class="w-full mt-1 border rounded px-3 py-2 text-sm" placeholder="Enter Client Name" />
+                    <div v-if="quickClientErrors.cl_name" class="text-red-500 text-xs mt-1">{{ quickClientErrors.cl_name }}</div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium">Contact Person</label>
+                        <input v-model="quickClientForm.contact_person" class="w-full mt-1 border rounded px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">Phone</label>
+                        <input v-model="quickClientForm.cl_phn" class="w-full mt-1 border rounded px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">Email</label>
+                        <input v-model="quickClientForm.cl_email" type="email" class="w-full mt-1 border rounded px-3 py-2 text-sm" />
+                        <div v-if="quickClientErrors.cl_email" class="text-red-500 text-xs mt-1">{{ quickClientErrors.cl_email }}</div>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">GST</label>
+                        <input v-model="quickClientForm.cl_gst" class="w-full mt-1 border rounded px-3 py-2 text-sm" />
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-sm font-medium">Address</label>
+                        <input v-model="quickClientForm.cl_addr" class="w-full mt-1 border rounded px-3 py-2 text-sm" />
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-sm font-medium">Address Line 2</label>
+                        <input v-model="quickClientForm.cl_addr2" class="w-full mt-1 border rounded px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">Pincode</label>
+                        <input v-model="quickClientForm.pincode" class="w-full mt-1 border rounded px-3 py-2 text-sm" />
+                    </div>
+                </div>
             </div>
         </CardBoxModal>
     </LayoutAuthenticated>

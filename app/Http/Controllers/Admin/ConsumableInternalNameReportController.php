@@ -57,7 +57,7 @@ class ConsumableInternalNameReportController extends Controller
 
         $perPage = request()->query('perPage') ?? 10;
         
-        $query = ConsumableInternalName::select('*', DB::raw('(unitPrice + (unitPrice * openStockMarginPercent / 100)) as unitPriceWithMargin'));
+        $query = ConsumableInternalName::select('*', DB::raw('CAST((unitPrice + (unitPrice * openStockMarginPercent / 100)) AS DECIMAL(15,2)) as unitPriceWithMargin'));
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('name')
@@ -65,6 +65,13 @@ class ConsumableInternalNameReportController extends Controller
             ->allowedFilters(array_merge(array_keys($formInfo), [$globalSearch]))
             ->paginate($perPage)
             ->withQueryString();
+
+        $resourceData->getCollection()->transform(function ($item) {
+            if (isset($item->unitPriceWithMargin)) {
+                $item->unitPriceWithMargin = number_format((float)$item->unitPriceWithMargin, 2, '.', '');
+            }
+            return $item;
+        });
 
         $this->resourceNeo['showall'] = true;
         

@@ -133,9 +133,20 @@ class ClientController extends Controller
         }
 
 
-        Client::create($savedArray);
+        $client = Client::create($savedArray);
 
         \ActivityLog::add(['action' => 'added', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->{array_keys($formInfo)[0]}]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Created successfully',
+                'data' => [
+                    'id' => $client->id,
+                    'label' => $client->cl_name,
+                    'cl_name' => $client->cl_name
+                ]
+            ]);
+        }
 
         return redirect()->route('client.index')->with(['message' => $this->resourceNeo['resourceTitle'] . ' Created Successfully !!', 'msg_type' => 'info']);
     }

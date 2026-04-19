@@ -239,21 +239,25 @@ const customItemFieldError = (idx, field) => {
     return form.errors[`custom_items.${idx}.${field}`] || "";
 };
 
+const roundHalfUp = (num) => {
+    return Number(Math.round(parseFloat(num || 0) + "e+2") + "e-2");
+};
+
 // ─── Unused but kept for reactivity ───
 const lineTaxable = (line) => {
     const qty = parseFloat(line.qty || 0);
     const rate = parseFloat(line.rate || 0);
-    return +(qty * rate).toFixed(2);
+    return roundHalfUp(qty * rate);
 };
 
 const lineGstAmount = (line) => {
     const taxable = lineTaxable(line);
     const gst = parseFloat(line.gst_percent || 0);
-    return +((taxable * gst) / 100).toFixed(2);
+    return roundHalfUp((taxable * gst) / 100);
 };
 
 const lineTotal = (line) => {
-    return +(lineTaxable(line) + lineGstAmount(line)).toFixed(2);
+    return roundHalfUp(lineTaxable(line) + lineGstAmount(line));
 };
 
 const itemsTaxableTotal = computed(() => {
@@ -267,7 +271,7 @@ const itemsGstTotal = computed(() => {
 const transportGst = computed(() => {
     const transport = parseFloat(form.transport_charge || 0);
     const gst = parseFloat(form.gst_percent || 0);
-    return +((transport * gst) / 100).toFixed(2);
+    return roundHalfUp((transport * gst) / 100);
 });
 
 const totalAmount = computed(() => {

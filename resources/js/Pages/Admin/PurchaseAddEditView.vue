@@ -36,6 +36,10 @@ const form = useForm(() => {
     return temp;
 });
 
+const roundHalfUp = (num) => {
+    return Number(Math.round(parseFloat(num || 0) + "e+2") + "e-2");
+};
+
 const calSumTotal = computed(() => {
     let sum = 0;
     for (const key in form["multi"]) {
@@ -44,7 +48,7 @@ const calSumTotal = computed(() => {
         }
     }
     const roundoff = parseFloat(form.roundoff) || 0;
-    return (sum + roundoff).toFixed(2);
+    return roundHalfUp(sum + roundoff).toFixed(2);
 });
 const multiDatas = ref([props.resourceNeo.formInfoMulti]);
 const addMoreMulti = () => {
@@ -204,18 +208,21 @@ const caltotal = (index) => {
         parseFloat(form["multi"][index].pur_rate) > 0 &&
         form["multi"][index].pur_pr_detail.data
     ) {
-        form["multi"][index].pur_amnt =
+        form["multi"][index].pur_amnt = roundHalfUp(
             parseFloat(form["multi"][index].pur_qty) *
-            parseFloat(form["multi"][index].pur_rate);
-        form["multi"][index].pur_gst_amnt =
+            parseFloat(form["multi"][index].pur_rate)
+        );
+        form["multi"][index].pur_gst_amnt = roundHalfUp(
             (parseFloat(form["multi"][index].pur_amnt) *
                 parseFloat(
                     form["multi"][index].pur_pr_detail.data.pr_gst_rate
                 )) /
-            100;
-        form["multi"][index].pur_amnt_total =
+            100
+        );
+        form["multi"][index].pur_amnt_total = roundHalfUp(
             parseFloat(form["multi"][index].pur_gst_amnt) +
-            parseFloat(form["multi"][index].pur_amnt);
+            parseFloat(form["multi"][index].pur_amnt)
+        );
     }
 };
 const valdateform = () => {

@@ -95,14 +95,26 @@ const trendOptions = {
         },
         title: {
             display: true,
-            text: "Monthly Purchase & Outward Trend",
+            text: "Monthly Purchase & Outward Trend (Last 12 Months)",
+        },
+        tooltip: {
+            callbacks: {
+                label: function (context) {
+                    const value = context.raw ?? 0;
+                    return `${context.dataset.label}: ₹${new Intl.NumberFormat('en-IN').format(Math.round(value))}`;
+                },
+            },
         },
     },
     scales: {
         y: {
             beginAtZero: true,
             ticks: {
-                stepSize: 1,
+                callback: function (value) {
+                    if (value >= 1000000) return '₹' + (value / 1000000).toFixed(1) + 'L';
+                    if (value >= 1000) return '₹' + (value / 1000).toFixed(0) + 'K';
+                    return '₹' + value;
+                },
             },
         },
     },
@@ -114,16 +126,18 @@ const trendData = computed(() => ({
         {
             label: "Purchases",
             data: props.monthlyTrend.map((item) => item.purchases),
+            backgroundColor: "rgba(59, 130, 246, 0.85)",
             borderColor: "#3B82F6",
-            backgroundColor: "rgba(59, 130, 246, 0.1)",
-            tension: 0.4,
+            borderWidth: 1,
+            borderRadius: 4,
         },
         {
             label: "Outwards",
             data: props.monthlyTrend.map((item) => item.outwards),
+            backgroundColor: "rgba(16, 185, 129, 0.85)",
             borderColor: "#10B981",
-            backgroundColor: "rgba(16, 185, 129, 0.1)",
-            tension: 0.4,
+            borderWidth: 1,
+            borderRadius: 4,
         },
     ],
 }));
@@ -450,7 +464,7 @@ const formatCurrency = (amount) => {
                 <!-- Monthly Trend Chart -->
                 <CardBox>
                     <div class="h-80">
-                        <Line :data="trendData" :options="trendOptions" />
+                        <Bar :data="trendData" :options="trendOptions" />
                     </div>
                 </CardBox>
 

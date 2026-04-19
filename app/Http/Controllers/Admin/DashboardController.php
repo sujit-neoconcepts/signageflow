@@ -89,24 +89,19 @@ class DashboardController extends Controller
             'total_deposit' => $totalDeposit,
         ];
 
-        // Monthly Purchase/Outward Trend - filtered within the date range
+        // Monthly Purchase/Outward Trend - always last 12 months including current month (ignores date filter)
         $monthlyTrend = [];
-        $currentMonth = $startDate->copy()->startOfMonth();
-        while ($currentMonth <= $endDate) {
-            $monthStart = $currentMonth->copy()->startOfMonth();
-            $monthEnd = $currentMonth->copy()->endOfMonth();
-            
-            // Clamp to the actual date range
-            if ($monthStart < $startDate) $monthStart = $startDate->copy();
-            if ($monthEnd > $endDate) $monthEnd = $endDate->copy();
+        $trendStart = Carbon::now()->startOfMonth()->subMonths(11);
+        for ($i = 0; $i < 12; $i++) {
+            $loopMonth = $trendStart->copy()->addMonths($i);
+            $monthStart = $loopMonth->copy()->startOfMonth();
+            $monthEnd   = $loopMonth->copy()->endOfMonth();
 
             $monthlyTrend[] = [
-                'month' => $currentMonth->format('M Y'),
-                'purchases' => Purchase::whereBetween('pur_date', [$monthStart, $monthEnd])->count(),
-                'outwards' => Outward::whereBetween('out_date', [$monthStart, $monthEnd])->count(),
+                'month'     => $loopMonth->format('M Y'),
+                'purchases' => (float) Purchase::whereBetween('pur_date', [$monthStart, $monthEnd])->sum('pur_amnt_total'),
+                'outwards'  => (float) Outward::whereBetween('out_date', [$monthStart, $monthEnd])->sum(DB::raw('out_qty * IFNULL(unitPrice, 0)')),
             ];
-            
-            $currentMonth->addMonth();
         }
 
         // Top 10 Suppliers by Purchase Value - filtered by date range
