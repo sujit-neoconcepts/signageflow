@@ -174,7 +174,6 @@ class OutwardController extends Controller
                 ->where('pur_incharge', Auth::user()->name)
                 ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
                 ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-                ->where('pgroups.sgroup', 'Stock Item')
                 ->groupBy('pgroups.id', 'pgroups.name', 'pgroups.sgroup')
                 ->get();
 
@@ -239,7 +238,7 @@ class OutwardController extends Controller
             ->leftJoin('consumable_internal_names', 'consumable_internal_names.name', '=', 'purchases.pur_pr_detail_int')
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-            ->where('pgroups.sgroup', 'Stock Item')
+            //->where('pgroups.sgroup', 'Stock Item')
             //->inFinancialYear()
             ->groupBy('purchases.pur_pr_detail_int', 'consumable_internal_names.unitPrice', 'consumable_internal_names.unitName', 'consumable_internal_names.unitAltName')
             ->orderBy('purchases.pur_pr_detail_int');
@@ -473,7 +472,7 @@ class OutwardController extends Controller
             ->joinSub($latestPurchasesQuery, 'latest_purchases', 'purchases.id', '=', 'latest_purchases.max_pur_id')
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-            ->where('pgroups.sgroup', 'Stock Item')
+            //->where('pgroups.sgroup', 'Stock Item')
             // Join with ConsumableInternalName to get unitPrice
             ->leftJoin('consumable_internal_names', 'consumable_internal_names.name', '=', 'purchases.pur_pr_detail_int')
             // Join with Stock calculation
@@ -497,7 +496,7 @@ class OutwardController extends Controller
             ->where('pur_loc', $request->out_loc)
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-            ->where('pgroups.sgroup', 'Stock Item')
+            //->where('pgroups.sgroup', 'Stock Item')
             ->select('pgroups.id as group_id', 'pgroups.name as group_name')
             ->groupBy('pgroups.id', 'pgroups.name')
             ->orderBy('pgroups.name')
@@ -524,7 +523,7 @@ class OutwardController extends Controller
             ->where('pur_loc', $request->out_loc)
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-            ->where('pgroups.sgroup', 'Stock Item')
+            //->where('pgroups.sgroup', 'Stock Item')
             ->orderBy('pgroups.name')
             /*->groupBy('pgroups.name')*/
             ->get();
@@ -556,7 +555,7 @@ class OutwardController extends Controller
             ->leftJoin('consumable_internal_names', 'consumable_internal_names.name', '=', 'purchases.pur_pr_detail_int')
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-            ->where('pgroups.sgroup', 'Stock Item')
+            //->where('pgroups.sgroup', 'Stock Item')
             //->inFinancialYear()
             ->groupBy('purchases.pur_pr_detail_int', 'consumable_internal_names.unitPrice', 'consumable_internal_names.unitName', 'consumable_internal_names.unitAltName')
             ->orderBy('purchases.pur_pr_detail_int');
@@ -639,7 +638,7 @@ class OutwardController extends Controller
         $query = Purchase::where('pur_pr_detail_int', $productName)
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-            ->where('pgroups.sgroup', 'Stock Item')
+            //->where('pgroups.sgroup', 'Stock Item')
             ->select('pgroups.id as group_id', 'pgroups.name as group_name');
             //->inFinancialYear();
 

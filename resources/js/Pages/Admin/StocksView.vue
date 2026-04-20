@@ -141,7 +141,9 @@ onMounted(() => {
 });
 const isModalTranActive = ref(false);
 const transaDetailsLive = ref([]);
+const selectedProductName = ref("");
 const showditail = async (pname) => {
+    selectedProductName.value = pname;
     isModalTranActive.value = true;
     transaDetailsLive.value = [];
     await axios
@@ -226,7 +228,9 @@ const getMaxQuantity = (stockId) => {
                     @selectedRows="selectedRows($event)"
                 >
                     <template #cell(pr_detail_int)="{ item: moduledata }">
-                        <span @dblclick="showditail(moduledata.pr_detail_int)"
+                        <span
+                            class="cursor-pointer hover:text-blue-600"
+                            @click="showditail(moduledata.pr_detail_int)"
                             >{{ moduledata.pr_detail_int }}
                         </span>
                     </template>
@@ -325,13 +329,21 @@ const getMaxQuantity = (stockId) => {
         <CardBoxModal
             v-model="isModalTranActive"
             buttonLabel="Ok"
-            title="Transactions"
+            title="Item Transactions"
             full-width
             has-cancel
         >
             <div
                 class="lg:max-h-[calc(100vh-280px)] overflow-y-auto relative"
             >
+                <div class="mb-4 bg-gray-100 dark:bg-slate-800 p-4 rounded-lg flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-blue-600 dark:text-blue-400">
+                        {{ selectedProductName }}
+                    </h2>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                        Total Transactions: {{ transaDetailsLive.length }}
+                    </div>
+                </div>
             <table>
                 <thead>
                     <tr>
@@ -347,6 +359,7 @@ const getMaxQuantity = (stockId) => {
                     <td>Qty Unit</td>
                     <td>Billed Qty Alt</td>
                     <td>Qty Unit Alt</td>
+                    <td>Remark</td>
                 </tr>
             </thead>
                 <tbody>
@@ -418,6 +431,13 @@ const getMaxQuantity = (stockId) => {
                     </td>
                     <td>
                         {{ data.pur_pr_detail_int ? data.pur_unit_alt : "" }}
+                    </td>
+                    <td>
+                        {{
+                            data.pur_pr_detail_int
+                                ? data.remark
+                                : data.out_remark
+                        }}
                     </td>
                 </tr>
                 </tbody>
