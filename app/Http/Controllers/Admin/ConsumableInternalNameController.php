@@ -361,7 +361,7 @@ class ConsumableInternalNameController extends Controller
 
     public function options()
     {
-        $options = ConsumableInternalName::select('id', 'name', 'unitName', 'unitAltName', 'unitPrice')->orderBy('name')->get();
+        $options = ConsumableInternalName::select('id', 'name', 'unitName', 'unitAltName', 'unitPrice', 'openStockMarginPercent')->orderBy('name')->get();
         return response()->json($options);
     }
 }

@@ -64,6 +64,7 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
         // CostSheet Compositions
         Route::get('costSheet/{costSheet}/compositions', [\App\Http\Controllers\Admin\CostSheetCompositionController::class, 'index'])->name('costSheetCompositions.index');
         Route::post('costSheet/{costSheet}/compositions', [\App\Http\Controllers\Admin\CostSheetCompositionController::class, 'store'])->name('costSheetCompositions.store');
+        Route::get('costSheet/options', [\App\Http\Controllers\Admin\CostSheetCompositionController::class, 'costSheetOptions'])->name('costSheetCompositions.options');
 
     Route::get('munit-import', [MunitController::class, 'importView'])->name('munit.import');
     Route::post('munit-import', [MunitController::class, 'import']);

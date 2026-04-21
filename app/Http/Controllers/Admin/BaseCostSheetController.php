@@ -158,18 +158,20 @@ abstract class BaseCostSheetController extends Controller
         $prodType = $this->prodType();
 
         $validated = $request->validate([
-            'name'     => ['required', 'max:255', Rule::unique('cost_sheets', 'name')->where(fn ($q) => $q->where('prod_type', $prodType))],
-            'qty_unit' => 'required|max:100',
+            'name'      => ['required', 'max:255', Rule::unique('cost_sheets', 'name')->where(fn ($q) => $q->where('prod_type', $prodType))],
+            'no_of_unit' => 'required|integer|min:1',
+            'qty_unit'  => 'required|max:100',
             'alt_units' => 'nullable|max:100',
-            'rate'     => 'nullable|numeric|min:0',
+            'rate'      => 'nullable|numeric|min:0',
         ]);
 
         $item = CostSheet::create([
-            'prod_type' => $prodType,
-            'name'      => $validated['name'],
-            'qty_unit'  => $validated['qty_unit'],
-            'alt_units' => $validated['alt_units'] ?? null,
-            'rate'      => $validated['rate'] ?? 0,
+            'prod_type'  => $prodType,
+            'name'       => $validated['name'],
+            'no_of_unit' => $validated['no_of_unit'],
+            'qty_unit'   => $validated['qty_unit'],
+            'alt_units'  => $validated['alt_units'] ?? null,
+            'rate'       => $validated['rate'] ?? 0,
         ]);
 
         \ActivityLog::add([

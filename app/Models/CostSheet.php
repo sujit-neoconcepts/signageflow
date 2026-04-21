@@ -9,7 +9,7 @@ class CostSheet extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['prod_type', 'name', 'qty_unit', 'alt_units', 'rate'];
+    protected $fillable = ['prod_type', 'name', 'no_of_unit', 'qty_unit', 'alt_units', 'rate'];
 
     public function compositions()
     {
@@ -26,6 +26,11 @@ class CostSheet extends Model
                 'searchable' => true,
                 'sortable' => true,
                 'vRule' => 'required|max:255',
+            ],
+            'no_of_unit' => [
+                'label' => 'No of Unit',
+                'vRule' => 'required|integer|min:1',
+                'default' => 1,
             ],
             'qty_unit' => [
                 'label' => 'Qty Unit',

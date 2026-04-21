@@ -9,34 +9,49 @@ use Illuminate\Http\Request;
 
 class CostSheetCompositionController extends Controller
 {
+    private array $validSections = ['raw_material', 'signage', 'cabinet', 'letters'];
+
     public function index(CostSheet $costSheet)
     {
-        $compositions = $costSheet->compositions()->with('consumable:id,name,unitName,unitAltName,unitPrice')->get();
+        $compositions = $costSheet->compositions()
+            ->with([
+                'consumable:id,name,unitName,unitAltName,unitPrice,openStockMarginPercent',
+                'childCostSheet:id,name,qty_unit,alt_units,rate,no_of_unit,prod_type,total_cost',
+            ])
+            ->get();
+
         return response()->json($compositions);
     }
 
     public function store(Request $request, CostSheet $costSheet)
     {
         $data = $request->validate([
-            'compositions' => 'array',
-            'compositions.*.id' => 'nullable|integer',
-            'compositions.*.consumable_internal_name_id' => 'required|exists:consumable_internal_names,id',
+            'compositions'           => 'array',
+            'total_cost'             => 'required|numeric|min:0',
+            'compositions.*.id'      => 'nullable|integer',
+            'compositions.*.section' => 'required|in:raw_material,signage,cabinet,letters',
+            'compositions.*.consumable_internal_name_id' => 'nullable|exists:consumable_internal_names,id',
+            'compositions.*.child_cost_sheet_id'         => 'nullable|exists:cost_sheets,id',
             'compositions.*.quantity' => 'required|numeric|min:0',
-            'compositions.*.margin' => 'nullable|numeric|min:0',
-            'compositions.*.unit' => 'nullable|string'
+            'compositions.*.margin'   => 'nullable|numeric|min:0',
+            'compositions.*.unit'     => 'nullable|string',
         ]);
 
         $idsToKeep = [];
 
         foreach ($data['compositions'] ?? [] as $compData) {
+            $payload = [
+                'section'                    => $compData['section'],
+                'consumable_internal_name_id'=> $compData['consumable_internal_name_id'] ?? null,
+                'child_cost_sheet_id'        => $compData['child_cost_sheet_id'] ?? null,
+                'quantity'                   => $compData['quantity'],
+                'margin'                     => $compData['margin'] ?? 0.00,
+                'unit'                       => $compData['unit'] ?? null,
+            ];
+
             $composition = $costSheet->compositions()->updateOrCreate(
                 ['id' => $compData['id'] ?? null],
-                [
-                    'consumable_internal_name_id' => $compData['consumable_internal_name_id'],
-                    'quantity' => $compData['quantity'],
-                    'margin' => $compData['margin'] ?? 0.00,
-                    'unit' => $compData['unit'] ?? null,
-                ]
+                $payload
             );
             $idsToKeep[] = $composition->id;
         }
@@ -44,9 +59,32 @@ class CostSheetCompositionController extends Controller
         // Delete removed compositions
         $costSheet->compositions()->whereNotIn('id', $idsToKeep)->delete();
 
+        // Update parent total cost
+        $costSheet->update(['total_cost' => $data['total_cost']]);
+
         return response()->json([
-            'message' => 'Compositions saved successfully.',
-            'compositions' => $costSheet->compositions()->with('consumable:id,name,unitName,unitAltName,unitPrice')->get()
+            'message'      => 'Compositions saved successfully.',
+            'compositions' => $costSheet->compositions()
+                ->with([
+                    'consumable:id,name,unitName,unitAltName,unitPrice,openStockMarginPercent',
+                    'childCostSheet:id,name,qty_unit,alt_units,rate,no_of_unit,prod_type,total_cost',
+                ])->get(),
         ]);
+    }
+
+    /**
+     * Return cost sheets by prod_type for use as child composition items.
+     */
+    public function costSheetOptions(Request $request)
+    {
+        $prodType = $request->query('prod_type');
+        $query    = CostSheet::select('id', 'name', 'qty_unit', 'alt_units', 'rate', 'no_of_unit', 'prod_type', 'total_cost')
+            ->orderBy('name');
+
+        if ($prodType) {
+            $query->where('prod_type', $prodType);
+        }
+
+        return response()->json($query->get());
     }
 }

@@ -44,9 +44,11 @@ const isModalDangerActive = ref(false);
 
 const isCompositionModalActive = ref(false);
 const selectedCostSheetId = ref(null);
+const selectedCostSheet = ref(null);
 
-const openCompositionModal = (id) => {
-    selectedCostSheetId.value = id;
+const openCompositionModal = (item) => {
+    selectedCostSheetId.value = item.id;
+    selectedCostSheet.value = item;
     isCompositionModalActive.value = true;
 };
 
@@ -207,7 +209,7 @@ const checkConditions = (item, conditions) => {
                                                 .actionExpand,
                                         },
                                     ]"
-                                    @click="openCompositionModal(dItem.id)"
+                                    @click="openCompositionModal(dItem)"
                                 >
                                     <BaseButton
                                         :class="[
@@ -330,6 +332,7 @@ const checkConditions = (item, conditions) => {
         <CostSheetCompositionModal 
             v-model="isCompositionModalActive" 
             :costSheetId="selectedCostSheetId" 
+            :costSheet="selectedCostSheet"
             @saved="isCompositionModalActive = false"
         />
     </LayoutAuthenticated>
