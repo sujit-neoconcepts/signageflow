@@ -13,11 +13,16 @@ import FormField from "@/components/FormField.vue";
 import FormFields from "@/components/FormFields.vue";
 import FormFieldsMulti from "@/components/FormFieldsMulti.vue";
 import axios from "axios";
+import CardBoxModal from "@/components/CardBoxModal.vue";
+import FormControl from "@/components/FormControl.vue";
+import Multiselect from "vue-multiselect";
+import "../../../css/vue-multiselect.css";
+
 const message = computed(() => usePage().props.flash.message);
 const msg_type = computed(() => usePage().props.flash.msg_type ?? "warning");
 
 import clone from "lodash-es/clone";
-import { computed, onBeforeMount, watch, ref } from "vue";
+import { computed, onBeforeMount, watch, ref, reactive } from "vue";
 import { getTodayString } from "@/helpers/helpers";
 const props = defineProps({
     formdata: {
@@ -121,8 +126,71 @@ const submitform = () => {
         }
     }
 };
+const isProductModalActive = ref(false);
+const currentMultiIndex = ref(0);
+const productForm = reactive({
+    subgroup: '',
+    groupinfo: null,
+    pr_detail: '',
+    pr_detail_int: null,
+    pr_hsn: '',
+    pr_gst_rate: '',
+    pr_pur_unit: '',
+    pr_int_unit: '',
+    pr_pur_unit_alt: '',
+    pr_int_unit_alt: '',
+    pr_min_unit: 1
+});
+
 const addFunction = (index, key) => {
-    window.open(route("product.create"), "_blank");
+    if (key == 'pur_pr_detail') {
+        currentMultiIndex.value = index;
+        productForm.subgroup = '';
+        productForm.groupinfo = null;
+        productForm.pr_detail = '';
+        productForm.pr_detail_int = null;
+        productForm.pr_hsn = '';
+        productForm.pr_gst_rate = '';
+        productForm.pr_pur_unit = '';
+        productForm.pr_int_unit = '';
+        productForm.pr_pur_unit_alt = '';
+        productForm.pr_int_unit_alt = '';
+        productForm.pr_min_unit = 1;
+
+        isProductModalActive.value = true;
+    } else {
+        window.open(route("product.create"), "_blank");
+    }
+};
+
+const submitProduct = async () => {
+    try {
+        const response = await axios.post(route('product.store'), productForm, {
+            headers: { 'Accept': 'application/json' }
+        });
+        
+        // Refresh all options in all line items
+        const newOptions = response.data.data;
+        props.resourceNeo.formInfoMulti.pur_pr_detail.options = newOptions;
+        
+        // Find the newly created product in the options
+        const matchingProduct = newOptions.find(v => v.label === productForm.pr_detail);
+        if (matchingProduct) {
+            form.multi[currentMultiIndex.value].pur_pr_detail = matchingProduct;
+            onChangeFunc(currentMultiIndex.value, 'pur_pr_detail');
+        }
+        
+        isProductModalActive.value = false;
+    } catch (e) {
+        alert("Error creating Product: " + (e.response?.data?.message || e.message));
+    }
+};
+
+const handleInternalNameChange = (val) => {
+    if (val && val.data) {
+        productForm.pr_int_unit = val.data.unitName;
+        productForm.pr_int_unit_alt = val.data.unitAltName;
+    }
 };
 const refreshFunction = async (index, key) => {
     await axios.get(route("product.options")).then((response) => {
@@ -420,6 +488,59 @@ const fetchProd = (index) => {
             </form>
         </SectionMain>
     </LayoutAuthenticated>
+    <CardBoxModal v-model="isProductModalActive" title="Add Product" hasCancel @confirm="submitProduct">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Sub Group">
+                <select v-model="productForm.subgroup" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
+                    <option value="">Select Sub Group</option>
+                    <option v-for="sg in props.resourceNeo.productSubgroups" :key="sg" :value="sg">{{ sg }}</option>
+                </select>
+            </FormField>
+            <FormField label="Product Group">
+                <Multiselect
+                    v-model="productForm.groupinfo"
+                    :options="props.resourceNeo.productGroups.filter(pg => pg.sgroup === productForm.subgroup)"
+                    track-by="id"
+                    label="label"
+                    placeholder="Select Product Group"
+                />
+            </FormField>
+            <FormField label="Name As Per Invoice" class="md:col-span-2">
+                <FormControl v-model="productForm.pr_detail" placeholder="Enter Name As Per Invoice" />
+            </FormField>
+            <FormField label="Internal Name">
+                <Multiselect
+                    v-model="productForm.pr_detail_int"
+                    :options="props.resourceNeo.internalNames"
+                    track-by="id"
+                    label="label"
+                    placeholder="Select Internal Name"
+                    @select="handleInternalNameChange"
+                />
+            </FormField>
+            <FormField label="HSN Code">
+                <FormControl v-model="productForm.pr_hsn" type="number" placeholder="Enter HSN Code" />
+            </FormField>
+            <FormField label="GST Rate">
+                <FormControl v-model="productForm.pr_gst_rate" type="number" placeholder="Enter GST Rate" />
+            </FormField>
+            <FormField label="Billed Unit">
+                <select v-model="productForm.pr_pur_unit" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
+                    <option value="">Select Billed Unit</option>
+                    <option v-for="unit in props.resourceNeo.units" :key="unit" :value="unit">{{ unit }}</option>
+                </select>
+            </FormField>
+            <FormField label="Internal Unit">
+                <select v-model="productForm.pr_int_unit" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
+                    <option value="">Select Internal Unit</option>
+                    <option v-for="unit in props.resourceNeo.units" :key="unit" :value="unit">{{ unit }}</option>
+                </select>
+            </FormField>
+            <FormField label="Conversion Value">
+                <FormControl v-model="productForm.pr_min_unit" type="number" placeholder="Enter Conversion Value" />
+            </FormField>
+        </div>
+    </CardBoxModal>
     <div
         class="grid lg:grid-cols-6 lg:grid-cols-7 lg:grid-cols-8 lg:col-span-2 lg:col-span-4 lg:col-span-3"
     ></div>

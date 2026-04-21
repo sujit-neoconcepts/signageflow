@@ -189,6 +189,10 @@ class ProductController extends Controller
 
         \ActivityLog::add(['action' => 'added', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->{array_keys($formInfo)[0]}]);
 
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Created successfully', 'data' => Product::getAllOption()]);
+        }
+
         return redirect()->route('product.index')->with(['message' => $this->resourceNeo['resourceTitle'] . ' Created Successfully !!', 'msg_type' => 'info']);
     }
 

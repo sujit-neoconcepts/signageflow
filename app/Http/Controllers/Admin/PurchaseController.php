@@ -304,6 +304,23 @@ class PurchaseController extends Controller
         $resourceNeo['AllowDel'] = true;
         $resourceNeo['formInfo'] = Purchase::formInfo();
         $resourceNeo['formInfoMulti'] = Purchase::formInfoMulti();
+        
+        $resourceNeo['productSubgroups'] = [
+            'Capex', 'Consumable Item', 'Indirect Expense/Purchase', 'Opex',
+            'Plant & Machinery Item', 'Services Purchase', 'Services Sale',
+            'Stock Item', 'Tools'
+        ];
+        $resourceNeo['productGroups'] = \App\Models\Pgroup::all()->map(function($pg) {
+            return ['id' => $pg->id, 'label' => $pg->name, 'sgroup' => $pg->sgroup];
+        });
+        $resourceNeo['internalNames'] = \App\Models\ConsumableInternalName::all()->map(function($cin) {
+            return [
+                'id' => $cin->id,
+                'label' => $cin->name,
+                'data' => ['unitName' => $cin->unitName, 'unitAltName' => $cin->unitAltName]
+            ];
+        });
+        $resourceNeo['units'] = \App\Models\Munit::orderBy('name')->pluck('name');
 
         return Inertia::render('Admin/PurchaseAddEditView', compact('resourceNeo'));
     }
@@ -430,6 +447,23 @@ class PurchaseController extends Controller
         $resourceNeo['AllowDel'] = true;
         $resourceNeo['formInfo'] = Purchase::formInfo();
         $resourceNeo['formInfoMulti'] = $formInfoMulti;
+        
+        $resourceNeo['productSubgroups'] = [
+            'Capex', 'Consumable Item', 'Indirect Expense/Purchase', 'Opex',
+            'Plant & Machinery Item', 'Services Purchase', 'Services Sale',
+            'Stock Item', 'Tools'
+        ];
+        $resourceNeo['productGroups'] = \App\Models\Pgroup::all()->map(function($pg) {
+            return ['id' => $pg->id, 'label' => $pg->name, 'sgroup' => $pg->sgroup];
+        });
+        $resourceNeo['internalNames'] = \App\Models\ConsumableInternalName::all()->map(function($cin) {
+            return [
+                'id' => $cin->id,
+                'label' => $cin->name,
+                'data' => ['unitName' => $cin->unitName, 'unitAltName' => $cin->unitAltName]
+            ];
+        });
+        $resourceNeo['units'] = \App\Models\Munit::orderBy('name')->pluck('name');
 
         return Inertia::render('Admin/PurchaseAddEditView', compact('formdata', 'resourceNeo'));
     }
