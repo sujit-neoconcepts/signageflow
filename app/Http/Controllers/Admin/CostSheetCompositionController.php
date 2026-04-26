@@ -16,7 +16,7 @@ class CostSheetCompositionController extends Controller
         $compositions = $costSheet->compositions()
             ->with([
                 'consumable:id,name,unitName,unitAltName,unitPrice,openStockMarginPercent',
-                'childCostSheet:id,name,qty_unit,alt_units,rate,no_of_unit,prod_type,total_cost',
+                'childCostSheet:id,name,qty_unit,alt_units,rate,no_of_unit,prod_type',
             ])
             ->get();
 
@@ -27,7 +27,7 @@ class CostSheetCompositionController extends Controller
     {
         $data = $request->validate([
             'compositions'           => 'array',
-            'total_cost'             => 'required|numeric|min:0',
+            'total_cost'             => 'nullable|numeric|min:0',
             'compositions.*.id'      => 'nullable|integer',
             'compositions.*.section' => 'required|in:raw_material,signage,cabinet,letters',
             'compositions.*.consumable_internal_name_id' => 'nullable|exists:consumable_internal_names,id',
@@ -59,15 +59,15 @@ class CostSheetCompositionController extends Controller
         // Delete removed compositions
         $costSheet->compositions()->whereNotIn('id', $idsToKeep)->delete();
 
-        // Update parent total cost
-        $costSheet->update(['total_cost' => $data['total_cost']]);
+        // Update parent total cost (calculated dynamically now)
+        // $costSheet->update(['total_cost' => $data['total_cost']]);
 
         return response()->json([
             'message'      => 'Compositions saved successfully.',
             'compositions' => $costSheet->compositions()
                 ->with([
                     'consumable:id,name,unitName,unitAltName,unitPrice,openStockMarginPercent',
-                    'childCostSheet:id,name,qty_unit,alt_units,rate,no_of_unit,prod_type,total_cost',
+                    'childCostSheet:id,name,qty_unit,alt_units,rate,no_of_unit,prod_type',
                 ])->get(),
         ]);
     }
@@ -78,7 +78,11 @@ class CostSheetCompositionController extends Controller
     public function costSheetOptions(Request $request)
     {
         $prodType = $request->query('prod_type');
-        $query    = CostSheet::select('id', 'name', 'qty_unit', 'alt_units', 'rate', 'no_of_unit', 'prod_type', 'total_cost')
+        $query    = CostSheet::select('id', 'name', 'qty_unit', 'alt_units', 'rate', 'no_of_unit', 'prod_type')
+            ->with([
+                'compositions.consumable:id,name,unitName,unitAltName,unitPrice,openStockMarginPercent',
+                'compositions.childCostSheet:id,name,qty_unit,alt_units,rate,no_of_unit,prod_type'
+            ])
             ->orderBy('name');
 
         if ($prodType) {
