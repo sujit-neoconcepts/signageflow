@@ -7,7 +7,7 @@ import BaseButton from "@/components/BaseButton.vue";
 import CardBox from "@/components/CardBox.vue";
 import NotificationBar from "@/components/NotificationBar.vue";
 import { mdiFormatListBulleted, mdiPlusCircle, mdiRefreshCircle } from "@mdi/js";
-import { computed, onBeforeMount, ref, reactive } from "vue";
+import { computed, onBeforeMount, ref, reactive, watch } from "vue";
 import Multiselect from "vue-multiselect";
 import "../../../css/vue-multiselect.css";
 import { getTodayString } from "@/helpers/helpers";
@@ -138,17 +138,19 @@ const filteredCostSheets = computed(() => {
 const quickAddModal = ref(false);
 const quickAddTargetLine = ref(null);
 const quickAddSearchText = ref("");
-const quickAddForm = reactive({ name: "", qty_unit: "", alt_units: "", rate: "0" });
-const quickAddErrors = reactive({ name: "", qty_unit: "", alt_units: "" });
+const quickAddForm = reactive({ name: "", no_of_unit: 1, qty_unit: "", alt_units: "", rate: "0" });
+const quickAddErrors = reactive({ name: "", no_of_unit: "", qty_unit: "", alt_units: "" });
 const quickAddLoading = ref(false);
 
 const openQuickAdd = (line, searchText = "") => {
     quickAddTargetLine.value = line;
     quickAddForm.name = searchText;
+    quickAddForm.no_of_unit = 1;
     quickAddForm.qty_unit = "";
     quickAddForm.alt_units = "";
     quickAddForm.rate = "0";
     quickAddErrors.name = "";
+    quickAddErrors.no_of_unit = "";
     quickAddErrors.qty_unit = "";
     quickAddErrors.alt_units = "";
     quickAddModal.value = true;
@@ -161,8 +163,10 @@ const routeForProductType = (type) => {
 
 const submitQuickAdd = async () => {
     quickAddErrors.name = "";
+    quickAddErrors.no_of_unit = "";
     quickAddErrors.qty_unit = "";
     if (!quickAddForm.name.trim()) { quickAddErrors.name = "Name is required."; return; }
+    if (!quickAddForm.no_of_unit) { quickAddErrors.no_of_unit = "No of Units is required."; return; }
     if (!quickAddForm.qty_unit) { quickAddErrors.qty_unit = "Unit is required."; return; }
 
     quickAddLoading.value = true;
@@ -170,7 +174,7 @@ const submitQuickAdd = async () => {
         const routeName = routeForProductType(form.product_type);
         const response = await axios.post(
             route(routeName + ".quickStore"),
-            { name: quickAddForm.name.trim(), qty_unit: quickAddForm.qty_unit, alt_units: quickAddForm.alt_units, rate: quickAddForm.rate || 0 },
+            { name: quickAddForm.name.trim(), no_of_unit: quickAddForm.no_of_unit, qty_unit: quickAddForm.qty_unit, alt_units: quickAddForm.alt_units, rate: quickAddForm.rate || 0 },
             { headers: { Accept: "application/json" } }
         );
         const newItem = response.data;
@@ -184,9 +188,14 @@ const submitQuickAdd = async () => {
     } catch (e) {
         const errs = e.response?.data?.errors;
         if (errs?.name) quickAddErrors.name = errs.name[0];
+        if (errs?.no_of_unit) quickAddErrors.no_of_unit = errs.no_of_unit[0];
         if (errs?.qty_unit) quickAddErrors.qty_unit = errs.qty_unit[0];
         if (errs?.alt_units) quickAddErrors.alt_units = errs.alt_units[0];
         if (!errs) alert("Error: " + (e.response?.data?.message || e.message));
+        // Show validation error generically if it's not caught by specific fields
+        if (errs && !errs.name && !errs.no_of_unit && !errs.qty_unit && !errs.alt_units) {
+            alert("Validation Error: " + (e.response?.data?.message || e.message));
+        }
     } finally {
         quickAddLoading.value = false;
     }
@@ -296,6 +305,22 @@ const itemsTaxableTotal = computed(() => {
     return form.items.reduce((sum, line) => sum + lineTaxable(line), 0).toFixed(2);
 });
 
+const totalL = computed(() => {
+    return form.items.reduce((sum, line) => sum + parseFloat(line.length || 0), 0).toFixed(4);
+});
+
+const totalW = computed(() => {
+    return form.items.reduce((sum, line) => sum + parseFloat(line.width || 0), 0).toFixed(4);
+});
+
+const totalQ = computed(() => {
+    return form.items.reduce((sum, line) => sum + parseFloat(line.pieces || 0), 0).toFixed(4);
+});
+
+const totalQty = computed(() => {
+    return form.items.reduce((sum, line) => sum + parseFloat(line.qty || 0), 0).toFixed(4);
+});
+
 const itemsGstTotal = computed(() => {
     return form.items.reduce((sum, line) => sum + lineGstAmount(line), 0).toFixed(2);
 });
@@ -306,12 +331,26 @@ const transportGst = computed(() => {
     return roundHalfUp((transport * gst) / 100);
 });
 
-const totalAmount = computed(() => {
+const rawSubTotal = computed(() => {
     return (
         parseFloat(itemsTaxableTotal.value || 0) +
         parseFloat(itemsGstTotal.value || 0) +
         parseFloat(form.transport_charge || 0) +
-        parseFloat(transportGst.value || 0) +
+        parseFloat(transportGst.value || 0)
+    );
+});
+
+watch(rawSubTotal, (newVal) => {
+    if (!props.formdata.id) {
+        const rounded = Math.round(newVal);
+        const diff = rounded - newVal;
+        form.roundoff = diff.toFixed(2);
+    }
+});
+
+const totalAmount = computed(() => {
+    return (
+        rawSubTotal.value +
         parseFloat(form.roundoff || 0)
     ).toFixed(2);
 });
@@ -700,6 +739,20 @@ const submitform = () => {
                                     </td>
                                 </tr>
                             </tbody>
+                            <tfoot class="bg-gray-100 font-semibold">
+                                <tr>
+                                    <td class="border p-2 text-right" colspan="2">Total</td>
+                                    <td class="border p-2 text-left">{{ totalL }}</td>
+                                    <td class="border p-2 text-left">{{ totalW }}</td>
+                                    <td class="border p-2 text-left">{{ totalQ }}</td>
+                                    <td class="border p-2 text-left">{{ totalQty }}</td>
+                                    <td class="border p-2 text-right" colspan="2"></td>
+                                    <td class="border p-2 text-right">{{ itemsTaxableTotal }}</td>
+                                    <td class="border p-2 text-right">{{ itemsGstTotal }}</td>
+                                    <td class="border p-2 text-right">{{ (parseFloat(itemsTaxableTotal || 0) + parseFloat(itemsGstTotal || 0)).toFixed(2) }}</td>
+                                    <td class="border p-2 text-center"></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                     <div class="mt-3">
@@ -744,6 +797,18 @@ const submitform = () => {
                         placeholder="Enter item name"
                     />
                     <div v-if="quickAddErrors.name" class="text-red-500 text-xs mt-1">{{ quickAddErrors.name }}</div>
+                </div>
+                <div>
+                    <label class="text-sm font-medium block mb-1">No of Units <span class="text-red-500">*</span></label>
+                    <input
+                        v-model="quickAddForm.no_of_unit"
+                        type="number"
+                        step="1"
+                        min="1"
+                        class="w-full border rounded px-3 py-2 text-sm"
+                        placeholder="1"
+                    />
+                    <div v-if="quickAddErrors.no_of_unit" class="text-red-500 text-xs mt-1">{{ quickAddErrors.no_of_unit }}</div>
                 </div>
                 <div>
                     <label class="text-sm font-medium block mb-1">Unit <span class="text-red-500">*</span></label>
