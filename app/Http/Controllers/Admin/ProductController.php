@@ -180,10 +180,11 @@ class ProductController extends Controller
         foreach (array_keys($formInfo) as $key) {
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
-            $savedArray[$key] = $request->{$key};
+            $val = $request->{$key};
+            $savedArray[$key] = is_string($val) ? trim($val) : $val;
         }
         $savedArray['groupinfo'] = $request->groupinfo ? $request->groupinfo['id'] : null;
-        $savedArray['pr_detail_int'] = $request->pr_detail_int ? $request->pr_detail_int['label'] : null;
+        $savedArray['pr_detail_int'] = $request->pr_detail_int ? trim($request->pr_detail_int['label']) : null;
         $request->validate($validateRule, [], $attributeNames);
         Product::create($savedArray);
 
@@ -249,10 +250,11 @@ class ProductController extends Controller
         $validateRule['pr_detail'] = 'required|unique:products,pr_detail,' . $product->id;
         $request->validate($validateRule, [], $attributeNames);
         foreach (array_diff(array_keys($formInfo), ['groupinfo', 'pr_detail_int', 'subgroup']) as $key) {
-            $product->{$key} = $request->{$key};
+            $val = $request->{$key};
+            $product->{$key} = is_string($val) ? trim($val) : $val;
         }
         $product->groupinfo = $request->groupinfo ? $request->groupinfo['id'] : null;
-        $product->pr_detail_int = $request->pr_detail_int ? $request->pr_detail_int['label'] : null;
+        $product->pr_detail_int = $request->pr_detail_int ? trim($request->pr_detail_int['label']) : null;
         $product->save();
 
         Purchase::where('pur_pr_id', $product->id)->update(['pur_pr_detail_int' => $product->pr_detail_int]);

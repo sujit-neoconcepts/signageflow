@@ -236,7 +236,7 @@ class OpeningController extends Controller
             foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate', 'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty']) as $key) {
                 $savedArray[$key] = $ml[$key];
             }
-            $savedArray['pur_pr_detail_int'] = $ml['pur_pr_detail_int']['label'];
+            $savedArray['pur_pr_detail_int'] = isset($ml['pur_pr_detail_int']['label']) ? trim($ml['pur_pr_detail_int']['label']) : null;
             $savedArray['pur_pr_id'] = $ml['pur_pr_detail_int']['id'];
             $savedArray['entry_type'] = 1;
 
@@ -332,6 +332,8 @@ class OpeningController extends Controller
             foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate',  'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty']) as $key) {
                 $purchase->{$key} = $ml[$key];
             }
+            $purchase->pur_pr_detail_int = isset($ml['pur_pr_detail_int']['label']) ? trim($ml['pur_pr_detail_int']['label']) : null;
+            $purchase->pur_pr_id = isset($ml['pur_pr_detail_int']['id']) ? $ml['pur_pr_detail_int']['id'] : null;
         }
 
 
