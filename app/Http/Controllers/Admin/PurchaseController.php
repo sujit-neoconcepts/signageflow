@@ -350,6 +350,11 @@ class PurchaseController extends Controller
             isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.' . $key] = $formInfoMulti[$key]['vRule'];
         }
 
+        $validateRule['pur_inv'] = [
+            'required',
+            Rule::unique('purchases_info')->where(fn ($q) => $q->where('pur_supplier', $request->pur_supplier)),
+        ];
+
         $request->validate($validateRule, [], $attributeNames);
 
         $savedArray['pur_date'] = date('Y-m-d', strtotime($request->pur_date));
@@ -394,7 +399,7 @@ class PurchaseController extends Controller
             $this->syncPurchaseInfoTotals($purchaseInfo->id);
         });
 
-        \ActivityLog::add(['action' => 'added', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->{array_keys($formInfo)[1]}]);
+        \ActivityLog::add(['action' => 'added', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->pur_supplier . ' - ' . $request->pur_inv]);
 
         return redirect()->route('purchase.index')->with(['message' => $this->resourceNeo['resourceTitle'] . ' Created Successfully !!', 'msg_type' => 'info']);
     }
@@ -482,10 +487,6 @@ class PurchaseController extends Controller
         $validateRule = [];
 
         $purchaseInfo = $purchase->purchaseInfo;
-        if (!$purchaseInfo && !empty($purchase->pur_inv)) {
-            $purchaseInfo = PurchaseInfo::where('pur_inv', $purchase->pur_inv)->first();
-        }
-
         $purchaseInfoId = $purchaseInfo?->id;
 
         foreach (array_keys($formInfo) as $key) {
@@ -495,8 +496,7 @@ class PurchaseController extends Controller
 
         $validateRule['pur_inv'] = [
             'required',
-            Rule::unique('purchases_info', 'pur_inv')
-                ->ignore($purchaseInfoId),
+            Rule::unique('purchases_info')->where(fn ($q) => $q->where('pur_supplier', $request->pur_supplier))->ignore($purchaseInfoId),
         ];
 
         foreach (array_keys($formInfoMulti) as $key) {
@@ -582,7 +582,7 @@ class PurchaseController extends Controller
             }
         });
 
-        \ActivityLog::add(['action' => 'updated', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->pur_inv]);
+        \ActivityLog::add(['action' => 'updated', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->pur_supplier . ' - ' . $request->pur_inv]);
 
         return redirect()->route('purchase.index')->with(['message' => 'Purchase Updated Successfully !!', 'msg_type' => 'info']);
     }
@@ -600,15 +600,10 @@ class PurchaseController extends Controller
         }
 
         $purchaseInfoId = $invoiceLines->first()->purchase_info_id;
-        $purInv = $invoiceLines->first()->pur_inv;
         $lineIds = $invoiceLines->pluck('id')->all();
-
-        Purchase::whereIn('id', $lineIds)->delete();
 
         if (!empty($purchaseInfoId)) {
             PurchaseInfo::where('id', $purchaseInfoId)->delete();
-        } elseif (!empty($purInv)) {
-            PurchaseInfo::where('pur_inv', $purInv)->delete();
         }
 
         \ActivityLog::add(['action' => 'deleted', 'module' => 'purchase', 'data_key' => implode(',', $lineIds)]);
@@ -627,7 +622,7 @@ class PurchaseController extends Controller
         $groupMap = [];
 
         foreach ($purchases as $purchase) {
-            $groupKey = $purchase->purchase_info_id ? 'info:' . $purchase->purchase_info_id : 'inv:' . $purchase->pur_inv;
+            $groupKey = 'info:' . $purchase->purchase_info_id;
             $groupMap[$groupKey] = $purchase;
         }
 
@@ -640,15 +635,10 @@ class PurchaseController extends Controller
             }
 
             $purchaseInfoId = $invoiceLines->first()->purchase_info_id;
-            $purInv = $invoiceLines->first()->pur_inv;
             $lineIds = $invoiceLines->pluck('id')->all();
-
-            Purchase::whereIn('id', $lineIds)->delete();
 
             if (!empty($purchaseInfoId)) {
                 PurchaseInfo::where('id', $purchaseInfoId)->delete();
-            } elseif (!empty($purInv)) {
-                PurchaseInfo::where('pur_inv', $purInv)->delete();
             }
 
             $allDeletedLineIds = array_merge($allDeletedLineIds, $lineIds);
@@ -751,13 +741,7 @@ class PurchaseController extends Controller
     {
         return Purchase::query()
             ->where('entry_type', 0)
-            ->where(function ($query) use ($purchase) {
-                if (!empty($purchase->purchase_info_id)) {
-                    $query->where('purchase_info_id', $purchase->purchase_info_id);
-                } else {
-                    $query->where('pur_inv', $purchase->pur_inv);
-                }
-            });
+            ->where('purchase_info_id', $purchase->purchase_info_id);
     }
 
     protected function syncPurchaseInfoTotals(int $purchaseInfoId): void
