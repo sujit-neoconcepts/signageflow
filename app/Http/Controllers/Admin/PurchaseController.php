@@ -162,6 +162,9 @@ class PurchaseController extends Controller
             $query->where(function ($query) use ($value, $formInfo, $formInfoMulti) {
                 Collection::wrap($value)->each(function ($value) use ($query, $formInfo, $formInfoMulti) {
                     foreach (array_keys($formInfo) as $key) {
+                        if ($key === 'roundoff') {
+                            continue;
+                        }
                         $query->orWhere($key, 'LIKE', "%{$value}%");
                     }
                     foreach (array_keys($formInfoMulti) as $key) {
@@ -176,7 +179,7 @@ class PurchaseController extends Controller
 
         $perPage = request()->query('perPage') ?? 10;
         $filterArray = [];
-        foreach (array_merge(array_diff(array_keys($formInfo), []), array_keys($formInfoMulti)) as $fvalue) {
+        foreach (array_merge(array_diff(array_keys($formInfo), ['roundoff']), array_keys($formInfoMulti)) as $fvalue) {
             $filterArray[] = AllowedFilter::exact($fvalue);
         }
 
@@ -191,7 +194,7 @@ class PurchaseController extends Controller
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('-pur_date')
-            ->allowedSorts(array_merge(array_diff(array_keys($formInfo), []), array_keys($formInfoMulti), []))
+            ->allowedSorts(array_merge(array_diff(array_keys($formInfo), ['roundoff']), array_keys($formInfoMulti), []))
             ->allowedFilters(array_merge($filterArray, [AllowedFilter::scope('pur_date_start'), AllowedFilter::scope('pur_date_end'), AllowedFilter::scope('received_date_start'), AllowedFilter::scope('received_date_end'), AllowedFilter::exact('groupinfo_sname', 'pgroups.sgroup'), $globalSearch]))
             ->paginate($perPage)
             ->withQueryString();
@@ -230,7 +233,7 @@ class PurchaseController extends Controller
         return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo, $formInfoMulti) {
             $table->withGlobalSearch();
 
-            $arrKey = array_diff(array_keys($formInfo), []);
+            $arrKey = array_diff(array_keys($formInfo), ['roundoff']);
             foreach ($arrKey as $key) {
                 $table->column($key, $formInfo[$key]['label'], searchable: $formInfo[$key]['searchable'] ?? false, sortable: $formInfo[$key]['sortable'] ?? false, hidden: $formInfo[$key]['hidden'] ?? false, extra: ['type' => $formInfo[$key]['type'] ?? '', 'options' => [], 'align' => $formInfo[$key]['align'] ?? 'left', 'showTotal' => $formInfo[$key]['showTotal'] ?? false]);
             }
@@ -695,7 +698,7 @@ class PurchaseController extends Controller
         $formInfoMulti = Purchase::formInfoMulti();
         $columns = [];
         foreach ($formInfo as $key => $meta) {
-            if (!($meta['hidden'] ?? false)) {
+            if (!($meta['hidden'] ?? false) && $key !== 'roundoff') {
                 $columns[] = ['key' => $key, 'label' => $meta['label'], 'align' => $meta['align'] ?? 'left'];
             }
         }
