@@ -69,6 +69,7 @@ class SalesOrderController extends Controller
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('-order_date')
+            ->defaultSort('-id')
             ->allowedSorts(['id', 'order_no', 'order_date', 'client_name', 'product_type', 'total_amount', 'remark'])
             ->allowedFilters([
                 AllowedFilter::exact('client_id'),
