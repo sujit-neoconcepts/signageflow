@@ -101,6 +101,9 @@ class DashboardController extends Controller
                 'month'     => $loopMonth->format('M Y'),
                 'purchases' => (float) Purchase::whereBetween('pur_date', [$monthStart, $monthEnd])->sum('pur_amnt_total'),
                 'outwards'  => (float) Outward::whereBetween('out_date', [$monthStart, $monthEnd])->sum(DB::raw('out_qty * IFNULL(unitPrice, 0)')),
+                'sales_cabinet' => (float) DB::table('sales_orders')->where('product_type', 'cabinet')->whereBetween('order_date', [$monthStart, $monthEnd])->sum('total_amount'),
+                'sales_letters' => (float) DB::table('sales_orders')->where('product_type', 'letters')->whereBetween('order_date', [$monthStart, $monthEnd])->sum('total_amount'),
+                'sales_signage' => (float) DB::table('sales_orders')->where('product_type', 'signage')->whereBetween('order_date', [$monthStart, $monthEnd])->sum('total_amount'),
             ];
         }
 

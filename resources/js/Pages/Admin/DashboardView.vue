@@ -95,7 +95,7 @@ const trendOptions = {
         },
         title: {
             display: true,
-            text: "Monthly Purchase & Outward Trend (Last 12 Months)",
+            text: "Monthly Purchase, Outward Trend and Sales (Last 12 Months)",
         },
         tooltip: {
             callbacks: {
@@ -111,7 +111,7 @@ const trendOptions = {
             beginAtZero: true,
             ticks: {
                 callback: function (value) {
-                    if (value >= 1000000) return '₹' + (value / 1000000).toFixed(1) + 'L';
+                    if (value >= 100000) return '₹' + (value / 100000).toFixed(1) + 'L';
                     if (value >= 1000) return '₹' + (value / 1000).toFixed(0) + 'K';
                     return '₹' + value;
                 },
@@ -136,6 +136,30 @@ const trendData = computed(() => ({
             data: props.monthlyTrend.map((item) => item.outwards),
             backgroundColor: "rgba(16, 185, 129, 0.85)",
             borderColor: "#10B981",
+            borderWidth: 1,
+            borderRadius: 4,
+        },
+        {
+            label: "Sales (Cabinet)",
+            data: props.monthlyTrend.map((item) => item.sales_cabinet),
+            backgroundColor: "rgba(245, 158, 11, 0.85)",
+            borderColor: "#F59E0B",
+            borderWidth: 1,
+            borderRadius: 4,
+        },
+        {
+            label: "Sales (Letters)",
+            data: props.monthlyTrend.map((item) => item.sales_letters),
+            backgroundColor: "rgba(139, 92, 246, 0.85)",
+            borderColor: "#8B5CF6",
+            borderWidth: 1,
+            borderRadius: 4,
+        },
+        {
+            label: "Sales (Signage)",
+            data: props.monthlyTrend.map((item) => item.sales_signage),
+            backgroundColor: "rgba(239, 68, 68, 0.85)",
+            borderColor: "#EF4444",
             borderWidth: 1,
             borderRadius: 4,
         },
