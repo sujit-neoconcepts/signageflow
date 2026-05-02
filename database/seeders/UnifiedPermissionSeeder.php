@@ -41,7 +41,7 @@ class UnifiedPermissionSeeder extends Seeder
         'purchase' => ['list','list_for_all', 'create', 'edit', 'delete', 'export'],
         'outward' => ['list', 'list_for_all', 'create', 'edit', 'delete', 'export','add_for_all'],
         'opening' => ['list','list_for_all', 'create', 'edit', 'delete', 'export', 'import'],
-        'stocks' => ['list', 'list_for_all', 'export'],
+        'stocks' => ['list', 'list_for_all', 'export', 'import'],
         'expense' => ['list', 'list_for_all', 'create', 'edit', 'delete', 'export','add_for_all'],
         'openStock' => ['list', 'create', 'edit', 'delete', 'export','adjust'],
         'signageCostSheet' => ['list', 'create', 'edit', 'delete', 'export'],

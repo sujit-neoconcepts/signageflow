@@ -65,16 +65,34 @@ const updateThreshold = () => {
                 :title="resourceNeo.resourceTitle"
                 main
             >
-                <Link :href="route('stocks.index')">
-                    <BaseButton
-                        class="m-2"
-                        :icon="mdiFormatListBulleted"
-                        color="success"
-                        label="All Stocks"
-                        rounded-full
-                        small
-                    />
-                </Link>
+                <div class="flex">
+                    <span v-for="exLink in props.resourceNeo.extraMainLinks">
+                        <Link
+                            :title="exLink.label"
+                            :href="route(exLink.link)"
+                            class="-mb-3 mr-2"
+                        >
+                            <BaseButton
+                                class="m-2"
+                                :icon="exLink.icon"
+                                color="success"
+                                rounded-full
+                                small
+                                :label="exLink.label"
+                            />
+                        </Link>
+                    </span>
+                    <Link :href="route('stocks.index')">
+                        <BaseButton
+                            class="m-2"
+                            :icon="mdiFormatListBulleted"
+                            color="success"
+                            label="All Stocks"
+                            rounded-full
+                            small
+                        />
+                    </Link>
+                </div>
             </SectionTitleLineWithButton>
 
             <NotificationBar
@@ -106,6 +124,7 @@ const updateThreshold = () => {
                             :class="{
                                 'text-red-500':
                                     product.status === 'Below Threshold',
+                                'text-orange-500': product.status === 'Equal',
                                 'text-green-500': product.status === 'Normal',
                             }"
                         >
@@ -147,6 +166,10 @@ const updateThreshold = () => {
 <style scoped>
 .text-red-500 {
     color: rgb(239, 68, 68);
+}
+
+.text-orange-500 {
+    color: rgb(249, 115, 22);
 }
 
 .text-green-500 {

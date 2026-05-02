@@ -127,7 +127,10 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::get('/stocks', [StocksController::class, 'index'])->name('stocks.index');
     Route::get('/stocks/owner', [StocksController::class, 'locationIncharge'])->name('stocks.owner');
     Route::get('/stocks/level', [StocksController::class, 'stockLevels'])->name('stocks.level');
+    Route::get('/stocks/threshold-list', [StocksController::class, 'stockLevels'])->name('stocks.threshold.index');
     Route::post('/stocks/threshold', [StocksController::class, 'updateThreshold'])->name('stocks.threshold');
+    Route::get('/stocks/threshold-import', [StocksController::class, 'importView'])->name('stocks.threshold.import');
+    Route::post('/stocks/threshold-import', [StocksController::class, 'import']);
     Route::post('/stocks/detail', [StocksController::class, 'StockDetail'])->name('stocks.detail');
     Route::post('/stocks/transfer', [StocksController::class, 'transferStock'])->name('stocks.transfer_stock');
 

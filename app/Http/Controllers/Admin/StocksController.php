@@ -18,6 +18,9 @@ use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
 use App\Models\Pgroup;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\ActivityLog;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class StocksController extends Controller
 {
@@ -25,7 +28,8 @@ class StocksController extends Controller
 
     public function __construct()
     {
-        $this->middleware('can:stocks_list', ['only' => ['index', 'show']]);
+        $this->middleware('can:stocks_list', ['only' => ['index', 'show', 'stockLevels']]);
+        $this->middleware('can:stocks_import', ['only' => ['importView', 'import']]);
     }
     /**
      * Display a listing of the resource.
@@ -533,7 +537,7 @@ class StocksController extends Controller
             'threshold_qty' => ['label' => 'Threshold Level', 'sortable' => true, 'align' => 'right'],
             'difference' => ['label' => 'Difference', 'sortable' => true, 'align' => 'right'],
             'pr_int_unit' => ['label' => 'Unit'],
-            'status' => ['label' => 'Status']
+            'status' => ['label' => 'Status', 'sortable' => true]
         ];
 
         $perPage = request()->query('perPage') ?? 10;
@@ -556,8 +560,10 @@ class StocksController extends Controller
             ->selectRaw('COALESCE(MAX(st.threshold_qty), 0) as threshold_qty')
             ->selectRaw('(ifnull(MAX(subq1.qtysum),0)-ifnull(MAX(subq3.qtysum),0) - COALESCE(MAX(st.threshold_qty), 0)) as difference')
             ->selectRaw("CASE 
-                WHEN (ifnull(MAX(subq1.qtysum),0)-ifnull(MAX(subq3.qtysum),0)) <= COALESCE(MAX(st.threshold_qty), 0) 
+                WHEN (ifnull(MAX(subq1.qtysum),0)-ifnull(MAX(subq3.qtysum),0)) < COALESCE(MAX(st.threshold_qty), 0) 
                 THEN 'Below Threshold' 
+                WHEN (ifnull(MAX(subq1.qtysum),0)-ifnull(MAX(subq3.qtysum),0)) = COALESCE(MAX(st.threshold_qty), 0) 
+                THEN 'Equal' 
                 ELSE 'Normal' 
                 END as status")
             ->leftJoin('stock_thresholds as st', 'products.pr_detail_int', '=', 'st.pr_detail_int')
@@ -578,10 +584,20 @@ class StocksController extends Controller
             });
         });
 
+        $statusFilter = AllowedFilter::callback('status', function ($query, $value) {
+            if ($value === 'Below Threshold') {
+                $query->havingRaw('(ifnull(MAX(subq1.qtysum),0)-ifnull(MAX(subq3.qtysum),0)) < COALESCE(MAX(st.threshold_qty), 0)');
+            } elseif ($value === 'Equal') {
+                $query->havingRaw('(ifnull(MAX(subq1.qtysum),0)-ifnull(MAX(subq3.qtysum),0)) = COALESCE(MAX(st.threshold_qty), 0)');
+            } elseif ($value === 'Normal') {
+                $query->havingRaw('(ifnull(MAX(subq1.qtysum),0)-ifnull(MAX(subq3.qtysum),0)) > COALESCE(MAX(st.threshold_qty), 0)');
+            }
+        });
+
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('pr_detail_int')
-            ->allowedSorts(['pr_detail_int', 'balsum', 'threshold_qty', 'difference'])
-            ->allowedFilters([$globalSearch, AllowedFilter::exact('sgroup', 'pgroups.sgroup'), AllowedFilter::exact('group_name', 'pgroups.name')])
+            ->allowedSorts(['pr_detail_int', 'balsum', 'threshold_qty', 'difference', 'status'])
+            ->allowedFilters([$globalSearch, AllowedFilter::exact('sgroup', 'pgroups.sgroup'), AllowedFilter::exact('group_name', 'pgroups.name'), $statusFilter])
             ->paginate($perPage)
             ->withQueryString();
 
@@ -590,6 +606,16 @@ class StocksController extends Controller
 
         if (\Auth::user()->can('stocks_export')) {
             $this->resourceNeo['bulkActions']['csvExport'] = [];
+        }
+
+        if (\Auth::user()->can('stocks_import')) {
+            $this->resourceNeo['extraMainLinks'] = [
+                [
+                    'label' => 'Import',
+                    'link' => 'stocks.threshold.import',
+                    'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z'
+                ]
+            ];
         }
 
         $sgroups = Pgroup::distinct()->pluck('sgroup', 'sgroup')->toArray();
@@ -601,7 +627,8 @@ class StocksController extends Controller
         ])->table(function (InertiaTable $table) use ($formInfo, $sgroups, $gnames) {
             $table->withGlobalSearch()
                 ->selectFilter(key: 'group_name', label: 'Prod Group', options: $gnames, noFilterOptionLabel: 'All')
-                ->selectFilter(key: 'sgroup', label: 'Sub Group', options: $sgroups, noFilterOptionLabel: 'All');
+                ->selectFilter(key: 'sgroup', label: 'Sub Group', options: $sgroups, noFilterOptionLabel: 'All')
+                ->selectFilter(key: 'status', label: 'Status', options: ['Below Threshold' => 'Below Threshold', 'Equal' => 'Equal', 'Normal' => 'Normal'], noFilterOptionLabel: 'All');
             foreach ($formInfo as $key => $config) {
                 $table->column(
                     key: $key,
@@ -625,7 +652,7 @@ class StocksController extends Controller
     public function updateThreshold(Request $request)
     {
         $request->validate([
-            'pr_detail_int' => 'required|exists:products,pr_detail_int',
+            'pr_detail_int' => 'required|exists:consumable_internal_names,name',
             'threshold_qty' => 'required|numeric|min:0',
         ]);
 
@@ -644,5 +671,113 @@ class StocksController extends Controller
             'message' => 'Stock threshold updated successfully',
             'msg_type' => 'info'
         ]);
+    }
+
+    /**
+     * Show the import view for stock thresholds.
+     */
+    public function importView()
+    {
+        $this->resourceNeo['extraMainLinks'] = [
+            [
+                'link' => 'stocks.level',
+                'label' => 'Back to List',
+                'icon' => 'M1,1V5H2V19H1V23H5V22H19V23H23V19H22V5H23V1H19V2H5V1M5,4H19V5H20V19H19V20H5V19H4V5H5M6,6V14H9V18H18V9H14V6M8,8H12V12H8M14,11H16V16H11V14H14'
+            ]
+        ];
+
+        $sampleData = [
+            ['pr_detail_int' => '0.8 Contact Tip', 'threshold_qty' => 10],
+            ['pr_detail_int' => '0.8 Contract Tip', 'threshold_qty' => 50],
+        ];
+
+        $resourceNeo = $this->resourceNeo;
+        $resourceNeo['resourceName'] = 'stocks.threshold';
+        $resourceNeo['resourceTitle'] = 'Stock Thresholds';
+
+        return Inertia::render('Admin/ImportView', compact('resourceNeo', 'sampleData'));
+    }
+
+    /**
+     * Import stock thresholds from a file.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:2048' // 2MB limit
+        ]);
+
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+
+        if (!is_readable($path)) {
+            return redirect()->back()->with(['message' => 'Import failed! Unable to read the file.', 'msg_type' => 'danger']);
+        }
+
+        $records = array_map('str_getcsv', file($path));
+
+        if (empty($records)) {
+            return redirect()->back()->with(['message' => 'Import failed! File is empty.', 'msg_type' => 'danger']);
+        }
+
+        $headers = array_shift($records);
+        $expectedHeaders = ['pr_detail_int', 'threshold_qty'];
+        $missingHeaders = array_diff($expectedHeaders, $headers);
+
+        if (!empty($missingHeaders)) {
+            return redirect()->back()->with(['message' => 'Import failed! Missing required columns: ' . implode(', ', $missingHeaders), 'msg_type' => 'danger']);
+        }
+
+        $errors = [];
+        $rowNumber = 2;
+        $validatedData = [];
+
+        foreach ($records as $record) {
+            if (empty(array_filter($record))) {
+                $rowNumber++;
+                continue;
+            }
+
+            $data = array_combine($headers, $record);
+
+            $validator = Validator::make($data, [
+                'pr_detail_int' => 'required|exists:consumable_internal_names,name',
+                'threshold_qty' => 'required|numeric|min:0',
+            ], [
+                'pr_detail_int.exists' => "Product ':input' does not exist in the consumable internal names table.",
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = "Row {$rowNumber}: " . implode(', ', $validator->errors()->all());
+            } else {
+                $validatedData[] = $validator->validated();
+            }
+
+            $rowNumber++;
+        }
+
+        if (!empty($errors)) {
+            return redirect()->back()->with(['message' => "Import failed! Please fix the following errors:\n\n" . implode("\n", $errors), 'msg_type' => 'danger']);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            foreach ($validatedData as $data) {
+                StockThreshold::updateOrCreate(
+                    ['pr_detail_int' => $data['pr_detail_int']],
+                    ['threshold_qty' => $data['threshold_qty']]
+                );
+            }
+
+            DB::commit();
+            ActivityLog::add(['action' => 'imported', 'module' => 'stock_threshold', 'data_key' => count($validatedData)]);
+
+            return redirect()->route('stocks.level')->with(['message' => count($validatedData) . ' stock threshold records imported/updated successfully!', 'msg_type' => 'success']);
+        } catch (\Exception $e) {
+            DB::rollback();
+            Log::error('Stock threshold import failed: ' . $e->getMessage());
+            return redirect()->back()->with(['message' => 'Import failed! An unexpected error occurred.', 'msg_type' => 'danger']);
+        }
     }
 }
