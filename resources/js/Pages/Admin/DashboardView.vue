@@ -331,7 +331,11 @@ const formatCurrency = (amount) => {
 
             <!-- Key Metrics Row -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                <CardBox class="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                <CardBox 
+                    class="bg-gradient-to-r from-blue-500 to-blue-600 text-white cursor-pointer"
+                    is-hoverable
+                    @click="router.get(route('product.index'), { perPage: 10000 })"
+                >
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-blue-100 text-sm">Total Products</p>
@@ -347,7 +351,11 @@ const formatCurrency = (amount) => {
                     </div>
                 </CardBox>
 
-                <CardBox class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white">
+                <CardBox 
+                    class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white cursor-pointer"
+                    is-hoverable
+                    @click="router.get(route('stocks.level'), { 'filter[status]': 'Below Threshold' })"
+                >
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-yellow-100 text-sm">Low Stock Items</p>
@@ -363,7 +371,11 @@ const formatCurrency = (amount) => {
                     </div>
                 </CardBox>
 
-                <CardBox class="bg-gradient-to-r from-green-500 to-green-600 text-white">
+                <CardBox 
+                    class="bg-gradient-to-r from-green-500 to-green-600 text-white cursor-pointer"
+                    is-hoverable
+                    @click="router.get(route('purchase.index'), { 'filter[pur_date_start]': filterStartDate, 'filter[pur_date_end]': filterEndDate, perPage: 10000 })"
+                >
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-green-100 text-sm">Total Purchases</p>
@@ -379,7 +391,11 @@ const formatCurrency = (amount) => {
                     </div>
                 </CardBox>
 
-                <CardBox class="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                <CardBox 
+                    class="bg-gradient-to-r from-purple-500 to-purple-600 text-white cursor-pointer"
+                    is-hoverable
+                    @click="router.get(route('expense.index'), { 'filter[amt_type]': 'Expense', 'filter[exp_date_start]': filterStartDate, 'filter[exp_date_end]': filterEndDate, perPage: 10000 })"
+                >
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-purple-100 text-sm">Total Expenses</p>

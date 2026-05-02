@@ -68,7 +68,7 @@ class SalesOrderController extends Controller
             ->inFinancialYear();
 
         $resourceData = QueryBuilder::for($query)
-            ->defaultSort('-id')
+            ->defaultSort('-order_date')
             ->allowedSorts(['id', 'order_no', 'order_date', 'client_name', 'product_type', 'total_amount', 'remark'])
             ->allowedFilters([
                 AllowedFilter::exact('client_id'),

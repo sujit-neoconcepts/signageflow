@@ -45,7 +45,9 @@ class DashboardController extends Controller
         // Consumables Stock Overview
         $stockOverview = [
             'total_products' => Product::count(),
-            'low_stock_items' => Product::whereRaw('(SELECT COALESCE(SUM(CASE WHEN pur_qty_int IS NOT NULL THEN pur_qty_int ELSE 0 END), 0) FROM purchases WHERE pur_pr_id = products.id) - (SELECT COALESCE(SUM(out_qty), 0) FROM outwards WHERE out_product_id = products.id) < 10')->count(),
+            'low_stock_items' => Product::leftJoin('stock_thresholds as st', 'products.pr_detail_int', '=', 'st.pr_detail_int')
+                ->whereRaw('(SELECT COALESCE(SUM(pur_qty_int), 0) FROM purchases WHERE pur_pr_detail_int = products.pr_detail_int) - (SELECT COALESCE(SUM(out_qty), 0) FROM outwards WHERE out_product = products.pr_detail_int) < COALESCE(st.threshold_qty, 0)')
+                ->count(DB::raw('DISTINCT products.pr_detail_int')),
         ];
 
         // Expenses Data - filtered by date range
