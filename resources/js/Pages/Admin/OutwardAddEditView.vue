@@ -204,20 +204,16 @@ const onChangeFunc = (index, fkey) => {
             form["multi"][index].out_product.data.pur_unint_int;
 
         form["multi"][index].out_qty_alt = 1;
-        form["multi"][index].out_qty =
-            parseFloat(form["multi"][index].out_qty_alt) /
-            (parseFloat(form["multi"][index].out_product.data.pur_qty_int_alt) /
-                parseFloat(form["multi"][index].out_product.data.pur_qty_int));
+        const conversionRatio = parseFloat(form["multi"][index].out_product.data.pur_qty_int_alt) / parseFloat(form["multi"][index].out_product.data.pur_qty_int);
+        form["multi"][index].out_qty = parseFloat((parseFloat(form["multi"][index].out_qty_alt) / conversionRatio).toFixed(3));
     } else if (fkey == "out_qty") {
-        form["multi"][index].out_qty_alt =
-            parseFloat(form["multi"][index].out_qty) *
-            (parseFloat(form["multi"][index].out_product.data.pur_qty_int_alt) /
-                parseFloat(form["multi"][index].out_product.data.pur_qty_int));
+        if (!props.formdata.id) {
+            const conversionRatio = parseFloat(form["multi"][index].out_product.data.pur_qty_int_alt) / parseFloat(form["multi"][index].out_product.data.pur_qty_int);
+            form["multi"][index].out_qty_alt = parseFloat((parseFloat(form["multi"][index].out_qty) * conversionRatio).toFixed(3));
+        }
     } else if (fkey == "out_qty_alt") {
-        form["multi"][index].out_qty =
-            parseFloat(form["multi"][index].out_qty_alt) /
-            (parseFloat(form["multi"][index].out_product.data.pur_qty_int_alt) /
-                parseFloat(form["multi"][index].out_product.data.pur_qty_int));
+        const conversionRatio = parseFloat(form["multi"][index].out_product.data.pur_qty_int_alt) / parseFloat(form["multi"][index].out_product.data.pur_qty_int);
+        form["multi"][index].out_qty = parseFloat((parseFloat(form["multi"][index].out_qty_alt) / conversionRatio).toFixed(3));
     }
 };
 

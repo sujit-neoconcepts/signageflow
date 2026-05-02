@@ -155,11 +155,9 @@ const onChangeFunc = async (index, fkey) => {
             
             // Set qty_alt to 1 and trigger qty calculation
             form["multi"][index].out_qty_alt = 1;
+            const conversionRatio = parseFloat(form["multi"][index].out_product.data.pur_qty_int_alt) / parseFloat(form["multi"][index].out_product.data.pur_qty_int);
             // Calculate qty based on qty_alt = 1
-            form["multi"][index].out_qty =
-                parseFloat(form["multi"][index].out_qty_alt) /
-                (parseFloat(form["multi"][index].out_product.data.pur_qty_int_alt) /
-                    parseFloat(form["multi"][index].out_product.data.pur_qty_int));
+            form["multi"][index].out_qty = parseFloat((parseFloat(form["multi"][index].out_qty_alt) / conversionRatio).toFixed(3));
             
             // Fetch and set balance after all fields are populated
             await fetchBalance(index);
@@ -178,17 +176,13 @@ const onChangeFunc = async (index, fkey) => {
         }
     } else if (fkey == "out_qty") {
         if (form["multi"][index].out_product?.data) {
-            form["multi"][index].out_qty_alt =
-                parseFloat(form["multi"][index].out_qty) *
-                (parseFloat(form["multi"][index].out_product.data.pur_qty_int_alt) /
-                    parseFloat(form["multi"][index].out_product.data.pur_qty_int));
+            const conversionRatio = parseFloat(form["multi"][index].out_product.data.pur_qty_int_alt) / parseFloat(form["multi"][index].out_product.data.pur_qty_int);
+            form["multi"][index].out_qty_alt = parseFloat((parseFloat(form["multi"][index].out_qty) * conversionRatio).toFixed(3));
         }
     } else if (fkey == "out_qty_alt") {
         if (form["multi"][index].out_product?.data) {
-            form["multi"][index].out_qty =
-                parseFloat(form["multi"][index].out_qty_alt) /
-                (parseFloat(form["multi"][index].out_product.data.pur_qty_int_alt) /
-                    parseFloat(form["multi"][index].out_product.data.pur_qty_int));
+            const conversionRatio = parseFloat(form["multi"][index].out_product.data.pur_qty_int_alt) / parseFloat(form["multi"][index].out_product.data.pur_qty_int);
+            form["multi"][index].out_qty = parseFloat((parseFloat(form["multi"][index].out_qty_alt) / conversionRatio).toFixed(3));
         }
     }
 };
