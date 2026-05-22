@@ -297,10 +297,19 @@ class OpeningController extends Controller
         $resourceNeo['AllowDel'] = false;
         $resourceNeo['formInfo'] = Purchase::formInfo();
         $resourceNeo['formInfoMulti'] = $formInfoMulti;
+        $resourceNeo['formInfoMulti']['pur_pr_detail_int'] = [
+            'label' => 'Internal name',
+            'searchable' => true,
+            'sortable' => true,
+            'type' => 'select',
+            'options' => Product::getAllOptionInternal(),
+            'vRule' => 'required',
+            'colspan' => 3,
+            'disabled'=>true
+        ];
         $resourceNeo['formInfo']['pur_inv'] = ['label' => 'Comment', 'searchable' => true, 'sortable' => true, 'vRule' => 'required', 'default' => 'Opening-' . date('d-m-Y H:i:s')];
         unset($resourceNeo['formInfo']['pur_supplier']);
         unset($resourceNeo['formInfo']['roundoff']);
-        $resourceNeo['formInfoMulti']['pur_pr_detail_int']['colspan'] = 3;
 
         return Inertia::render('Admin/OpeningAddEditView', compact('formdata', 'resourceNeo'));
     }

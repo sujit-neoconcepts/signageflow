@@ -75,7 +75,7 @@ onBeforeMount(() => {
                         opkey
                     ].id == props.formdata["pur_pr_id"]
                 ) {
-                    tepm["pur_pr_detail"] =
+                    tepm["pur_pr_detail_int"] =
                         props.resourceNeo.formInfoMulti.pur_pr_detail_int.options[
                             opkey
                         ];
