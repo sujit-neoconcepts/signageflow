@@ -33,7 +33,8 @@ class HandleInertiaRequests extends Middleware
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => ['name' => $request->user()->name ?? '', 'id' => $request->user()->id ?? null],
-            ],/*
+            ],
+            'version' => config('custom.vite_ver'),/*
             'ziggy' => function () use ($request) {
                 return array_merge((new Ziggy())->toArray(), [
                     'location' => $request->url(),

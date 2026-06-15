@@ -15,7 +15,10 @@
 <body>
     <header id="header">
         <div id="logo">
-            <h1 class="logo"><a href="/"><img src="images/banner.png" /></a></h1>
+            <h1 class="logo" style="position: relative; display: inline-block; margin: 0;">
+                <a href="/"><img src="images/banner.png" style="display: block;" /></a>
+                <span class="version-badge" style="position: absolute; top: -8px; right: 5px; font-size: 0.9rem; font-weight: bold; color: #fff; background-color: #3b82f6; padding: 2px 8px; border-radius: 9999px; letter-spacing: normal; line-height: 1.2; text-transform: none; font-family: 'Ropa Sans', sans-serif; box-shadow: 0 2px 4px rgba(0,0,0,0.15); z-index: 10;">{{ config('custom.vite_ver') }}</span>
+            </h1>
         </div>
         <div id="topNav">
             <nav class="main-nav">

@@ -1,12 +1,17 @@
 <script setup>
 import { useStyleStore } from "@/stores/style.js";
-import { onMounted } from "vue";
+import { onMounted, computed } from "vue";
+import { usePage } from "@inertiajs/vue3";
+
 const styleStore = useStyleStore();
 const props = defineProps({
     title: String,
     sitekey: String,
     captcha_en: Boolean,
 });
+
+const version = computed(() => usePage().props.version || 'v1.0');
+
 onMounted(() => {
     if (props.captcha_en) {
         const recaptchaScript = document.createElement("script");
@@ -21,12 +26,23 @@ onMounted(() => {
 <template>
     <div class="flex flex-wrap" :class="{ dark: styleStore.darkMode }">
         <div
-            class="w-full sm:w-full md:w-full lg:w-3/5 xl:w-3/5 lg:bg-white"
+            class="w-full sm:w-full md:w-full lg:w-3/5 xl:w-3/5 lg:bg-white relative flex items-center justify-center"
         >
-            <div
-                class="flex items-center justify-center text-2xl uppercase text-white dark:text-black lg:text-9xl lg:h-screen lg:bg-[url('/images/banner.png')] bg-no-repeat lg:bg-center lg:-indent-[500%]"
-            >
-                SignageFlow
+            <div class="relative lg:static flex items-center justify-center w-full h-full">
+                <!-- Large screen centered container for image and badge -->
+                <div class="hidden lg:block relative">
+                    <img src="/images/banner.png" alt="SignageFlow" class="max-w-[400px] h-auto" />
+                    <span class="absolute -top-3 -right-3 bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-md z-10">
+                        {{ version }}
+                    </span>
+                </div>
+                <!-- Small screen text logo -->
+                <div class="lg:hidden text-2xl uppercase text-white dark:text-black flex items-center gap-2 py-8">
+                    <span>SignageFlow</span>
+                    <span class="bg-blue-600 text-white text-xs font-bold px-2.5 py-0.5 rounded-full shadow-md">
+                        {{ version }}
+                    </span>
+                </div>
             </div>
         </div>
 

@@ -2,6 +2,7 @@
 import { mdiLogout, mdiClose } from "@mdi/js";
 import { computed } from "vue";
 import { useStyleStore } from "@/stores/style.js";
+import { usePage } from "@inertiajs/vue3";
 import AsideMenuList from "@/components/AsideMenuList.vue";
 import AsideMenuItem from "@/components/AsideMenuItem.vue";
 import BaseIcon from "@/components/BaseIcon.vue";
@@ -17,6 +18,7 @@ defineProps({
 const emit = defineEmits(["menu-click", "aside-lg-close-click"]);
 
 const styleStore = useStyleStore();
+const version = computed(() => usePage().props.version || 'v1.0');
 
 const logoutItem = computed(() => ({
     label: "Logout",
@@ -52,29 +54,39 @@ const asideLgCloseClick = (event) => {
                     <!-- Logo for expanded sidebar -->
                     <div class="flex flex-col items-center justify-center gap-2" :class="isAsideXlExpanded ? 'xl:flex' : 'xl:hidden'">
                         <div class="flex items-center justify-center gap-2">
-                            <!-- Symbol -->
-                        <img
-                            src="/logo-b.png"
-                            class="hidden dark:block w-18 flex-shrink-0"
-                        />
-                        <img
-                            src="/logo-w.png"
-                            class="block dark:hidden w-18 flex-shrink-0"
-                        />
+                            <!-- Symbol wrapper for positioning badge at bottom-right -->
+                            <div class="relative">
+                                <img
+                                    src="/logo-b.png"
+                                    class="hidden dark:block w-18 flex-shrink-0"
+                                />
+                                <img
+                                    src="/logo-w.png"
+                                    class="block dark:hidden w-18 flex-shrink-0"
+                                />
+                                <span class="absolute -bottom-1 -right-2 bg-blue-600 text-white text-[9px] px-1 py-0.2 rounded-full font-bold select-none shadow-sm z-10 scale-90">
+                                    {{ version }}
+                                </span>
+                            </div>
                             <!-- Text -->
                             <span class="text-xl font-bold text-gray-700 dark:text-gray-300"></span>
                         </div>
                     </div>
                     <!-- Symbol only for collapsed sidebar -->
                     <div class="flex items-center justify-center" :class="isAsideXlExpanded ? 'xl:hidden' : 'xl:flex'">
-                        <img
-                        src="/logo-b.png"
-                        class="mx-auto hidden dark:block w-16"
-                    />
-                    <img
-                        src="/logo-w.png"
-                        class="mx-auto block dark:hidden w-16"
-                    />
+                        <div class="relative">
+                            <img
+                                src="/logo-b.png"
+                                class="mx-auto hidden dark:block w-16"
+                            />
+                            <img
+                                src="/logo-w.png"
+                                class="mx-auto block dark:hidden w-16"
+                            />
+                            <span class="absolute -bottom-1 -right-2 bg-blue-600 text-white text-[9px] px-1 py-0.2 rounded-full font-bold select-none shadow-sm z-10 scale-90">
+                                {{ version }}
+                            </span>
+                        </div>
                     </div>
                 </div>
                 <button
