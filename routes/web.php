@@ -73,6 +73,7 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
 
     Route::get('pgroup-import', [PgroupController::class, 'importView'])->name('pgroup.import');
     Route::post('pgroup-import', [PgroupController::class, 'import']);
+    Route::get('pgroup-options', [PgroupController::class, 'pgroupOptions'])->name('pgroup.options');
     Route::resource('pgroup', PgroupController::class);
     Route::delete('pgroup-bulk-destroy', [PgroupController::class, 'bulkDestroy'])->name('pgroup.bulkDestroy');
 
@@ -180,6 +181,7 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::resource('client', ClientController::class);
     Route::delete('client-bulk-destroy', [ClientController::class, 'bulkDestroy'])->name('client.bulkDestroy');
 
+    Route::get('supplier-options', [SupplierController::class, 'supplierOptions'])->name('supplier.options');
     Route::resource('supplier', SupplierController::class);
     Route::get('supplier-import', [SupplierController::class, 'importView'])->name('supplier.import');
     Route::post('supplier-import', [SupplierController::class, 'import']);

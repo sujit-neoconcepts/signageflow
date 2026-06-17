@@ -343,4 +343,9 @@ class PgroupController extends Controller
                 ]);
         }
     }
+
+    public function pgroupOptions(Request $request)
+    {
+        return response()->json(Pgroup::getOptionsForProduct());
+    }
 }

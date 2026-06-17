@@ -186,6 +186,152 @@ const submitProduct = async () => {
     }
 };
 
+const isSupplierModalActive = ref(false);
+const supplierForm = reactive({
+    sp_name: '',
+    sp_addr: '',
+    sp_phn: '',
+    sp_email: '',
+    sp_gst: '',
+});
+
+const addHeaderFunction = (pkey, key) => {
+    if (key === 'pur_supplier') {
+        supplierForm.sp_name = '';
+        supplierForm.sp_addr = '';
+        supplierForm.sp_phn = '';
+        supplierForm.sp_email = '';
+        supplierForm.sp_gst = '';
+        isSupplierModalActive.value = true;
+    }
+};
+
+const refreshHeaderFunction = async (pkey, key) => {
+    if (key === 'pur_supplier') {
+        try {
+            const response = await axios.get(route("supplier.options"));
+            props.resourceNeo.formInfo[key]["options"] = response.data;
+        } catch (e) {
+            alert("Error refreshing Suppliers: " + (e.response?.data?.message || e.message));
+        }
+    }
+};
+
+const submitSupplier = async () => {
+    try {
+        const response = await axios.post(route('supplier.store'), supplierForm, {
+            headers: { 'Accept': 'application/json' }
+        });
+        
+        const newOptions = response.data.data;
+        props.resourceNeo.formInfo.pur_supplier.options = newOptions;
+        
+        const matchingSupplier = newOptions.find(v => v.toLowerCase() === supplierForm.sp_name.trim().toLowerCase());
+        if (matchingSupplier) {
+            form.pur_supplier = matchingSupplier;
+        } else {
+            form.pur_supplier = supplierForm.sp_name;
+        }
+        
+        isSupplierModalActive.value = false;
+    } catch (e) {
+        alert("Error creating Supplier: " + (e.response?.data?.message || e.message));
+    }
+};
+
+const isPgroupModalActive = ref(false);
+const pgroupForm = reactive({
+    name: '',
+    sgroup: ''
+});
+
+const addProductGroup = () => {
+    pgroupForm.name = '';
+    pgroupForm.sgroup = productForm.subgroup || '';
+    isPgroupModalActive.value = true;
+};
+
+const refreshProductGroup = async () => {
+    try {
+        const response = await axios.get(route("pgroup.options"));
+        props.resourceNeo.productGroups = response.data;
+    } catch (e) {
+        alert("Error refreshing Product Groups: " + (e.response?.data?.message || e.message));
+    }
+};
+
+const submitProductGroup = async () => {
+    try {
+        await axios.post(route('pgroup.store'), pgroupForm, {
+            headers: { 'Accept': 'application/json' }
+        });
+        
+        await refreshProductGroup();
+        
+        const matchingGroup = props.resourceNeo.productGroups.find(pg => pg.label.toLowerCase() === pgroupForm.name.trim().toLowerCase() && pg.sgroup === pgroupForm.sgroup);
+        if (matchingGroup) {
+            productForm.groupinfo = matchingGroup;
+        }
+        
+        isPgroupModalActive.value = false;
+    } catch (e) {
+        alert("Error creating Product Group: " + (e.response?.data?.message || e.message));
+    }
+};
+
+const isInternalNameModalActive = ref(false);
+const internalNameForm = reactive({
+    name: '',
+    unitPrice: 0,
+    unitName: '',
+    unitAltName: '',
+    openStockUnit: 0,
+    openStockMarginPercent: 0
+});
+
+const addInternalName = () => {
+    internalNameForm.name = '';
+    internalNameForm.unitPrice = 0;
+    internalNameForm.unitName = '';
+    internalNameForm.unitAltName = '';
+    internalNameForm.openStockUnit = 0;
+    internalNameForm.openStockMarginPercent = 0;
+    isInternalNameModalActive.value = true;
+};
+
+const refreshInternalName = async () => {
+    try {
+        const response = await axios.get(route("consumableInternalName.options"));
+        props.resourceNeo.internalNames = response.data.map(cin => ({
+            id: cin.id,
+            label: cin.name,
+            data: { unitName: cin.unitName, unitAltName: cin.unitAltName }
+        }));
+    } catch (e) {
+        alert("Error refreshing Internal Names: " + (e.response?.data?.message || e.message));
+    }
+};
+
+const submitInternalName = async () => {
+    try {
+        await axios.post(route('consumableInternalName.store'), internalNameForm, {
+            headers: { 'Accept': 'application/json' }
+        });
+        
+        await refreshInternalName();
+        
+        const matchingName = props.resourceNeo.internalNames.find(cin => cin.label.toLowerCase() === internalNameForm.name.trim().toLowerCase());
+        if (matchingName) {
+            productForm.pr_detail_int = matchingName;
+            handleInternalNameChange(matchingName);
+        }
+        
+        isInternalNameModalActive.value = false;
+    } catch (e) {
+        alert("Error creating Internal Name: " + (e.response?.data?.message || e.message));
+    }
+};
+
 const handleInternalNameChange = (val) => {
     if (val && val.data) {
         productForm.pr_int_unit = val.data.unitName;
@@ -371,10 +517,14 @@ const fetchProd = (index) => {
                             <FormField
                                 v-for="(formField, key) in props.resourceNeo
                                     .formInfo"
+                                :addAndRefresh="formField.addAndRefresh"
                                 :label="formField.label"
                                 :help="formField.tooltip"
                                 :error="form.errors[key]"
                                 class="!mb-0"
+                                :addFunction="addHeaderFunction"
+                                :refreshFunction="refreshHeaderFunction"
+                                :fkey="key"
                             >
                                 <FormFields
                                     :form-field="formField"
@@ -488,7 +638,7 @@ const fetchProd = (index) => {
             </form>
         </SectionMain>
     </LayoutAuthenticated>
-    <CardBoxModal v-model="isProductModalActive" title="Add Product" hasCancel @confirm="submitProduct">
+    <CardBoxModal v-model="isProductModalActive" title="Add Name As per Invoice" hasCancel @confirm="submitProduct">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Sub Group">
                 <select v-model="productForm.subgroup" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
@@ -496,7 +646,12 @@ const fetchProd = (index) => {
                     <option v-for="sg in props.resourceNeo.productSubgroups" :key="sg" :value="sg">{{ sg }}</option>
                 </select>
             </FormField>
-            <FormField label="Product Group">
+            <FormField 
+                label="Product Group"
+                addAndRefresh
+                :addFunction="addProductGroup"
+                :refreshFunction="refreshProductGroup"
+            >
                 <Multiselect
                     v-model="productForm.groupinfo"
                     :options="props.resourceNeo.productGroups.filter(pg => pg.sgroup === productForm.subgroup)"
@@ -508,7 +663,12 @@ const fetchProd = (index) => {
             <FormField label="Name As Per Invoice" class="md:col-span-2">
                 <FormControl v-model="productForm.pr_detail" placeholder="Enter Name As Per Invoice" />
             </FormField>
-            <FormField label="Internal Name">
+            <FormField 
+                label="Internal Name"
+                addAndRefresh
+                :addFunction="addInternalName"
+                :refreshFunction="refreshInternalName"
+            >
                 <Multiselect
                     v-model="productForm.pr_detail_int"
                     :options="props.resourceNeo.internalNames"
@@ -538,6 +698,69 @@ const fetchProd = (index) => {
             </FormField>
             <FormField label="Conversion Value">
                 <FormControl v-model="productForm.pr_min_unit" type="number" placeholder="Enter Conversion Value" />
+            </FormField>
+        </div>
+    </CardBoxModal>
+    <CardBoxModal v-model="isSupplierModalActive" title="Add Supplier" hasCancel @confirm="submitSupplier">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Supplier Name">
+                <FormControl v-model="supplierForm.sp_name" placeholder="Enter Supplier Name" />
+            </FormField>
+            <FormField label="Phone">
+                <FormControl v-model="supplierForm.sp_phn" placeholder="Enter Phone" />
+            </FormField>
+            <FormField label="Email">
+                <FormControl v-model="supplierForm.sp_email" type="email" placeholder="Enter Email" />
+            </FormField>
+            <FormField label="GST">
+                <FormControl v-model="supplierForm.sp_gst" placeholder="Enter GST" />
+            </FormField>
+            <FormField label="Address" class="md:col-span-2">
+                <FormControl v-model="supplierForm.sp_addr" placeholder="Enter Address" />
+            </FormField>
+        </div>
+    </CardBoxModal>
+    <CardBoxModal v-model="isPgroupModalActive" title="Add Product Group" hasCancel @confirm="submitProductGroup">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Product Group Name">
+                <FormControl v-model="pgroupForm.name" placeholder="Enter Product Group Name" />
+            </FormField>
+            <FormField label="Sub Group">
+                <select v-model="pgroupForm.sgroup" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
+                    <option value="">Select Sub Group</option>
+                    <option v-for="sg in props.resourceNeo.productSubgroups" :key="sg" :value="sg">{{ sg }}</option>
+                </select>
+            </FormField>
+        </div>
+    </CardBoxModal>
+    <CardBoxModal v-model="isInternalNameModalActive" title="Add Internal Name" hasCancel @confirm="submitInternalName">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Internal Name">
+                <FormControl v-model="internalNameForm.name" placeholder="Enter Internal Name" />
+            </FormField>
+            <FormField label="Unit Price">
+                <FormControl v-model="internalNameForm.unitPrice" type="number" placeholder="Enter Unit Price" />
+            </FormField>
+            <FormField label="Unit Name">
+                <select v-model="internalNameForm.unitName" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
+                    <option value="">Select Unit Name</option>
+                    <option v-for="unit in props.resourceNeo.units" :key="unit" :value="unit">{{ unit }}</option>
+                </select>
+            </FormField>
+            <FormField label="Unit Alt Name">
+                <select v-model="internalNameForm.unitAltName" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
+                    <option value="">Select Unit Alt Name</option>
+                    <option v-for="unit in props.resourceNeo.units" :key="unit" :value="unit">{{ unit }}</option>
+                </select>
+            </FormField>
+            <FormField label="Open Stock Unit">
+                <select v-model="internalNameForm.openStockUnit" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
+                    <option :value="0">Main [0]</option>
+                    <option :value="1">Alternative [1]</option>
+                </select>
+            </FormField>
+            <FormField label="Open Stock Margin %">
+                <FormControl v-model="internalNameForm.openStockMarginPercent" type="number" placeholder="Enter Open Stock Margin %" />
             </FormField>
         </div>
     </CardBoxModal>

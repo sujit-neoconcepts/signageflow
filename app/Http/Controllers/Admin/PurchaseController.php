@@ -313,9 +313,7 @@ class PurchaseController extends Controller
             'Plant & Machinery Item', 'Services Purchase', 'Services Sale',
             'Stock Item', 'Tools'
         ];
-        $resourceNeo['productGroups'] = \App\Models\Pgroup::all()->map(function($pg) {
-            return ['id' => $pg->id, 'label' => $pg->name, 'sgroup' => $pg->sgroup];
-        });
+        $resourceNeo['productGroups'] = \App\Models\Pgroup::getOptionsForProduct();
         $resourceNeo['internalNames'] = \App\Models\ConsumableInternalName::all()->map(function($cin) {
             return [
                 'id' => $cin->id,
@@ -461,9 +459,7 @@ class PurchaseController extends Controller
             'Plant & Machinery Item', 'Services Purchase', 'Services Sale',
             'Stock Item', 'Tools'
         ];
-        $resourceNeo['productGroups'] = \App\Models\Pgroup::all()->map(function($pg) {
-            return ['id' => $pg->id, 'label' => $pg->name, 'sgroup' => $pg->sgroup];
-        });
+        $resourceNeo['productGroups'] = \App\Models\Pgroup::getOptionsForProduct();
         $resourceNeo['internalNames'] = \App\Models\ConsumableInternalName::all()->map(function($cin) {
             return [
                 'id' => $cin->id,

@@ -41,11 +41,18 @@ class Pgroup extends Model
 
     public static function getStockOption()
     {
-        $allDatas = Pgroup::where('sgroup', 'Stock Item')->get()->sortBy("name");
         $allopts = [];
+        $allDatas = Pgroup::where('sgroup', 'Stock Item')->get()->sortBy("name");
         foreach ($allDatas as $allData) {
             $allopts[] = ['id' => $allData->id, 'label' => $allData->name . " (" . $allData->sgroup . ")"];
         }
         return $allopts;
+    }
+
+    public static function getOptionsForProduct()
+    {
+        return self::orderBy('name')->get()->map(function($pg) {
+            return ['id' => $pg->id, 'label' => $pg->name, 'sgroup' => $pg->sgroup];
+        });
     }
 }

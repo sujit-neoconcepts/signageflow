@@ -118,6 +118,10 @@ class SupplierController extends Controller
 
         \ActivityLog::add(['action' => 'added', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->{array_keys($formInfo)[0]}]);
 
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Created successfully', 'data' => Supplier::orderBy('sp_name')->pluck('sp_name')]);
+        }
+
         return redirect()->route('supplier.index')->with(['message' => $this->resourceNeo['resourceTitle'] . ' Created Successfully !!', 'msg_type' => 'info']);
     }
 
@@ -357,5 +361,10 @@ class SupplierController extends Controller
                     'msg_type' => 'danger'
                 ]);
         }
+    }
+
+    public function supplierOptions(Request $request)
+    {
+        return Supplier::orderBy('sp_name')->pluck('sp_name');
     }
 }

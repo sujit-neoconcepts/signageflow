@@ -75,30 +75,7 @@ export default [
                 label: "Open Stock",
                 resource: "openStock",
             },
-            {
-                label: "Cost Sheet",
-                icon: mdiInvoiceList,
-                menu: [
-                    {
-                        route: "signageCostSheet.index",
-                        label: "Signage",
-                        icon: mdiInvoiceList,
-                        resource: "signageCostSheet",
-                    },
-                    {
-                        route: "cabinetCostSheet.index",
-                        label: "Cabinet",
-                        icon: mdiInvoiceList,
-                        resource: "cabinetCostSheet",
-                    },
-                    {
-                        route: "lettersCostSheet.index",
-                        label: "Letters",
-                        icon: mdiInvoiceList,
-                        resource: "lettersCostSheet",
-                    },
-                ],
-            },
+            
         ],
     },
     {
@@ -225,6 +202,30 @@ export default [
             },
         ],
     },
+    {
+                label: "Cost Sheet",
+                icon: mdiInvoiceList,
+                menu: [
+                    {
+                        route: "signageCostSheet.index",
+                        label: "Signage",
+                        icon: mdiInvoiceList,
+                        resource: "signageCostSheet",
+                    },
+                    {
+                        route: "cabinetCostSheet.index",
+                        label: "Cabinet",
+                        icon: mdiInvoiceList,
+                        resource: "cabinetCostSheet",
+                    },
+                    {
+                        route: "lettersCostSheet.index",
+                        label: "Letters",
+                        icon: mdiInvoiceList,
+                        resource: "lettersCostSheet",
+                    },
+                ],
+            },
     {
         label: "Reports",
         icon: mdiInvoiceList,

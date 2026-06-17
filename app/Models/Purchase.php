@@ -47,7 +47,7 @@ class Purchase extends Model
             'pur_date' => ['label' => 'Purchase Date', 'sortable' => true, 'vRule' => 'required', 'type' => 'datepicker'],
             'received_date' => ['label' => 'Received Date', 'sortable' => true, 'vRule' => 'nullable', 'type' => 'datepicker'],
             'pur_inv' => ['label' => 'Invoice No', 'searchable' => true, 'sortable' => true, 'vRule' => 'required'],
-            'pur_supplier' => ['label' => 'Supplier Name',  'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => $allsuppliers, 'vRule' => 'required',],
+            'pur_supplier' => ['label' => 'Supplier Name',  'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => $allsuppliers, 'vRule' => 'required', 'addAndRefresh' => true],
             'roundoff' => ['label' => 'Roundoff (+/-)', 'sortable' => true, 'vRule' => 'nullable|numeric', 'type' => 'number', 'align' => 'right', 'default' => '0'],
         ];
         return $formInfo;
