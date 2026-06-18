@@ -203,7 +203,7 @@ export default [
         ],
     },
     {
-                label: "Cost Sheet",
+                label: "Price List",
                 icon: mdiInvoiceList,
                 menu: [
                     {

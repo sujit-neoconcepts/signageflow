@@ -15,6 +15,7 @@ import FormFieldsMulti from "@/components/FormFieldsMulti.vue";
 import axios from "axios";
 import CardBoxModal from "@/components/CardBoxModal.vue";
 import FormControl from "@/components/FormControl.vue";
+import BaseButtons from "@/components/BaseButtons.vue";
 import Multiselect from "vue-multiselect";
 import "../../../css/vue-multiselect.css";
 
@@ -128,6 +129,7 @@ const submitform = () => {
 };
 const isProductModalActive = ref(false);
 const currentMultiIndex = ref(0);
+const productErrors = ref({});
 const productForm = reactive({
     subgroup: '',
     groupinfo: null,
@@ -156,6 +158,7 @@ const addFunction = (index, key) => {
         productForm.pr_pur_unit_alt = '';
         productForm.pr_int_unit_alt = '';
         productForm.pr_min_unit = 1;
+        productErrors.value = {};
 
         isProductModalActive.value = true;
     } else {
@@ -164,6 +167,7 @@ const addFunction = (index, key) => {
 };
 
 const submitProduct = async () => {
+    productErrors.value = {};
     try {
         const response = await axios.post(route('product.store'), productForm, {
             headers: { 'Accept': 'application/json' }
@@ -182,7 +186,16 @@ const submitProduct = async () => {
         
         isProductModalActive.value = false;
     } catch (e) {
-        alert("Error creating Product: " + (e.response?.data?.message || e.message));
+        if (e.response?.status === 422 && e.response?.data?.errors) {
+            const errors = e.response.data.errors;
+            const mappedErrors = {};
+            for (const key in errors) {
+                mappedErrors[key] = errors[key][0];
+            }
+            productErrors.value = mappedErrors;
+        } else {
+            alert("Error creating Product: " + (e.response?.data?.message || e.message));
+        }
     }
 };
 
@@ -638,9 +651,9 @@ const fetchProd = (index) => {
             </form>
         </SectionMain>
     </LayoutAuthenticated>
-    <CardBoxModal v-model="isProductModalActive" title="Add Name As per Invoice" hasCancel @confirm="submitProduct">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Sub Group">
+    <CardBoxModal v-model="isProductModalActive" title="Add Name As per Invoice" hasCancel :fullWidth="true">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <FormField label="Sub Group" :error="productErrors.subgroup" class="lg:col-span-1">
                 <select v-model="productForm.subgroup" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
                     <option value="">Select Sub Group</option>
                     <option v-for="sg in props.resourceNeo.productSubgroups" :key="sg" :value="sg">{{ sg }}</option>
@@ -651,6 +664,8 @@ const fetchProd = (index) => {
                 addAndRefresh
                 :addFunction="addProductGroup"
                 :refreshFunction="refreshProductGroup"
+                :error="productErrors.groupinfo"
+                class="lg:col-span-1"
             >
                 <Multiselect
                     v-model="productForm.groupinfo"
@@ -660,7 +675,7 @@ const fetchProd = (index) => {
                     placeholder="Select Product Group"
                 />
             </FormField>
-            <FormField label="Name As Per Invoice" class="md:col-span-2">
+            <FormField label="Name As Per Invoice" class="md:col-span-2 lg:col-span-2" :error="productErrors.pr_detail">
                 <FormControl v-model="productForm.pr_detail" placeholder="Enter Name As Per Invoice" />
             </FormField>
             <FormField 
@@ -668,6 +683,8 @@ const fetchProd = (index) => {
                 addAndRefresh
                 :addFunction="addInternalName"
                 :refreshFunction="refreshInternalName"
+                :error="productErrors.pr_detail_int"
+                class="md:col-span-2 lg:col-span-2"
             >
                 <Multiselect
                     v-model="productForm.pr_detail_int"
@@ -678,28 +695,46 @@ const fetchProd = (index) => {
                     @select="handleInternalNameChange"
                 />
             </FormField>
-            <FormField label="HSN Code">
+            <FormField label="HSN Code" :error="productErrors.pr_hsn" class="lg:col-span-1">
                 <FormControl v-model="productForm.pr_hsn" type="number" placeholder="Enter HSN Code" />
             </FormField>
-            <FormField label="GST Rate">
+            <FormField label="GST Rate" :error="productErrors.pr_gst_rate" class="lg:col-span-1">
                 <FormControl v-model="productForm.pr_gst_rate" type="number" placeholder="Enter GST Rate" />
             </FormField>
-            <FormField label="Billed Unit">
+            <FormField label="Billed Unit" :error="productErrors.pr_pur_unit" class="lg:col-span-1">
                 <select v-model="productForm.pr_pur_unit" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
                     <option value="">Select Billed Unit</option>
                     <option v-for="unit in props.resourceNeo.units" :key="unit" :value="unit">{{ unit }}</option>
                 </select>
             </FormField>
-            <FormField label="Internal Unit">
+            <FormField label="Internal Unit" :error="productErrors.pr_int_unit" class="lg:col-span-1">
                 <select v-model="productForm.pr_int_unit" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
                     <option value="">Select Internal Unit</option>
                     <option v-for="unit in props.resourceNeo.units" :key="unit" :value="unit">{{ unit }}</option>
                 </select>
             </FormField>
-            <FormField label="Conversion Value">
+            <FormField label="Billed Unit Alt" :error="productErrors.pr_pur_unit_alt" class="lg:col-span-1">
+                <select v-model="productForm.pr_pur_unit_alt" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
+                    <option value="">Select Billed Unit Alt</option>
+                    <option v-for="unit in props.resourceNeo.units" :key="unit" :value="unit">{{ unit }}</option>
+                </select>
+            </FormField>
+            <FormField label="Internal Unit Alt" :error="productErrors.pr_int_unit_alt" class="lg:col-span-1">
+                <select v-model="productForm.pr_int_unit_alt" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
+                    <option value="">Select Internal Unit Alt</option>
+                    <option v-for="unit in props.resourceNeo.units" :key="unit" :value="unit">{{ unit }}</option>
+                </select>
+            </FormField>
+            <FormField label="Conversion Value" :error="productErrors.pr_min_unit" class="lg:col-span-1">
                 <FormControl v-model="productForm.pr_min_unit" type="number" placeholder="Enter Conversion Value" />
             </FormField>
         </div>
+        <template #footer>
+            <BaseButtons>
+                <BaseButton label="Done" color="info" @click="submitProduct" />
+                <BaseButton label="Cancel" color="info" outline @click="isProductModalActive = false" />
+            </BaseButtons>
+        </template>
     </CardBoxModal>
     <CardBoxModal v-model="isSupplierModalActive" title="Add Supplier" hasCancel @confirm="submitSupplier">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
