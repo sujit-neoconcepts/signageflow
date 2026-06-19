@@ -13,7 +13,6 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -39,12 +38,12 @@ class EnquiryController extends Controller
     public function index()
     {
         $formInfo = [
-            'enquiry_no'   => ['label' => 'Enquiry No',   'searchable' => true, 'sortable' => true],
+            'enquiry_no' => ['label' => 'Enquiry No',   'searchable' => true, 'sortable' => true],
             'enquiry_date' => ['label' => 'Enquiry Date', 'searchable' => true, 'sortable' => true, 'type' => 'datepicker'],
-            'client_name'  => ['label' => 'Client',       'searchable' => true, 'sortable' => true],
+            'client_name' => ['label' => 'Client',       'searchable' => true, 'sortable' => true],
             'product_type' => ['label' => 'Product Type', 'searchable' => true, 'sortable' => true],
-            'status'       => ['label' => 'Status',       'searchable' => true, 'sortable' => true],
-            'remark'       => ['label' => 'Remark',       'searchable' => true, 'sortable' => true],
+            'status' => ['label' => 'Status',       'searchable' => true, 'sortable' => true],
+            'remark' => ['label' => 'Remark',       'searchable' => true, 'sortable' => true],
         ];
 
         $globalSearch = AllowedFilter::callback('global', function ($query, $value) {
@@ -62,7 +61,7 @@ class EnquiryController extends Controller
 
         $query = Enquiry::select('enquiries.*', 'clients.cl_name as client_name')
             ->leftJoin('clients', 'clients.id', '=', 'enquiries.client_id');
-            //->inFinancialYear();
+        // ->inFinancialYear();
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('-id')
@@ -159,15 +158,13 @@ class EnquiryController extends Controller
                     'original_name' => $f->original_name,
                     'file_size' => $f->file_size,
                     'mime_type' => $f->mime_type,
-                    'download_url' => '/admin/enquiry-file/' . $f->id . '/download',
+                    'download_url' => '/admin/enquiry-file/'.$f->id.'/download',
                 ];
             })->values(),
         ]);
     }
 
-    public function show(Enquiry $enquiry)
-    {
-    }
+    public function show(Enquiry $enquiry) {}
 
     public function print(Enquiry $enquiry)
     {
@@ -183,7 +180,8 @@ class EnquiryController extends Controller
         ])->setPaper('a4', 'portrait');
 
         $safeOrderNo = str_replace(['/', '\\'], '-', (string) $enquiry->enquiry_no);
-        return $pdf->stream('enquiry-' . $safeOrderNo . '.pdf');
+
+        return $pdf->stream('enquiry-'.$safeOrderNo.'.pdf');
     }
 
     public function create()
@@ -206,26 +204,26 @@ class EnquiryController extends Controller
         $items = $enquiry->items->map(function ($item) {
             return [
                 'cost_sheet_id' => $item->cost_sheet_id,
-                'item_name'     => $item->item_name,
-                'qty_mode'      => $item->qty_mode,
-                'length'        => $item->length,
-                'width'         => $item->width,
-                'pieces'        => $item->pieces,
-                'qty'           => $item->qty,
-                'rate'          => $item->rate,
-                'gst_percent'   => $item->gst_percent,
+                'item_name' => $item->item_name,
+                'qty_mode' => $item->qty_mode,
+                'length' => $item->length,
+                'width' => $item->width,
+                'pieces' => $item->pieces,
+                'qty' => $item->qty,
+                'rate' => $item->rate,
+                'gst_percent' => $item->gst_percent,
             ];
         })->values()->toArray();
 
         $formdata = [
-            'enquiry_id'       => $enquiry->id,
-            'enquiry_no'       => $enquiry->enquiry_no,
-            'client_id'        => $enquiry->client_id,
-            'product_type'     => $enquiry->product_type,
-            'remark'           => 'From ' . $enquiry->enquiry_no,
+            'enquiry_id' => $enquiry->id,
+            'enquiry_no' => $enquiry->enquiry_no,
+            'client_id' => $enquiry->client_id,
+            'product_type' => $enquiry->product_type,
+            'remark' => 'From '.$enquiry->enquiry_no,
             'transport_charge' => $enquiry->transport_charge,
-            'gst_percent'      => $enquiry->gst_percent,
-            'items'            => $items,
+            'gst_percent' => $enquiry->gst_percent,
+            'items' => $items,
         ];
 
         $resourceNeo = (new \App\Http\Controllers\Admin\SalesOrderController)->getResourceNeo();
@@ -238,7 +236,6 @@ class EnquiryController extends Controller
 
         return Inertia::render('Admin/SalesOrderAddEditView', compact('formdata', 'resourceNeo', 'clients', 'costSheetOptions', 'munits'));
     }
-
 
     public function store(Request $request)
     {
@@ -273,13 +270,13 @@ class EnquiryController extends Controller
                     'total_amount' => 0,
                 ]);
 
-                if (!empty($lineResult['rows'])) {
+                if (! empty($lineResult['rows'])) {
                     $enquiry->items()->createMany($lineResult['rows']);
                 }
 
                 // Save custom items
                 $customItems = $this->normalizeCustomItems($request->custom_items ?? []);
-                if (!empty($customItems)) {
+                if (! empty($customItems)) {
                     $enquiry->customItems()->createMany($customItems);
                 }
 
@@ -303,20 +300,20 @@ class EnquiryController extends Controller
                 // Handle temp files uploaded via background requests
                 if ($request->has('temp_files') && is_array($request->temp_files)) {
                     foreach ($request->temp_files as $tf) {
-                        $oldPath = 'temp_enquiry_files/' . $tf['stored_name'];
+                        $oldPath = 'temp_enquiry_files/'.$tf['stored_name'];
                         if (\Illuminate\Support\Facades\Storage::disk('local')->exists($oldPath)) {
-                            $newDir = 'enquiry_files/' . $enquiry->id;
-                            if (!\Illuminate\Support\Facades\Storage::disk('local')->exists($newDir)) {
+                            $newDir = 'enquiry_files/'.$enquiry->id;
+                            if (! \Illuminate\Support\Facades\Storage::disk('local')->exists($newDir)) {
                                 \Illuminate\Support\Facades\Storage::disk('local')->makeDirectory($newDir);
                             }
-                            $newPath = $newDir . '/' . $tf['stored_name'];
+                            $newPath = $newDir.'/'.$tf['stored_name'];
                             \Illuminate\Support\Facades\Storage::disk('local')->move($oldPath, $newPath);
 
                             $enquiry->files()->create([
                                 'original_name' => $tf['original_name'],
-                                'stored_name'   => $tf['stored_name'],
-                                'mime_type'     => $tf['mime_type'],
-                                'file_size'     => $tf['file_size'],
+                                'stored_name' => $tf['stored_name'],
+                                'mime_type' => $tf['mime_type'],
+                                'file_size' => $tf['file_size'],
                             ]);
                         }
                     }
@@ -344,6 +341,7 @@ class EnquiryController extends Controller
                 return redirect()->back()->withErrors(['enquiry' => $e->getMessage()])->withInput();
             } catch (\Throwable $e) {
                 DB::rollBack();
+
                 return redirect()->back()->withErrors(['enquiry' => $e->getMessage()])->withInput();
             }
         }
@@ -391,8 +389,8 @@ class EnquiryController extends Controller
                     'original_name' => $f->original_name,
                     'file_size' => $f->file_size,
                     'mime_type' => $f->mime_type,
-                    'download_url' => '/admin/enquiry-file/' . $f->id . '/download',
-                    'delete_url' => '/admin/enquiry-file/' . $f->id,
+                    'download_url' => '/admin/enquiry-file/'.$f->id.'/download',
+                    'delete_url' => '/admin/enquiry-file/'.$f->id,
                 ];
             })->values(),
         ];
@@ -434,16 +432,16 @@ class EnquiryController extends Controller
                 'gst_percent' => $orderGstPercent,
                 'items_taxable_total' => 0,
                 'items_gst_total' => 0,
-                'total_amount' => 0
+                'total_amount' => 0,
             ]);
 
-            if (!empty($lineResult['rows'])) {
+            if (! empty($lineResult['rows'])) {
                 $enquiry->items()->createMany($lineResult['rows']);
             }
 
             // Save custom items
             $customItems = $this->normalizeCustomItems($request->custom_items ?? []);
-            if (!empty($customItems)) {
+            if (! empty($customItems)) {
                 $enquiry->customItems()->createMany($customItems);
             }
 
@@ -464,20 +462,20 @@ class EnquiryController extends Controller
             // Handle temp files uploaded via background requests
             if ($request->has('temp_files') && is_array($request->temp_files)) {
                 foreach ($request->temp_files as $tf) {
-                    $oldPath = 'temp_enquiry_files/' . $tf['stored_name'];
+                    $oldPath = 'temp_enquiry_files/'.$tf['stored_name'];
                     if (\Illuminate\Support\Facades\Storage::disk('local')->exists($oldPath)) {
-                        $newDir = 'enquiry_files/' . $enquiry->id;
-                        if (!\Illuminate\Support\Facades\Storage::disk('local')->exists($newDir)) {
+                        $newDir = 'enquiry_files/'.$enquiry->id;
+                        if (! \Illuminate\Support\Facades\Storage::disk('local')->exists($newDir)) {
                             \Illuminate\Support\Facades\Storage::disk('local')->makeDirectory($newDir);
                         }
-                        $newPath = $newDir . '/' . $tf['stored_name'];
+                        $newPath = $newDir.'/'.$tf['stored_name'];
                         \Illuminate\Support\Facades\Storage::disk('local')->move($oldPath, $newPath);
 
                         $enquiry->files()->create([
                             'original_name' => $tf['original_name'],
-                            'stored_name'   => $tf['stored_name'],
-                            'mime_type'     => $tf['mime_type'],
-                            'file_size'     => $tf['file_size'],
+                            'stored_name' => $tf['stored_name'],
+                            'mime_type' => $tf['mime_type'],
+                            'file_size' => $tf['file_size'],
                         ]);
                     }
                 }
@@ -486,6 +484,7 @@ class EnquiryController extends Controller
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
+
             return redirect()->back()->withErrors(['enquiry' => $e->getMessage()])->withInput();
         }
 
@@ -551,24 +550,24 @@ class EnquiryController extends Controller
         $uploaded = [];
         foreach ($request->file('files') as $file) {
             $originalName = $file->getClientOriginalName();
-            $storedName = uniqid('enq_', true) . '_' . time() . '.' . $file->getClientOriginalExtension();
-            $path = 'enquiry_files/' . $enquiry->id;
+            $storedName = uniqid('enq_', true).'_'.time().'.'.$file->getClientOriginalExtension();
+            $path = 'enquiry_files/'.$enquiry->id;
             $file->storeAs($path, $storedName, 'local');
 
             $record = $enquiry->files()->create([
                 'original_name' => $originalName,
-                'stored_name'   => $storedName,
-                'mime_type'     => $file->getMimeType(),
-                'file_size'     => $file->getSize(),
+                'stored_name' => $storedName,
+                'mime_type' => $file->getMimeType(),
+                'file_size' => $file->getSize(),
             ]);
 
             $uploaded[] = [
-                'id'            => $record->id,
+                'id' => $record->id,
                 'original_name' => $record->original_name,
-                'file_size'     => $record->file_size,
-                'mime_type'     => $record->mime_type,
-                'download_url'  => '/admin/enquiry-file/' . $record->id . '/download',
-                'delete_url'    => '/admin/enquiry-file/' . $record->id,
+                'file_size' => $record->file_size,
+                'mime_type' => $record->mime_type,
+                'download_url' => '/admin/enquiry-file/'.$record->id.'/download',
+                'delete_url' => '/admin/enquiry-file/'.$record->id,
             ];
         }
 
@@ -585,14 +584,14 @@ class EnquiryController extends Controller
         $uploaded = [];
         foreach ($request->file('files') as $file) {
             $originalName = $file->getClientOriginalName();
-            $storedName = uniqid('temp_', true) . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $storedName = uniqid('temp_', true).'_'.time().'.'.$file->getClientOriginalExtension();
             $file->storeAs('temp_enquiry_files', $storedName, 'local');
 
             $uploaded[] = [
                 'original_name' => $originalName,
-                'stored_name'   => $storedName,
-                'mime_type'     => $file->getMimeType(),
-                'file_size'     => $file->getSize(),
+                'stored_name' => $storedName,
+                'mime_type' => $file->getMimeType(),
+                'file_size' => $file->getSize(),
             ];
         }
 
@@ -609,7 +608,7 @@ class EnquiryController extends Controller
 
     public function downloadFile(EnquiryFile $enquiryFile)
     {
-        $path = storage_path('app/' . $enquiryFile->storagePath());
+        $path = storage_path('app/'.$enquiryFile->storagePath());
 
         if (! file_exists($path)) {
             abort(404, 'File not found.');
@@ -685,6 +684,7 @@ class EnquiryController extends Controller
                 'qty' => round($qty, 4),
             ];
         }
+
         return $result;
     }
 
@@ -703,7 +703,7 @@ class EnquiryController extends Controller
 
         foreach ($items as $item) {
             $costSheet = $costSheets->get((int) $item['cost_sheet_id']);
-            if (!$costSheet) {
+            if (! $costSheet) {
                 throw new \RuntimeException('Selected cost sheet item not found.');
             }
             if ($costSheet->prod_type !== $productType) {
@@ -812,7 +812,7 @@ class EnquiryController extends Controller
             ->max('enquiry_sequence');
 
         $nextSequence = $maxSequence + 1;
-        $enquiryNo = $prefix . str_pad((string) $nextSequence, 2, '0', STR_PAD_LEFT) . '/' . $fyCode;
+        $enquiryNo = $prefix.str_pad((string) $nextSequence, 2, '0', STR_PAD_LEFT).'/'.$fyCode;
 
         return [$enquiryNo, $prefix, $nextSequence, $fyCode];
     }
@@ -833,7 +833,7 @@ class EnquiryController extends Controller
         $startYear = ((int) $date->format('n') >= 4) ? (int) $date->format('Y') : ((int) $date->format('Y') - 1);
         $nextYear = $startYear + 1;
 
-        return substr((string) $startYear, -2) . substr((string) $nextYear, -2);
+        return substr((string) $startYear, -2).substr((string) $nextYear, -2);
     }
 
     protected function isDuplicateKeyException(QueryException $exception): bool

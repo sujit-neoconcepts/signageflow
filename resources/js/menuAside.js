@@ -21,6 +21,8 @@ import {
     mdiCartPlus,
     mdiCartArrowUp,
     mdiInvoiceList,
+    mdiClipboardCheckOutline,
+    mdiCalendarCheck,
 } from "@mdi/js";
 
 export default [
@@ -235,6 +237,24 @@ export default [
                 label: "Product Internal Name Report",
                 icon: mdiFormatListBulletedType,
                 resource: "consumableInternalNameReport",
+            },
+        ],
+    },
+    {
+        label: "Tasks",
+        icon: mdiClipboardCheckOutline,
+        menu: [
+            {
+                route: "task.index",
+                label: "Task Manager",
+                icon: mdiClipboardCheckOutline,
+                resource: "task",
+            },
+            {
+                route: "task.myTasks",
+                label: "My Tasks",
+                icon: mdiCalendarCheck,
+                resource: "taskMyTasks",
             },
         ],
     },

@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\BlackTubeSales;
 use App\Models\Grade;
 use App\Models\Thickness;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\BlackTubeSalesItem>
@@ -20,13 +20,13 @@ class BlackTubeSalesItemFactory extends Factory
     public function definition(): array
     {
         $qty = $this->faker->numberBetween(100, 1000);
-                $weightPerTube = $this->faker->randomFloat(3, 1, 10);
-                $weight = $qty * $weightPerTube;
-                $noOfBundle = $this->faker->numberBetween(1, 20);
-                $perPcInBundle = ceil($qty / $noOfBundle);
-                $rate = $this->faker->randomFloat(2, 40, 160);
-                $amount = $weight * $rate;
-        
+        $weightPerTube = $this->faker->randomFloat(3, 1, 10);
+        $weight = $qty * $weightPerTube;
+        $noOfBundle = $this->faker->numberBetween(1, 20);
+        $perPcInBundle = ceil($qty / $noOfBundle);
+        $rate = $this->faker->randomFloat(2, 40, 160);
+        $amount = $weight * $rate;
+
         return [
             'black_tube_sales_id' => BlackTubeSales::inRandomOrder()->first()?->id ?? BlackTubeSales::factory(),
             'grade' => Grade::inRandomOrder()->first()?->name ?? '304',

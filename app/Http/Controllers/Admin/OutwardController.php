@@ -2,19 +2,19 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Inertia\Inertia;
-use App\Models\Outward;
-use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use App\Http\Controllers\Controller;
+use App\Models\Outward;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Services\OpenStockService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
-use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class OutwardController extends Controller
 {
@@ -27,6 +27,7 @@ class OutwardController extends Controller
         $this->middleware('can:outward_edit', ['only' => ['edit', 'update']]);
         $this->middleware('can:outward_delete', ['only' => ['destroy']]);
     }
+
     /**
      * Display a listing of the resource.
      */
@@ -55,7 +56,7 @@ class OutwardController extends Controller
             $query = Outward::select('outwards.*', 'pgroups.name as groupinfo_name', 'pgroups.sgroup as groupinfo_sname', DB::raw('out_qty * IFNULL(unitPrice, 0) as OutwardValue'))
                 ->leftJoin('products', 'products.id', 'outwards.out_product_id', 'left')
                 ->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left');
-            //$resourceNeo['formInfo']['out_incharge']['type'] = null;
+            // $resourceNeo['formInfo']['out_incharge']['type'] = null;
         } else {
             $query = Outward::select('outwards.*', 'pgroups.name as groupinfo_name', 'pgroups.sgroup as groupinfo_sname', DB::raw('out_qty * IFNULL(unitPrice, 0) as OutwardValue'))
                 ->leftJoin('products', 'products.id', 'outwards.out_product_id', 'left')
@@ -63,7 +64,7 @@ class OutwardController extends Controller
                 ->where('out_incharge', Auth::user()->name);
         }
 
-        //$query->inFinancialYear();
+        // $query->inFinancialYear();
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('-out_date')
@@ -97,35 +98,35 @@ class OutwardController extends Controller
             $table->column('out_remark', 'Remark', sortable: true);
 
             $fresult2 = [];
-            foreach ($formInfoMulti['out_incharge']['options'] as  $opt) {
+            foreach ($formInfoMulti['out_incharge']['options'] as $opt) {
                 $opt && $fresult2[$opt] = $opt;
             }
             $fresult6 = [];
-            foreach ($formInfoMulti['out_product_group']['options'] as  $opt) {
+            foreach ($formInfoMulti['out_product_group']['options'] as $opt) {
                 if (isset($opt['label'])) {
                     $fresult6[$opt['label']] = $opt['label'];
                 }
             }
             $fresult7 = [];
             foreach ([
-  'Capex',
-  'Consumable Item',
-  'Indirect Expense/Purchase',
-  'Opex',
-  'Plant & Machinery Item',
-  'Services Purchase',
-  'Services Sale',
-  'Stock Item',
-  'Tools'
-] as  $opt) {
+                'Capex',
+                'Consumable Item',
+                'Indirect Expense/Purchase',
+                'Opex',
+                'Plant & Machinery Item',
+                'Services Purchase',
+                'Services Sale',
+                'Stock Item',
+                'Tools',
+            ] as $opt) {
                 $opt && $fresult7[$opt] = $opt;
             }
             $fresult3 = [];
-            foreach ($formInfoMulti['out_qty_unit']['options'] as  $opt) {
+            foreach ($formInfoMulti['out_qty_unit']['options'] as $opt) {
                 $opt && $fresult3[$opt] = $opt;
             }
             $fresult4 = [];
-            foreach ($formInfoMulti['out_loc']['options'] as  $opt) {
+            foreach ($formInfoMulti['out_loc']['options'] as $opt) {
                 $opt && $fresult4[$opt] = $opt;
             }
             $table
@@ -160,9 +161,9 @@ class OutwardController extends Controller
         $resourceNeo['formInfo'] = Outward::formInfo();
         $resourceNeo['formInfoMulti'] = Outward::formInfoMulti();
 
-        $resourceNeo['formInfoMulti']['balance'] = ['label' => 'Balance', 'readonly' => true, ];
+        $resourceNeo['formInfoMulti']['balance'] = ['label' => 'Balance', 'readonly' => true];
 
-        if (!(\Auth::user()->can('all') || \Auth::user()->can('outward_add_for_all'))) {
+        if (! (\Auth::user()->can('all') || \Auth::user()->can('outward_add_for_all'))) {
             $resourceNeo['formInfoMulti']['out_incharge']['type'] = null;
             $resourceNeo['formInfoMulti']['out_incharge']['readonly'] = true;
 
@@ -179,10 +180,11 @@ class OutwardController extends Controller
 
             $allopts = [];
             foreach ($allGDatas as $allData) {
-                $allopts[] = ['id' => $allData->id, 'label' => $allData->name . " (" . $allData->sgroup . ")"];
+                $allopts[] = ['id' => $allData->id, 'label' => $allData->name.' ('.$allData->sgroup.')'];
             }
             $resourceNeo['formInfoMulti']['out_product_group']['options'] = $allopts;
         }
+
         return Inertia::render('Admin/OutwardAddEditView', compact('resourceNeo'));
     }
 
@@ -196,55 +198,55 @@ class OutwardController extends Controller
         $resourceNeo['AllowDel'] = true;
         $resourceNeo['formInfo'] = Outward::formInfo();
         $resourceNeo['formInfoMulti'] = Outward::formInfoMulti();
-        
-        $resourceNeo['formInfoMulti']['balance'] = ['label' => 'Balance', 'readonly' => true, ];
-        
+
+        $resourceNeo['formInfoMulti']['balance'] = ['label' => 'Balance', 'readonly' => true];
+
         // Fetch all products and pass directly (no AJAX needed since no dependencies)
         $allProducts = $this->getAllProductsData();
         $resourceNeo['formInfoMulti']['out_product']['options'] = $allProducts;
-        
-        if (!(\Auth::user()->can('all') || \Auth::user()->can('outward_add_for_all'))) {
+
+        if (! (\Auth::user()->can('all') || \Auth::user()->can('outward_add_for_all'))) {
             // Make incharge readonly and prepopulated for restricted users
             $resourceNeo['formInfoMulti']['out_incharge']['type'] = null;
             $resourceNeo['formInfoMulti']['out_incharge']['readonly'] = true;
             $resourceNeo['formInfoMulti']['out_incharge']['default'] = Auth::user()->name;
-            
+
             // Location options will be filtered by incharge via API
             $resourceNeo['formInfoMulti']['out_loc']['options'] = [];
-            
+
             // Product group options will be filtered via API
             $resourceNeo['formInfoMulti']['out_product_group']['options'] = [];
         }
 
         return Inertia::render('Admin/Scan', compact('resourceNeo'));
     }
-    
+
     /**
      * Get all products data (helper method used by both scan controller and AJAX endpoint)
      */
     private function getAllProductsData()
     {
         $query = Purchase::select(
-                'purchases.pur_pr_detail_int', 
-                DB::raw('MAX(purchases.pur_pr_id) as pur_pr_id'),
-                DB::raw('MAX(purchases.pur_unint_int) as pur_unint_int'),
-                DB::raw('MAX(purchases.pur_unint_int_alt) as pur_unint_int_alt'),
-                DB::raw('MAX(purchases.pur_qty_int) as pur_qty_int'),
-                DB::raw('MAX(purchases.pur_qty_int_alt) as pur_qty_int_alt'),
-                'consumable_internal_names.unitPrice as pur_unit_price',
-                'consumable_internal_names.unitName',
-                'consumable_internal_names.unitAltName'
-            )
+            'purchases.pur_pr_detail_int',
+            DB::raw('MAX(purchases.pur_pr_id) as pur_pr_id'),
+            DB::raw('MAX(purchases.pur_unint_int) as pur_unint_int'),
+            DB::raw('MAX(purchases.pur_unint_int_alt) as pur_unint_int_alt'),
+            DB::raw('MAX(purchases.pur_qty_int) as pur_qty_int'),
+            DB::raw('MAX(purchases.pur_qty_int_alt) as pur_qty_int_alt'),
+            'consumable_internal_names.unitPrice as pur_unit_price',
+            'consumable_internal_names.unitName',
+            'consumable_internal_names.unitAltName'
+        )
             ->leftJoin('consumable_internal_names', 'consumable_internal_names.name', '=', 'purchases.pur_pr_detail_int')
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-            //->where('pgroups.sgroup', 'Stock Item')
-            //->inFinancialYear()
+            // ->where('pgroups.sgroup', 'Stock Item')
+            // ->inFinancialYear()
             ->groupBy('purchases.pur_pr_detail_int', 'consumable_internal_names.unitPrice', 'consumable_internal_names.unitName', 'consumable_internal_names.unitAltName')
             ->orderBy('purchases.pur_pr_detail_int');
 
         // If user doesn't have full access, filter by their name
-        if (!(Auth::user()->can('all') || Auth::user()->can('outward_add_for_all'))) {
+        if (! (Auth::user()->can('all') || Auth::user()->can('outward_add_for_all'))) {
             $query->where('purchases.pur_incharge', Auth::user()->name);
         }
 
@@ -264,6 +266,7 @@ class OutwardController extends Controller
                 ],
             ];
         }
+
         return $allOpt;
     }
 
@@ -278,7 +281,7 @@ class OutwardController extends Controller
         $validateRule = [];
         $savedArray = [];
 
-        if (strtotime($request->out_date) < strtotime('-2 days') && !(\Auth::user()->can('outward_back_date_entry'))) {
+        if (strtotime($request->out_date) < strtotime('-2 days') && ! (\Auth::user()->can('outward_back_date_entry'))) {
             return redirect()->back()->withErrors(['out_date' => 'The Out Date cannot be older than 2 days.']);
         }
 
@@ -288,15 +291,15 @@ class OutwardController extends Controller
             $savedArray[$key] = $request->{$key};
         }
         foreach (array_keys($formInfoMulti) as $key) {
-            $attributeNames['multi.*.' . $key] = $formInfoMulti[$key]['label'];
-            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.' . $key] = $formInfoMulti[$key]['vRule'];
+            $attributeNames['multi.*.'.$key] = $formInfoMulti[$key]['label'];
+            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.'.$key] = $formInfoMulti[$key]['vRule'];
         }
 
         $request->validate($validateRule, [], $attributeNames);
         $savedArray['out_date'] = date('Y-m-d', strtotime($request->out_date));
         DB::beginTransaction();
         try {
-            $openStockService = new OpenStockService();
+            $openStockService = new OpenStockService;
             foreach ($request->multi as $ml) {
                 foreach (array_diff(array_keys($formInfoMulti), []) as $key) {
                     $savedArray[$key] = $ml[$key];
@@ -311,14 +314,13 @@ class OutwardController extends Controller
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
+
             return redirect()->back()->withErrors(['out_product' => $e->getMessage()])->withInput();
         }
 
-
-
         \ActivityLog::add(['action' => 'added', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->{array_keys($formInfoMulti)[3]}]);
 
-        return redirect()->route('outward.index')->with(['message' => $this->resourceNeo['resourceTitle'] . ' Created Successfully !!', 'msg_type' => 'info']);
+        return redirect()->route('outward.index')->with(['message' => $this->resourceNeo['resourceTitle'].' Created Successfully !!', 'msg_type' => 'info']);
     }
 
     /**
@@ -344,8 +346,6 @@ class OutwardController extends Controller
         $resourceNeo['formInfo'] = Outward::formInfo();
         $formInfoMulti = Outward::formInfoMulti();
 
-
-
         $temp = [];
         foreach (array_keys($formInfoMulti) as $key) {
             $temp[$key] = $formdata->{$key};
@@ -356,11 +356,12 @@ class OutwardController extends Controller
 
         $resourceNeo['formInfoMulti'] = $formInfoMulti;
 
-        $resourceNeo['formInfoMulti']['balance'] = ['label' => 'Balance', 'readonly' => true, ];
+        $resourceNeo['formInfoMulti']['balance'] = ['label' => 'Balance', 'readonly' => true];
 
-        if (!(\Auth::user()->can('all') || \Auth::user()->can('outward_add_for_all'))) {
+        if (! (\Auth::user()->can('all') || \Auth::user()->can('outward_add_for_all'))) {
             $resourceNeo['formInfoMulti']['out_incharge']['type'] = null;
         }
+
         return Inertia::render('Admin/OutwardAddEditView', compact('formdata', 'resourceNeo'));
     }
 
@@ -378,8 +379,8 @@ class OutwardController extends Controller
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
         }
         foreach (array_keys($formInfoMulti) as $key) {
-            $attributeNames['multi.*.' . $key] = $formInfoMulti[$key]['label'];
-            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.' . $key] = $formInfoMulti[$key]['vRule'];
+            $attributeNames['multi.*.'.$key] = $formInfoMulti[$key]['label'];
+            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.'.$key] = $formInfoMulti[$key]['vRule'];
         }
         $request->validate($validateRule, [], $attributeNames);
         foreach (array_diff(array_keys($formInfo), []) as $key) {
@@ -413,6 +414,7 @@ class OutwardController extends Controller
         $uname = $outward->id;
         $outward->delete();
         \ActivityLog::add(['action' => 'deleted', 'module' => 'outward', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Outward Deleted !!');
     }
 
@@ -424,9 +426,9 @@ class OutwardController extends Controller
         Outward::whereIn('id', request('ids'))->delete();
         $uname = (count(request('ids')) > 50) ? 'Many' : $uname = implode(',', request('ids'));
         \ActivityLog::add(['action' => 'deleted', 'module' => 'outward', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Selected Outward Deleted !!');
     }
-
 
     public function products(Request $request)
     {
@@ -439,7 +441,7 @@ class OutwardController extends Controller
             ->selectRaw('SUM(out_qty) as total_out_qty')
             ->where('out_incharge', $incharge)
             ->where('out_loc', $location)
-            //->inFinancialYear()
+            // ->inFinancialYear()
             ->groupBy('out_product');
 
         // 2. Calculate Current Stock per Product (Total Purchases - Total Outwards)
@@ -448,7 +450,7 @@ class OutwardController extends Controller
             ->where('purchases.pur_incharge', $incharge)
             ->where('purchases.pur_loc', $location)
             ->leftJoinSub($outwardsQuery, 'outwards_sum', 'purchases.pur_pr_detail_int', '=', 'outwards_sum.out_product')
-            //->inFinancialYear()
+            // ->inFinancialYear()
             ->groupBy('purchases.pur_pr_detail_int');
 
         // 3. Get Latest Purchase ID per Product (to ensure unique products and get latest details)
@@ -459,26 +461,26 @@ class OutwardController extends Controller
 
         // 4. Main Query
         $alldatas = Purchase::select(
-                'purchases.pur_pr_id',
-                'purchases.pur_pr_detail_int',
-                'purchases.pur_unint_int',
-                'purchases.pur_unint_int_alt',
-                'purchases.pur_qty_int_alt',
-                'purchases.pur_qty_int',
-                'stock_query.current_stock',
-                'consumable_internal_names.unitPrice'
-            )
+            'purchases.pur_pr_id',
+            'purchases.pur_pr_detail_int',
+            'purchases.pur_unint_int',
+            'purchases.pur_unint_int_alt',
+            'purchases.pur_qty_int_alt',
+            'purchases.pur_qty_int',
+            'stock_query.current_stock',
+            'consumable_internal_names.unitPrice'
+        )
             // Join to get only the latest purchase record for each product
             ->joinSub($latestPurchasesQuery, 'latest_purchases', 'purchases.id', '=', 'latest_purchases.max_pur_id')
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-            //->where('pgroups.sgroup', 'Stock Item')
+            // ->where('pgroups.sgroup', 'Stock Item')
             // Join with ConsumableInternalName to get unitPrice
             ->leftJoin('consumable_internal_names', 'consumable_internal_names.name', '=', 'purchases.pur_pr_detail_int')
             // Join with Stock calculation
             ->leftJoinSub($stockSubQuery, 'stock_query', 'purchases.pur_pr_detail_int', '=', 'stock_query.pur_pr_detail_int')
             ->where('products.groupinfo', $groupId)
-            //->inFinancialYear()
+            // ->inFinancialYear()
             ->orderBy('purchases.pur_pr_detail_int')
             ->get();
 
@@ -487,6 +489,7 @@ class OutwardController extends Controller
         foreach ($alldatas as $alldata) {
             $allOpt[] = ['id' => $alldata->pur_pr_id, 'label' => $alldata->pur_pr_detail_int, 'data' => $alldata];
         }
+
         return $allOpt;
     }
 
@@ -496,7 +499,7 @@ class OutwardController extends Controller
             ->where('pur_loc', $request->out_loc)
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-            //->where('pgroups.sgroup', 'Stock Item')
+            // ->where('pgroups.sgroup', 'Stock Item')
             ->select('pgroups.id as group_id', 'pgroups.name as group_name')
             ->groupBy('pgroups.id', 'pgroups.name')
             ->orderBy('pgroups.name')
@@ -506,8 +509,10 @@ class OutwardController extends Controller
         foreach ($alldatas as $alldata) {
             $allOpt[] = ['id' => $alldata->group_id, 'label' => $alldata->group_name, 'data' => $alldata];
         }
+
         return $allOpt;
     }
+
     public function productsloc(Request $request)
     {
         return Purchase::where('pur_incharge', $request->out_incharge)
@@ -523,15 +528,16 @@ class OutwardController extends Controller
             ->where('pur_loc', $request->out_loc)
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-            //->where('pgroups.sgroup', 'Stock Item')
+            // ->where('pgroups.sgroup', 'Stock Item')
             ->orderBy('pgroups.name')
-            /*->groupBy('pgroups.name')*/
+            /* ->groupBy('pgroups.name') */
             ->get();
 
         $allOpt = [];
         foreach ($alldatas as $alldata) {
             $allOpt[] = ['id' => $alldata->groupinfo, 'label' => $alldata->name, 'data' => $alldata];
         }
+
         return $allOpt;
     }
 
@@ -542,26 +548,26 @@ class OutwardController extends Controller
     public function getAllProducts(Request $request)
     {
         $query = Purchase::select(
-                'purchases.pur_pr_detail_int', 
-                DB::raw('MAX(purchases.pur_pr_id) as pur_pr_id'),
-                DB::raw('MAX(purchases.pur_unint_int) as pur_unint_int'),
-                DB::raw('MAX(purchases.pur_unint_int_alt) as pur_unint_int_alt'),
-                DB::raw('MAX(purchases.pur_qty_int) as pur_qty_int'),
-                DB::raw('MAX(purchases.pur_qty_int_alt) as pur_qty_int_alt'),
-                'consumable_internal_names.unitPrice as pur_unit_price',
-                'consumable_internal_names.unitName',
-                'consumable_internal_names.unitAltName'
-            )
+            'purchases.pur_pr_detail_int',
+            DB::raw('MAX(purchases.pur_pr_id) as pur_pr_id'),
+            DB::raw('MAX(purchases.pur_unint_int) as pur_unint_int'),
+            DB::raw('MAX(purchases.pur_unint_int_alt) as pur_unint_int_alt'),
+            DB::raw('MAX(purchases.pur_qty_int) as pur_qty_int'),
+            DB::raw('MAX(purchases.pur_qty_int_alt) as pur_qty_int_alt'),
+            'consumable_internal_names.unitPrice as pur_unit_price',
+            'consumable_internal_names.unitName',
+            'consumable_internal_names.unitAltName'
+        )
             ->leftJoin('consumable_internal_names', 'consumable_internal_names.name', '=', 'purchases.pur_pr_detail_int')
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-            //->where('pgroups.sgroup', 'Stock Item')
-            //->inFinancialYear()
+            // ->where('pgroups.sgroup', 'Stock Item')
+            // ->inFinancialYear()
             ->groupBy('purchases.pur_pr_detail_int', 'consumable_internal_names.unitPrice', 'consumable_internal_names.unitName', 'consumable_internal_names.unitAltName')
             ->orderBy('purchases.pur_pr_detail_int');
 
         // If user doesn't have full access, filter by their name
-        if (!(Auth::user()->can('all') || Auth::user()->can('outward_add_for_all'))) {
+        if (! (Auth::user()->can('all') || Auth::user()->can('outward_add_for_all'))) {
             $query->where('purchases.pur_incharge', Auth::user()->name);
         }
 
@@ -581,6 +587,7 @@ class OutwardController extends Controller
                 ],
             ];
         }
+
         return $allOpt;
     }
 
@@ -595,7 +602,7 @@ class OutwardController extends Controller
         $incharges = Purchase::where('pur_pr_detail_int', $productName)
             ->select('pur_incharge')
             ->distinct()
-            //->inFinancialYear()
+            // ->inFinancialYear()
             ->orderBy('pur_incharge')
             ->pluck('pur_incharge');
 
@@ -614,7 +621,7 @@ class OutwardController extends Controller
         $query = Purchase::where('pur_pr_detail_int', $productName)
             ->select('pur_loc')
             ->distinct();
-            //->inFinancialYear();
+        // ->inFinancialYear();
 
         if ($incharge) {
             $query->where('pur_incharge', $incharge);
@@ -638,9 +645,9 @@ class OutwardController extends Controller
         $query = Purchase::where('pur_pr_detail_int', $productName)
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-            //->where('pgroups.sgroup', 'Stock Item')
+            // ->where('pgroups.sgroup', 'Stock Item')
             ->select('pgroups.id as group_id', 'pgroups.name as group_name');
-            //->inFinancialYear();
+        // ->inFinancialYear();
 
         if ($incharge) {
             $query->where('pur_incharge', $incharge);

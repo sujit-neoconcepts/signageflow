@@ -15,7 +15,8 @@ class Permission extends OriginalPermission
 
     public static function formInfo()
     {
-        $formInfo = ['name'=>['title'=>'Name']];
+        $formInfo = ['name' => ['title' => 'Name']];
+
         return $formInfo;
     }
 }

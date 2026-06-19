@@ -29,24 +29,28 @@ class PurchaseInfo extends Model
     public function scopePurDateStart($query, $sd)
     {
         $start = ($sd instanceof Carbon) ? $sd : Carbon::parse($sd);
+
         return $query->where('purchases_info.pur_date', '>=', $start->startOfDay());
     }
 
     public function scopePurDateEnd($query, $ed)
     {
         $end = ($ed instanceof Carbon) ? $ed : Carbon::parse($ed);
+
         return $query->where('purchases_info.pur_date', '<=', $end->endOfDay());
     }
 
     public function scopeReceivedDateStart($query, $sd)
     {
         $start = ($sd instanceof Carbon) ? $sd : Carbon::parse($sd);
+
         return $query->where('purchases_info.received_date', '>=', $start->startOfDay());
     }
 
     public function scopeReceivedDateEnd($query, $ed)
     {
         $end = ($ed instanceof Carbon) ? $ed : Carbon::parse($ed);
+
         return $query->where('purchases_info.received_date', '<=', $end->endOfDay());
     }
 }

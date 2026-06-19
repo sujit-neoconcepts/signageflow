@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Rules\NotUsedPassword;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -47,14 +46,14 @@ class NewPasswordController extends Controller
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user) use ($request) {
-                if((Hash::check($request->password, $user->password))) {
+                if ((Hash::check($request->password, $user->password))) {
                     throw \Illuminate\Validation\ValidationException::withMessages([
-                        'password' => 'You can\'t enter your current old password.'
+                        'password' => 'You can\'t enter your current old password.',
                     ]);
                 }
 
                 $user->forceFill([
-                    'password' => $request->password, //Hash::make($request->password),
+                    'password' => $request->password, // Hash::make($request->password),
                     'remember_token' => Str::random(60),
                 ])->save();
 

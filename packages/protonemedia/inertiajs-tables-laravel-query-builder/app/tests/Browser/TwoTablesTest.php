@@ -177,12 +177,12 @@ class TwoTablesTest extends DuskTestCase
                 ->get();
 
             $companies->last()->update([
-                'name'    => 'Protone Media B.V.',
+                'name' => 'Protone Media B.V.',
                 'address' => 'The Netherlands',
             ]);
 
             $users->last()->update([
-                'name'  => 'Baljet Pascal',
+                'name' => 'Baljet Pascal',
                 'email' => 'pascal@pascal.pascal',
             ]);
 

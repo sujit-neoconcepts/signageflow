@@ -8,50 +8,54 @@ use Illuminate\Database\Eloquent\Model;
 class Pgroup extends Model
 {
     use HasFactory;
+
     protected $fillable = ['name', 'sgroup'];
 
     public static function formInfo()
     {
         $formInfo = [
-            'name' => ['label' => 'Name', 'vRule' => 'required|unique:pgroups,name',],
+            'name' => ['label' => 'Name', 'vRule' => 'required|unique:pgroups,name'],
             'sgroup' => ['label' => 'Sub Group', 'vRule' => 'required', 'searchable' => false, 'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => [
-  'Capex',
-  'Consumable Item',
-  'Indirect Expense/Purchase',
-  'Opex',
-  'Plant & Machinery Item',
-  'Services Purchase',
-  'Services Sale',
-  'Stock Item',
-  'Tools'
-], 'vRule' => 'required',],
+                'Capex',
+                'Consumable Item',
+                'Indirect Expense/Purchase',
+                'Opex',
+                'Plant & Machinery Item',
+                'Services Purchase',
+                'Services Sale',
+                'Stock Item',
+                'Tools',
+            ], 'vRule' => 'required', ],
         ];
+
         return $formInfo;
     }
 
     public static function getAllOption()
     {
-        $allDatas = Pgroup::all()->sortBy("name");
+        $allDatas = Pgroup::all()->sortBy('name');
         $allopts = [];
         foreach ($allDatas as $allData) {
-            $allopts[] = ['id' => $allData->id, 'label' => $allData->name . " (" . $allData->sgroup . ")", 'sgroup' => $allData->sgroup];
+            $allopts[] = ['id' => $allData->id, 'label' => $allData->name.' ('.$allData->sgroup.')', 'sgroup' => $allData->sgroup];
         }
+
         return $allopts;
     }
 
     public static function getStockOption()
     {
         $allopts = [];
-        $allDatas = Pgroup::where('sgroup', 'Stock Item')->get()->sortBy("name");
+        $allDatas = Pgroup::where('sgroup', 'Stock Item')->get()->sortBy('name');
         foreach ($allDatas as $allData) {
-            $allopts[] = ['id' => $allData->id, 'label' => $allData->name . " (" . $allData->sgroup . ")"];
+            $allopts[] = ['id' => $allData->id, 'label' => $allData->name.' ('.$allData->sgroup.')'];
         }
+
         return $allopts;
     }
 
     public static function getOptionsForProduct()
     {
-        return self::orderBy('name')->get()->map(function($pg) {
+        return self::orderBy('name')->get()->map(function ($pg) {
             return ['id' => $pg->id, 'label' => $pg->name, 'sgroup' => $pg->sgroup];
         });
     }

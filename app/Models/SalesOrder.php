@@ -9,7 +9,7 @@ use Illuminate\Support\Carbon;
 
 class SalesOrder extends Model
 {
-    use HasFactory, FinancialYearScope;
+    use FinancialYearScope, HasFactory;
 
     const DATE_COLUMN = 'order_date';
 
@@ -54,12 +54,14 @@ class SalesOrder extends Model
     public function scopeOrderDateStart($query, $sd)
     {
         $start = ($sd instanceof Carbon) ? $sd : Carbon::parse($sd);
+
         return $query->where('order_date', '>=', $start->startOfDay());
     }
 
     public function scopeOrderDateEnd($query, $ed)
     {
         $end = ($ed instanceof Carbon) ? $ed : Carbon::parse($ed);
+
         return $query->where('order_date', '<=', $end->endOfDay());
     }
 }

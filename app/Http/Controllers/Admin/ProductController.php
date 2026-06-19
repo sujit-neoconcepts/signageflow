@@ -2,19 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Inertia\Inertia;
-use App\Models\Product;
-use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use App\Http\Controllers\Controller;
 use App\Models\Outward;
 use App\Models\Pgroup;
+use App\Models\Product;
 use App\Models\Purchase;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Inertia\Inertia;
+use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
+use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\AllowedSort;
 use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
-use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
-
 
 class ProductController extends Controller
 {
@@ -28,6 +27,7 @@ class ProductController extends Controller
         $this->middleware('can:product_edit', ['only' => ['edit', 'update']]);
         $this->middleware('can:product_delete', ['only' => ['destroy']]);
     }
+
     /**
      * Display a listing of the resource.
      */
@@ -35,15 +35,15 @@ class ProductController extends Controller
     {
         $formInfo = Product::formInfo();
         $formInfoMulti = [];
-        $globalSearch = AllowedFilter::callback('global', function ($query, $value) use ($formInfo, $formInfoMulti) {
-            $query->where(function ($query) use ($value, $formInfo, $formInfoMulti) {
-                Collection::wrap($value)->each(function ($value) use ($query, $formInfo, $formInfoMulti) {
+        $globalSearch = AllowedFilter::callback('global', function ($query, $value) {
+            $query->where(function ($query) use ($value) {
+                Collection::wrap($value)->each(function ($value) use ($query) {
                     /*foreach (array_merge(array_keys($formInfo), array_keys($formInfoMulti)) as $key) {
                         $query->orWhere($key, 'LIKE', "%{$value}%");
                     }*/
                     $query->orWhere('pr_detail_int', 'LIKE', "%{$value}%");
                     $query->orWhere('pgroups.name', 'LIKE', "%{$value}%");
-                   // $query->orWhere('pgroups.sgroup', 'LIKE', "%{$value}%");
+                    // $query->orWhere('pgroups.sgroup', 'LIKE', "%{$value}%");
                 });
             });
         });
@@ -62,7 +62,7 @@ class ProductController extends Controller
             ->defaultSort('pr_detail')
             ->allowedSorts(array_merge(array_keys($formInfo), array_keys($formInfoMulti), ['groupinfo_name', 'groupinfo_sname', AllowedSort::field('validation', 'validation_status_raw')]))
             ->allowedFilters(array_merge(
-                array_diff(array_merge(array_keys($formInfo), array_keys($formInfoMulti)), ['groupinfo']), 
+                array_diff(array_merge(array_keys($formInfo), array_keys($formInfoMulti)), ['groupinfo']),
                 [AllowedFilter::exact('groupinfo'), AllowedFilter::exact('groupinfo_sname', 'pgroups.sgroup'), $globalSearch]
             ))
             ->paginate($perPage)
@@ -70,8 +70,8 @@ class ProductController extends Controller
             ->through(function ($product) {
                 $errors = [];
                 if (empty($product->pr_detail_int)) {
-                    $errors[] = "Internal Name is empty";
-                } elseif (!$product->cin_id) {
+                    $errors[] = 'Internal Name is empty';
+                } elseif (! $product->cin_id) {
                     $errors[] = "Internal Name '{$product->pr_detail_int}' does not exist in master";
                 } else {
                     if ($product->pr_int_unit !== $product->cin_unitName) {
@@ -81,9 +81,10 @@ class ProductController extends Controller
                         $errors[] = "Internal Unit Alt mismatch. Product: '{$product->pr_int_unit_alt}', Master: '{$product->cin_unitAltName}'";
                     }
                 }
-                
-                $product->validation_status = (bool)$product->validation_status_raw;
+
+                $product->validation_status = (bool) $product->validation_status_raw;
                 $product->validation_error = implode(' | ', $errors);
+
                 return $product;
             });
 
@@ -101,13 +102,13 @@ class ProductController extends Controller
             [
                 'label' => 'Import',
                 'link' => 'product.import',
-                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z'
-            ]
+                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z',
+            ],
         ];
 
         return Inertia::render('Admin/ProductIndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo, $formInfoMulti) {
             $table->withGlobalSearch();
-            $arrKey = array_diff(array_keys($formInfo), ['subgroup','groupinfo']);
+            $arrKey = array_diff(array_keys($formInfo), ['subgroup', 'groupinfo']);
             $table->column('groupinfo_sname', 'Product Sub Group', searchable: false, sortable: true);
             $table->column('groupinfo_name', 'Product Group', searchable: false, sortable: true);
             foreach ($arrKey as $key) {
@@ -116,8 +117,6 @@ class ProductController extends Controller
             foreach (array_keys($formInfoMulti) as $key) {
                 $table->column($key, $formInfoMulti[$key]['label'], searchable: $formInfoMulti[$key]['searchable'] ?? false, sortable: $formInfoMulti[$key]['sortable'] ?? false, hidden: $formInfoMulti[$key]['hidden'] ?? false, extra: ['align' => $formInfoMulti[$key]['align'] ?? 'left']);
             }
-            
-            
 
             $fresult = ['' => 'All'];
             $options1 = $formInfo['pr_pur_unit']['options'] ?? [];
@@ -131,16 +130,16 @@ class ProductController extends Controller
             }
             $fresult3 = [];
             foreach ([
-  'Capex',
-  'Consumable Item',
-  'Indirect Expense/Purchase',
-  'Opex',
-  'Plant & Machinery Item',
-  'Services Purchase',
-  'Services Sale',
-  'Stock Item',
-  'Tools'
-] as  $opt) {
+                'Capex',
+                'Consumable Item',
+                'Indirect Expense/Purchase',
+                'Opex',
+                'Plant & Machinery Item',
+                'Services Purchase',
+                'Services Sale',
+                'Stock Item',
+                'Tools',
+            ] as $opt) {
                 $opt && $fresult3[$opt] = $opt;
             }
             $table
@@ -153,7 +152,6 @@ class ProductController extends Controller
                 ->selectFilter(key: 'groupinfo', label: 'Product Group', options: $fresult2, noFilterOptionLabel: 'All')
                 ->selectFilter(key: 'groupinfo_sname', label: 'Product Sub Group', options: $fresult3, noFilterOptionLabel: 'All');
 
-
             $table->perPageOptions([10, 15, 30, 50, 100, 10000]);
         });
     }
@@ -165,6 +163,7 @@ class ProductController extends Controller
     {
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = Product::formInfo();
+
         return Inertia::render('Admin/ProductAddEditView', compact('resourceNeo'));
     }
 
@@ -194,7 +193,7 @@ class ProductController extends Controller
             return response()->json(['message' => 'Created successfully', 'data' => Product::getAllOption()]);
         }
 
-        return redirect()->route('product.index')->with(['message' => $this->resourceNeo['resourceTitle'] . ' Created Successfully !!', 'msg_type' => 'info']);
+        return redirect()->route('product.index')->with(['message' => $this->resourceNeo['resourceTitle'].' Created Successfully !!', 'msg_type' => 'info']);
     }
 
     /**
@@ -214,7 +213,7 @@ class ProductController extends Controller
         $pgroup = Pgroup::find($product->groupinfo);
         $formdata->subgroup = $pgroup ? $pgroup->sgroup : null;
         $formdata->groupinfo = $pgroup ? ['id' => $product->groupinfo, 'label' => $pgroup->name, 'sgroup' => $pgroup->sgroup] : null;
-        
+
         // Format pr_detail_int for dropdown
         if ($product->pr_detail_int) {
             $consumableName = \App\Models\ConsumableInternalName::where('name', $product->pr_detail_int)->first();
@@ -224,14 +223,15 @@ class ProductController extends Controller
                     'label' => $consumableName->name,
                     'data' => [
                         'unitName' => $consumableName->unitName,
-                        'unitAltName' => $consumableName->unitAltName
-                    ]
+                        'unitAltName' => $consumableName->unitAltName,
+                    ],
                 ];
             }
         }
-        
+
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = Product::formInfo();
+
         return Inertia::render('Admin/ProductAddEditView', compact('formdata', 'resourceNeo'));
     }
 
@@ -247,7 +247,7 @@ class ProductController extends Controller
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
         }
-        $validateRule['pr_detail'] = 'required|unique:products,pr_detail,' . $product->id;
+        $validateRule['pr_detail'] = 'required|unique:products,pr_detail,'.$product->id;
         $request->validate($validateRule, [], $attributeNames);
         foreach (array_diff(array_keys($formInfo), ['groupinfo', 'pr_detail_int', 'subgroup']) as $key) {
             $val = $request->{$key};
@@ -259,8 +259,6 @@ class ProductController extends Controller
 
         Purchase::where('pur_pr_id', $product->id)->update(['pur_pr_detail_int' => $product->pr_detail_int]);
         Outward::where('out_product_id', $product->id)->update(['out_product' => $product->pr_detail_int]);
-
-
 
         \ActivityLog::add(['action' => 'updated', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->{array_keys($formInfo)[0]}]);
 
@@ -275,6 +273,7 @@ class ProductController extends Controller
         $uname = $product->id;
         $product->delete();
         \ActivityLog::add(['action' => 'deleted', 'module' => 'product', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Product Deleted !!');
     }
 
@@ -286,6 +285,7 @@ class ProductController extends Controller
         Product::whereIn('id', request('ids'))->delete();
         $uname = (count(request('ids')) > 50) ? 'Many' : $uname = implode(',', request('ids'));
         \ActivityLog::add(['action' => 'deleted', 'module' => 'product', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Selected Product Deleted !!');
     }
 
@@ -296,6 +296,7 @@ class ProductController extends Controller
             Purchase::where('pur_pr_id', $product->id)->update(['pur_pr_detail_int' => $product->pr_detail_int]);
             Outward::where('out_product_id', $product->id)->update(['out_product' => $product->pr_detail_int]);
         }
+
         return redirect()->route('dashboard')->with('message', 'Name Auto sync');
     }
 
@@ -313,12 +314,12 @@ class ProductController extends Controller
             [
                 'link' => 'product.index',
                 'label' => 'Back to List',
-                'icon' => 'M18.6,6.62C17.16,6.62 15.8,7.18 14.83,8.15L7.8,14.39C7.16,15.03 6.31,15.38 5.4,15.38C3.53,15.38 2,13.87 2,12C2,10.13 3.53,8.62 5.4,8.62C6.31,8.62 7.16,8.97 7.84,9.65L8.97,10.65L10.5,9.31L9.22,8.2C8.2,7.18 6.84,6.62 5.4,6.62C2.42,6.62 0,9.04 0,12C0,14.96 2.42,17.38 5.4,17.38C6.84,17.38 8.2,16.82 9.17,15.85L16.2,9.61C16.84,8.97 17.69,8.62 18.6,8.62C20.47,8.62 22,10.13 22,12C22,13.87 20.47,15.38 18.6,15.38C17.7,15.38 16.84,15.03 16.16,14.35L15,13.34L13.5,14.68L14.78,15.8C15.8,16.81 17.15,17.37 18.6,17.37C21.58,17.37 24,14.96 24,12C24,9 21.58,6.62 18.6,6.62Z'
-            ]
+                'icon' => 'M18.6,6.62C17.16,6.62 15.8,7.18 14.83,8.15L7.8,14.39C7.16,15.03 6.31,15.38 5.4,15.38C3.53,15.38 2,13.87 2,12C2,10.13 3.53,8.62 5.4,8.62C6.31,8.62 7.16,8.97 7.84,9.65L8.97,10.65L10.5,9.31L9.22,8.2C8.2,7.18 6.84,6.62 5.4,6.62C2.42,6.62 0,9.04 0,12C0,14.96 2.42,17.38 5.4,17.38C6.84,17.38 8.2,16.82 9.17,15.85L16.2,9.61C16.84,8.97 17.69,8.62 18.6,8.62C20.47,8.62 22,10.13 22,12C22,13.87 20.47,15.38 18.6,15.38C17.7,15.38 16.84,15.03 16.16,14.35L15,13.34L13.5,14.68L14.78,15.8C15.8,16.81 17.15,17.37 18.6,17.37C21.58,17.37 24,14.96 24,12C24,9 21.58,6.62 18.6,6.62Z',
+            ],
         ];
 
         $sampleData = [
-           // ['subgroup' => 'Stock Item', 'groupinfo' => 'abc', 'pr_detail' => 'Product A', 'pr_hsn' => '12345678', 'pr_detail_int' => 'PROD-A', 'pr_pur_unit' => 'Kg', 'pr_int_unit' => 'Kg', 'pr_pur_unit_alt' => '', 'pr_int_unit_alt' => '', 'pr_min_unit' => '1', 'pr_gst_rate' => '18'],
+            // ['subgroup' => 'Stock Item', 'groupinfo' => 'abc', 'pr_detail' => 'Product A', 'pr_hsn' => '12345678', 'pr_detail_int' => 'PROD-A', 'pr_pur_unit' => 'Kg', 'pr_int_unit' => 'Kg', 'pr_pur_unit_alt' => '', 'pr_int_unit_alt' => '', 'pr_min_unit' => '1', 'pr_gst_rate' => '18'],
 
             ['subgroup' => 'Stock Item', 'groupinfo' => 'Adhesives', 'pr_detail' => 'Product B', 'pr_hsn' => '87654321', 'pr_detail_int' => 'A Glue', 'pr_pur_unit' => 'Piece', 'pr_int_unit' => 'Pc.', 'pr_pur_unit_alt' => '', 'pr_int_unit_alt' => 'Pc.', 'pr_min_unit' => '1', 'pr_gst_rate' => '12'],
         ];
@@ -334,18 +335,18 @@ class ProductController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:2048' // 2MB limit
+            'file' => 'required|file|mimes:csv,txt|max:2048', // 2MB limit
         ]);
 
         $file = $request->file('file');
         $path = $file->getRealPath();
 
         // Check if file is readable
-        if (!is_readable($path)) {
+        if (! is_readable($path)) {
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! Unable to read the uploaded file.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -356,7 +357,7 @@ class ProductController extends Controller
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! The uploaded file is empty.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -366,11 +367,11 @@ class ProductController extends Controller
         // Validate headers
         $expectedHeaders = ['subgroup', 'groupinfo', 'pr_detail', 'pr_hsn', 'pr_detail_int', 'pr_pur_unit', 'pr_int_unit', 'pr_pur_unit_alt', 'pr_int_unit_alt', 'pr_min_unit', 'pr_gst_rate'];
         $missingHeaders = array_diff($expectedHeaders, $headers);
-        if (!empty($missingHeaders)) {
+        if (! empty($missingHeaders)) {
             return redirect()->back()
                 ->with([
-                    'message' => 'Import failed! Missing required columns: ' . implode(', ', $missingHeaders),
-                    'msg_type' => 'danger'
+                    'message' => 'Import failed! Missing required columns: '.implode(', ', $missingHeaders),
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -379,7 +380,7 @@ class ProductController extends Controller
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! No data rows found in the file.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -392,6 +393,7 @@ class ProductController extends Controller
             // Skip empty rows
             if (empty(array_filter($record))) {
                 $rowNumber++;
+
                 continue;
             }
 
@@ -414,26 +416,26 @@ class ProductController extends Controller
                     'required',
                     'exists:munits,name',
                     function ($attribute, $value, $fail) use ($data) {
-                        if (!empty($data['pr_detail_int'])) {
+                        if (! empty($data['pr_detail_int'])) {
                             $cin = \App\Models\ConsumableInternalName::where('name', $data['pr_detail_int'])->first();
-                            if ($cin && (string)$cin->unitName !== (string)$value) {
+                            if ($cin && (string) $cin->unitName !== (string) $value) {
                                 $fail("Internal Unit must be '{$cin->unitName}' as per Internal Name settings.");
                             }
                         }
-                    }
+                    },
                 ],
                 'pr_pur_unit_alt' => 'nullable|exists:munits,name',
                 'pr_int_unit_alt' => [
                     'nullable',
                     'exists:munits,name',
                     function ($attribute, $value, $fail) use ($data) {
-                        if (!empty($data['pr_detail_int'])) {
+                        if (! empty($data['pr_detail_int'])) {
                             $cin = \App\Models\ConsumableInternalName::where('name', $data['pr_detail_int'])->first();
-                            if ($cin && (string)$cin->unitAltName !== (string)$value) {
+                            if ($cin && (string) $cin->unitAltName !== (string) $value) {
                                 $fail("Internal Unit Alt must be '{$cin->unitAltName}' as per Internal Name settings.");
                             }
                         }
-                    }
+                    },
                 ],
                 'pr_min_unit' => 'required|numeric',
                 'pr_gst_rate' => 'required|numeric',
@@ -459,19 +461,19 @@ class ProductController extends Controller
             ]);
 
             if ($validator->fails()) {
-                $errors[] = "Row {$rowNumber}: " . implode(', ', $validator->errors()->all());
+                $errors[] = "Row {$rowNumber}: ".implode(', ', $validator->errors()->all());
             } else {
                 // Get validated data
                 $validatedRecord = $validator->validated();
-                
+
                 // Convert groupinfo from name to ID
                 $pgroup = Pgroup::where('name', $validatedRecord['groupinfo'])
-                                ->where('sgroup', $validatedRecord['subgroup'])
-                                ->first();
+                    ->where('sgroup', $validatedRecord['subgroup'])
+                    ->first();
                 if ($pgroup) {
                     $validatedRecord['groupinfo'] = $pgroup->id;
                 }
-                
+
                 unset($validatedRecord['subgroup']);
                 $validatedData[] = $validatedRecord;
             }
@@ -480,12 +482,13 @@ class ProductController extends Controller
         }
 
         // If there are any validation errors, redirect back with errors
-        if (!empty($errors)) {
-            $errorMessage = "Import failed! Please fix the following errors:\n\n" . implode("\n", $errors);
+        if (! empty($errors)) {
+            $errorMessage = "Import failed! Please fix the following errors:\n\n".implode("\n", $errors);
+
             return redirect()->back()
                 ->with([
                     'message' => $errorMessage,
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -502,16 +505,17 @@ class ProductController extends Controller
 
             return redirect()->route('product.index')
                 ->with([
-                    'message' => count($validatedData) . ' product records imported successfully!',
-                    'msg_type' => 'success'
+                    'message' => count($validatedData).' product records imported successfully!',
+                    'msg_type' => 'success',
                 ]);
         } catch (\Exception $e) {
             \DB::rollback();
-            \Log::error('Product import failed: ' . $e->getMessage());
+            \Log::error('Product import failed: '.$e->getMessage());
+
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! An unexpected error occurred while importing the data. Please try again.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
     }

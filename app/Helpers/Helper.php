@@ -11,7 +11,7 @@ class Helper
             return 'A';
         }
 
-        return  ++$key;
+        return ++$key;
     }
 
     public static function ucfirstlower($string)

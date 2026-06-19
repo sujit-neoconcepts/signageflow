@@ -4,13 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\ConsumableInternalName;
 
 class Product extends Model
 {
     use HasFactory;
-    protected $fillable = ['pr_detail', 'pr_hsn', 'pr_detail_int', 'pr_pur_unit', 'pr_pur_unit_alt', 'pr_int_unit', 'pr_int_unit_alt', 'pr_gst_rate', 'pr_min_unit', 'pr_min_unit_alt', 'pr_group', 'groupinfo'];
 
+    protected $fillable = ['pr_detail', 'pr_hsn', 'pr_detail_int', 'pr_pur_unit', 'pr_pur_unit_alt', 'pr_int_unit', 'pr_int_unit_alt', 'pr_gst_rate', 'pr_min_unit', 'pr_min_unit_alt', 'pr_group', 'groupinfo'];
 
     public static function formInfo()
     {
@@ -18,14 +17,14 @@ class Product extends Model
         $consumableNames = ConsumableInternalName::select('id', 'name', 'unitName', 'unitAltName')
             ->orderBy('name')
             ->get()
-            ->map(function($item) {
+            ->map(function ($item) {
                 return [
                     'id' => $item->id,
                     'label' => $item->name,
                     'data' => [
                         'unitName' => $item->unitName,
-                        'unitAltName' => $item->unitAltName
-                    ]
+                        'unitAltName' => $item->unitAltName,
+                    ],
                 ];
             })
             ->toArray();
@@ -40,7 +39,7 @@ class Product extends Model
                 'Services Purchase',
                 'Services Sale',
                 'Stock Item',
-                'Tools'
+                'Tools',
             ], 'vRule' => 'required'],
 
             'groupinfo' => ['label' => 'Product Group', 'searchable' => false, 'sortable' => true, 'type' => 'select',  'options' => Pgroup::getAllOption(), 'vRule' => 'required', 'canAdd' => true, 'filter' => ['on' => 'subgroup', 'comp' => 'sgroup', 'fetch' => 'id']],
@@ -48,32 +47,33 @@ class Product extends Model
             'pr_detail' => ['label' => 'Name As Per Invoice', 'searchable' => true, 'sortable' => true, 'vRule' => 'required|unique:products,pr_detail'],
 
             'pr_detail_int' => [
-                'label' => 'Internal Name', 
-                'searchable' => true, 
+                'label' => 'Internal Name',
+                'searchable' => true,
                 'sortable' => true,
                 'type' => 'select',
                 'options' => $consumableNames,
                 'canAdd' => true,
                 'autoFill' => [
                     'pr_int_unit' => 'data.unitName',
-                    'pr_int_unit_alt' => 'data.unitAltName'
-                ]
+                    'pr_int_unit_alt' => 'data.unitAltName',
+                ],
             ],
 
             'pr_hsn' => ['label' => 'HSN Code:', 'searchable' => true, 'sortable' => true, 'vRule' => 'required|numeric', 'align' => 'right'],
 
             'pr_gst_rate' => ['label' => 'Gst Rate', 'searchable' => true, 'sortable' => true, 'vRule' => 'required|numeric', 'align' => 'right'],
 
-            'pr_pur_unit' => ['label' => 'Billed Unit',  'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => $allunits, 'vRule' => 'required',],
+            'pr_pur_unit' => ['label' => 'Billed Unit',  'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => $allunits, 'vRule' => 'required'],
 
             'pr_int_unit' => ['label' => 'Internal Unit',  'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => $allunits, 'vRule' => 'required'],
 
-            'pr_pur_unit_alt' => ['label' => 'Billed Unit Alt',  'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => $allunits,],
+            'pr_pur_unit_alt' => ['label' => 'Billed Unit Alt',  'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => $allunits],
 
-            'pr_int_unit_alt' => ['label' => 'Internal Unit Alt',  'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => $allunits,],
+            'pr_int_unit_alt' => ['label' => 'Internal Unit Alt',  'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => $allunits],
 
             'pr_min_unit' => ['label' => 'Conversion Value', 'searchable' => false, 'sortable' => true, 'vRule' => 'required|numeric'],
         ];
+
         return $formInfo;
     }
 
@@ -101,7 +101,7 @@ class Product extends Model
         // Last rates by Internal Name
         $lastRates = \DB::table('purchases')
             ->select('pur_rate', 'pur_pr_detail_int')
-            ->whereIn('id', function($query) {
+            ->whereIn('id', function ($query) {
                 $query->selectRaw('MAX(id)')
                     ->from('purchases')
                     ->where('entry_type', 0)
@@ -121,11 +121,12 @@ class Product extends Model
             $alldata->unit_rate = $alldata->master_unit_price ?? 0;
 
             $allOpt[] = [
-                'id' => $alldata->id, 
-                'label' => $alldata->pr_detail, 
-                'data' => $alldata
+                'id' => $alldata->id,
+                'label' => $alldata->pr_detail,
+                'data' => $alldata,
             ];
         }
+
         return $allOpt;
     }
 
@@ -152,30 +153,31 @@ class Product extends Model
         $lastRates = \DB::table('purchases')
             ->whereIn('pur_pr_detail_int', $names)
             ->select('pur_rate', 'pur_pr_detail_int')
-            ->whereIn('id', function($query) {
+            ->whereIn('id', function ($query) {
                 $query->selectRaw('MAX(id)')
                     ->from('purchases')
                     ->where('entry_type', 0)
                     ->groupBy('pur_pr_detail_int');
             })
             ->get()->pluck('pur_rate', 'pur_pr_detail_int');
-            
+
         $minIds = Product::select('pr_detail_int', \DB::raw('MIN(id) as min_id'))
             ->whereIn('pr_detail_int', $names)
             ->groupBy('pr_detail_int')
             ->get()->pluck('min_id', 'pr_detail_int');
 
-        $allOpt = []; 
+        $allOpt = [];
         foreach ($alldatas as $alldata) {
             $in = $purSub[$alldata->name] ?? 0;
             $out = $outSub[$alldata->name] ?? 0;
-            
+
             $alldata->available_qty = $in - $out;
             $alldata->last_rate = $lastRates[$alldata->name] ?? 0;
             $alldata->unit_rate = $alldata->unitPrice ?? 0;
-            
+
             $allOpt[] = ['id' => $minIds[$alldata->name] ?? null, 'label' => $alldata->name, 'data' => $alldata];
         }
+
         return $allOpt;
     }
 
@@ -185,16 +187,17 @@ class Product extends Model
         $uniqueIds = Product::selectRaw('MIN(id) as id')
             ->groupBy('pr_detail_int')
             ->pluck('id');
-        
+
         // Fetch full records for those IDs
         $alldatas = Product::whereIn('id', $uniqueIds)
             ->orderBy('pr_detail_int')
             ->get();
-            
+
         $allOpt = []; // [['id' => 0, 'label' => 'Products']];
         foreach ($alldatas as $alldata) {
             $allOpt[] = ['id' => $alldata->id, 'label' => $alldata->pr_detail_int, 'data' => $alldata];
         }
+
         return $allOpt;
     }
 }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Supplier extends Model
 {
     use HasFactory;
+
     protected $fillable = ['sp_name', 'sp_addr', 'sp_phn', 'sp_email', 'sp_gst'];
 
     public static function formInfo()
@@ -31,8 +32,9 @@ class Supplier extends Model
         foreach ($allSuppliers as $allSupplier) {
             $allData[] = ['id' => $allSupplier->id, 'label' => $allSupplier->sp_name];
         }
-        //print_r($allData);
-        //exit;
+
+        // print_r($allData);
+        // exit;
         return $allData;
     }
 }

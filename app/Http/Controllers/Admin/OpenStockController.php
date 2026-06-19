@@ -22,7 +22,7 @@ class OpenStockController extends Controller
         'resourceName' => 'openStock',
         'resourceTitle' => 'Open Stock',
         'iconPath' => 'M4,4H20V6H4V4M4,8H20V16H4V8M4,18H20V20H4V18Z',
-        'actions' => [ 'r'],
+        'actions' => ['r'],
     ];
 
     public function __construct()
@@ -125,10 +125,10 @@ class OpenStockController extends Controller
             ->where('pgroups.sgroup', 'Stock Item')
             ->whereNotNull('purchases.pur_pr_detail_int')
             ->where('purchases.pur_pr_detail_int', '!=', '')
-            //->inFinancialYear()
+            // ->inFinancialYear()
             ->orderBy('purchases.pur_pr_detail_int');
 
-        if (!(Auth::user()->can('all') || Auth::user()->can('outward_add_for_all'))) {
+        if (! (Auth::user()->can('all') || Auth::user()->can('outward_add_for_all'))) {
             $internalNameQuery->where('purchases.pur_incharge', Auth::user()->name);
         }
 
@@ -209,7 +209,7 @@ class OpenStockController extends Controller
         $validated = $request->validate($rules);
         $validated['txn_date'] = date('Y-m-d', strtotime($validated['txn_date']));
 
-        $service = new OpenStockService();
+        $service = new OpenStockService;
         $service->adjustStock($validated);
 
         \ActivityLog::add([

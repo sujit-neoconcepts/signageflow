@@ -2,18 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Inertia\Inertia;
+use App\Helpers\Helper;
+use App\Http\Controllers\Controller;
 use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
+use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\AllowedSort;
 use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
-use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
-
-use App\Helpers\Helper;
 
 class ClientController extends Controller
 {
@@ -44,7 +43,6 @@ class ClientController extends Controller
             });
         });
 
-
         $perPage = request()->query('perPage') ?? 10;
         $resourceData = QueryBuilder::for(Client::class)
             ->defaultSort('cl_name')
@@ -67,14 +65,14 @@ class ClientController extends Controller
             [
                 'label' => 'Import',
                 'link' => 'client.import',
-                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z'
-            ]
+                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z',
+            ],
         ];
 
         return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo) {
             $table->withGlobalSearch();
 
-           // $table->column('id', 'ID', sortable: true);
+            // $table->column('id', 'ID', sortable: true);
             $arrKey = array_diff(array_keys($formInfo), ['password', 'active']);
             foreach ($arrKey as $key) {
                 $table->column($key, $formInfo[$key]['label'], searchable: true, sortable: true);
@@ -94,8 +92,6 @@ class ClientController extends Controller
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = Client::formInfo();
 
-
-
         return Inertia::render('Admin/AddEditView', compact('resourceNeo'));
     }
 
@@ -114,24 +110,21 @@ class ClientController extends Controller
             $savedArray[$key] = $request->{$key};
         }
 
-
         $savedArray['active'] = $request->active['id'] ?? 0;
         $request->validate($validateRule, [], $attributeNames);
 
-
-        if (!empty($savedArray['cl_name'])) {
+        if (! empty($savedArray['cl_name'])) {
             $savedArray['cl_name'] = Helper::ucfirstlower($savedArray['cl_name']);
         }
-        if (!empty($savedArray['contact_person'])) {
+        if (! empty($savedArray['contact_person'])) {
             $savedArray['contact_person'] = Helper::ucfirstlower($savedArray['contact_person']);
         }
-        if (!empty($savedArray['cl_addr'])) {
+        if (! empty($savedArray['cl_addr'])) {
             $savedArray['cl_addr'] = Helper::ucfirstlower($savedArray['cl_addr']);
         }
-        if (!empty($savedArray['cl_addr2'])) {
+        if (! empty($savedArray['cl_addr2'])) {
             $savedArray['cl_addr2'] = Helper::ucfirstlower($savedArray['cl_addr2']);
         }
-
 
         $client = Client::create($savedArray);
 
@@ -143,12 +136,12 @@ class ClientController extends Controller
                 'data' => [
                     'id' => $client->id,
                     'label' => $client->cl_name,
-                    'cl_name' => $client->cl_name
-                ]
+                    'cl_name' => $client->cl_name,
+                ],
             ]);
         }
 
-        return redirect()->route('client.index')->with(['message' => $this->resourceNeo['resourceTitle'] . ' Created Successfully !!', 'msg_type' => 'info']);
+        return redirect()->route('client.index')->with(['message' => $this->resourceNeo['resourceTitle'].' Created Successfully !!', 'msg_type' => 'info']);
     }
 
     /**
@@ -161,8 +154,6 @@ class ClientController extends Controller
 
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = Client::formInfo();
-
-
 
         return Inertia::render('Admin/AddEditView', compact('formdata', 'resourceNeo'));
     }
@@ -179,15 +170,12 @@ class ClientController extends Controller
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
         }
-        $validateRule['cl_name'] = 'required|unique:clients,cl_name,' . $client->id;
+        $validateRule['cl_name'] = 'required|unique:clients,cl_name,'.$client->id;
         $request->validate($validateRule, [], $attributeNames);
-
 
         foreach (array_keys($formInfo) as $key) {
             $client->{$key} = $request->{$key};
         }
-
-
 
         $client->active = $request->active['id'];
 
@@ -195,7 +183,7 @@ class ClientController extends Controller
 
         \ActivityLog::add(['action' => 'updated', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->{array_keys($formInfo)[0]}]);
 
-        return redirect()->route('client.index')->with(['message' => $this->resourceNeo['resourceTitle'] . ' Updated Successfully !!', 'msg_type' => 'info']);
+        return redirect()->route('client.index')->with(['message' => $this->resourceNeo['resourceTitle'].' Updated Successfully !!', 'msg_type' => 'info']);
     }
 
     /**
@@ -208,7 +196,8 @@ class ClientController extends Controller
         $client->delete();
 
         \ActivityLog::add(['action' => 'deleted', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $uname]);
-        return redirect()->back()->with('message', $this->resourceNeo['resourceTitle'] . ' Deleted !!');
+
+        return redirect()->back()->with('message', $this->resourceNeo['resourceTitle'].' Deleted !!');
     }
 
     /**
@@ -219,7 +208,8 @@ class ClientController extends Controller
         Client::whereIn('id', request('ids'))->delete();
         $uname = (count(request('ids')) > 50) ? 'Many' : $uname = implode(',', request('ids'));
         \ActivityLog::add(['action' => 'deleted', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $uname]);
-        return redirect()->back()->with('message', 'Selected ' . $this->resourceNeo['resourceTitle'] . ' Deleted !!');
+
+        return redirect()->back()->with('message', 'Selected '.$this->resourceNeo['resourceTitle'].' Deleted !!');
     }
 
     /**
@@ -231,8 +221,8 @@ class ClientController extends Controller
             [
                 'link' => 'client.index',
                 'label' => 'Back to List',
-                'icon' => 'M12 3C14.21 3 16 4.79 16 7S14.21 11 12 11 8 9.21 8 7 9.79 3 12 3M16 13.54C16 14.6 15.72 17.07 13.81 19.83L13 15L13.94 13.12C13.32 13.05 12.67 13 12 13S10.68 13.05 10.06 13.12L11 15L10.19 19.83C8.28 17.07 8 14.6 8 13.54C5.61 14.24 4 15.5 4 17V21H20V17C20 15.5 18.4 14.24 16 13.54Z'
-            ]
+                'icon' => 'M12 3C14.21 3 16 4.79 16 7S14.21 11 12 11 8 9.21 8 7 9.79 3 12 3M16 13.54C16 14.6 15.72 17.07 13.81 19.83L13 15L13.94 13.12C13.32 13.05 12.67 13 12 13S10.68 13.05 10.06 13.12L11 15L10.19 19.83C8.28 17.07 8 14.6 8 13.54C5.61 14.24 4 15.5 4 17V21H20V17C20 15.5 18.4 14.24 16 13.54Z',
+            ],
         ];
 
         $sampleData = [
@@ -253,18 +243,18 @@ class ClientController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:2048' // 2MB limit
+            'file' => 'required|file|mimes:csv,txt|max:2048', // 2MB limit
         ]);
 
         $file = $request->file('file');
         $path = $file->getRealPath();
 
         // Check if file is readable
-        if (!is_readable($path)) {
+        if (! is_readable($path)) {
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! Unable to read the uploaded file.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -275,7 +265,7 @@ class ClientController extends Controller
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! The uploaded file is empty.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -287,11 +277,11 @@ class ClientController extends Controller
         // Validate headers - only required fields are mandatory, others are ignored if present
         $requiredHeaders = ['cl_name', 'contact_person', 'cl_addr', 'cl_addr2', 'pincode', 'cl_phn', 'cl_email', 'password', 'cl_gst'];
         $missingRequiredHeaders = array_diff($requiredHeaders, $headers);
-        if (!empty($missingRequiredHeaders)) {
+        if (! empty($missingRequiredHeaders)) {
             return redirect()->back()
                 ->with([
-                    'message' => 'Import failed! Missing required columns: ' . implode(', ', $missingRequiredHeaders),
-                    'msg_type' => 'danger'
+                    'message' => 'Import failed! Missing required columns: '.implode(', ', $missingRequiredHeaders),
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -300,7 +290,7 @@ class ClientController extends Controller
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! No data rows found in the file.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -314,6 +304,7 @@ class ClientController extends Controller
             // Skip empty rows
             if (empty(array_filter($record))) {
                 $rowNumber++;
+
                 continue;
             }
 
@@ -324,7 +315,7 @@ class ClientController extends Controller
 
             // Handle empty values - convert empty strings to null for proper database storage
             foreach ($data as $key => $value) {
-                if ($value === '' && !in_array($key, ['password', 'active'])) {
+                if ($value === '' && ! in_array($key, ['password', 'active'])) {
                     $data[$key] = null;
                 }
             }
@@ -333,7 +324,6 @@ class ClientController extends Controller
             if (isset($data['password']) && $data['password'] === '') {
                 $data['password'] = 'password123'; // Default password for empty fields
             }
-
 
             // Build validation rules using the same logic as store method
             $attributeNames = [];
@@ -354,7 +344,7 @@ class ClientController extends Controller
             $validator = \Validator::make($savedArray, $validationRules, [], $attributeNames);
 
             if ($validator->fails()) {
-                $errors[] = "Row {$rowNumber}: " . implode(', ', $validator->errors()->all());
+                $errors[] = "Row {$rowNumber}: ".implode(', ', $validator->errors()->all());
             } else {
                 $validatedData[] = $savedArray;
             }
@@ -363,12 +353,13 @@ class ClientController extends Controller
         }
 
         // If there are any validation errors, redirect back with errors
-        if (!empty($errors)) {
-            $errorMessage = "Import failed! Please fix the following errors:\n\n" . implode("\n", $errors);
+        if (! empty($errors)) {
+            $errorMessage = "Import failed! Please fix the following errors:\n\n".implode("\n", $errors);
+
             return redirect()->back()
                 ->with([
                     'message' => $errorMessage,
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -378,16 +369,16 @@ class ClientController extends Controller
 
             foreach ($validatedData as $data) {
 
-                if (!empty($data['cl_name'])) {
+                if (! empty($data['cl_name'])) {
                     $data['cl_name'] = Helper::ucfirstlower($data['cl_name']);
                 }
-                if (!empty($data['contact_person'])) {
+                if (! empty($data['contact_person'])) {
                     $data['contact_person'] = Helper::ucfirstlower($data['contact_person']);
                 }
-                if (!empty($data['cl_addr'])) {
+                if (! empty($data['cl_addr'])) {
                     $data['cl_addr'] = Helper::ucfirstlower($data['cl_addr']);
                 }
-                if (!empty($data['cl_addr2'])) {
+                if (! empty($data['cl_addr2'])) {
                     $data['cl_addr2'] = Helper::ucfirstlower($data['cl_addr2']);
                 }
 
@@ -397,19 +388,19 @@ class ClientController extends Controller
             \DB::commit();
             \ActivityLog::add(['action' => 'imported', 'module' => 'client', 'data_key' => count($validatedData)]);
 
-
             return redirect()->route('client.index')
                 ->with([
-                    'message' => count($validatedData) . ' client records imported successfully!',
-                    'msg_type' => 'success'
+                    'message' => count($validatedData).' client records imported successfully!',
+                    'msg_type' => 'success',
                 ]);
         } catch (\Exception $e) {
             \DB::rollback();
-            \Log::error('Client import failed: ' . $e->getMessage());
+            \Log::error('Client import failed: '.$e->getMessage());
+
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! An unexpected error occurred while importing the data. Please try again.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
     }

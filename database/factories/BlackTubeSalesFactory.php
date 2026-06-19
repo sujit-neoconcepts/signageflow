@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Client;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\BlackTubeSales>
@@ -18,11 +18,11 @@ class BlackTubeSalesFactory extends Factory
     public function definition(): array
     {
         $salesDate = $this->faker->dateTimeBetween('-1 year', 'now');
-                $deliveryDate = $this->faker->dateTimeBetween($salesDate, '+1 month');
-                $subTotal = $this->faker->randomFloat(2, 15000, 150000);
-                $taxTotal = $subTotal * 0.18;
-                $total = $subTotal + $taxTotal;
-        
+        $deliveryDate = $this->faker->dateTimeBetween($salesDate, '+1 month');
+        $subTotal = $this->faker->randomFloat(2, 15000, 150000);
+        $taxTotal = $subTotal * 0.18;
+        $total = $subTotal + $taxTotal;
+
         return [
             'sales_number' => null,
             'sales_date' => $salesDate,

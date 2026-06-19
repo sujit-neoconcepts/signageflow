@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Inertia\Inertia;
+use App\Http\Controllers\Controller;
 use App\Models\Pgroup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
+use Inertia\Inertia;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class PgroupController extends Controller
 {
@@ -23,6 +23,7 @@ class PgroupController extends Controller
         $this->middleware('can:pgroup_edit', ['only' => ['edit', 'update']]);
         $this->middleware('can:pgroup_delete', ['only' => ['destroy']]);
     }
+
     /**
      * Display a listing of the resource.
      */
@@ -58,18 +59,16 @@ class PgroupController extends Controller
             $this->resourceNeo['bulkActions']['csvExport'] = [];
         }
 
-
         // Add import link to extraMainLinks
         $this->resourceNeo['extraMainLinks'] = [
             [
                 'label' => 'Import',
                 'link' => 'pgroup.import',
-                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z'
-            ]
+                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z',
+            ],
         ];
 
-        return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' =>
-        $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo, $formInfoMulti) {
+        return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo, $formInfoMulti) {
             $table->withGlobalSearch();
             $arrKey = array_diff(array_keys($formInfo), []);
             foreach ($arrKey as $key) {
@@ -80,16 +79,16 @@ class PgroupController extends Controller
             }
             $fresult = [];
             foreach ([
-  'Capex',
-  'Consumable Item',
-  'Indirect Expense/Purchase',
-  'Opex',
-  'Plant & Machinery Item',
-  'Services Purchase',
-  'Services Sale',
-  'Stock Item',
-  'Tools'
-] as $opt) {
+                'Capex',
+                'Consumable Item',
+                'Indirect Expense/Purchase',
+                'Opex',
+                'Plant & Machinery Item',
+                'Services Purchase',
+                'Services Sale',
+                'Stock Item',
+                'Tools',
+            ] as $opt) {
                 $fresult[$opt] = $opt;
             }
 
@@ -108,6 +107,7 @@ class PgroupController extends Controller
     {
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = Pgroup::formInfo();
+
         return Inertia::render('Admin/AddEditView', compact('resourceNeo'));
     }
 
@@ -145,6 +145,7 @@ class PgroupController extends Controller
         $formdata = $pgroup;
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = Pgroup::formInfo();
+
         return Inertia::render('Admin/AddEditView', compact('formdata', 'resourceNeo'));
     }
 
@@ -160,7 +161,7 @@ class PgroupController extends Controller
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
         }
-        $validateRule['name'] = 'required|unique:pgroups,name,' . $pgroup->id;
+        $validateRule['name'] = 'required|unique:pgroups,name,'.$pgroup->id;
         $request->validate($validateRule, [], $attributeNames);
         foreach (array_diff(array_keys($formInfo), []) as $key) {
             $pgroup->{$key} = $request->{$key};
@@ -181,6 +182,7 @@ class PgroupController extends Controller
         $uname = $pgroup->id;
         $pgroup->delete();
         \ActivityLog::add(['action' => 'deleted', 'module' => 'pgroup', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Pgroup Deleted !!');
     }
 
@@ -192,8 +194,10 @@ class PgroupController extends Controller
         Pgroup::whereIn('id', request('ids'))->delete();
         $uname = (count(request('ids')) > 50) ? 'Many' : $uname = implode(',', request('ids'));
         \ActivityLog::add(['action' => 'deleted', 'module' => 'pgroup', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Selected Pgroup Deleted !!');
     }
+
     /**
      * Show the import view.
      */
@@ -203,8 +207,8 @@ class PgroupController extends Controller
             [
                 'link' => 'pgroup.index',
                 'label' => 'Back to List',
-                'icon' => 'M1,1V5H2V19H1V23H5V22H19V23H23V19H22V5H23V1H19V2H5V1M5,4H19V5H20V19H19V20H5V19H4V5H5M6,6V14H9V18H18V9H14V6M8,8H12V12H8M14,11H16V16H11V14H14'
-            ]
+                'icon' => 'M1,1V5H2V19H1V23H5V22H19V23H23V19H22V5H23V1H19V2H5V1M5,4H19V5H20V19H19V20H5V19H4V5H5M6,6V14H9V18H18V9H14V6M8,8H12V12H8M14,11H16V16H11V14H14',
+            ],
         ];
 
         $sampleData = [
@@ -225,18 +229,18 @@ class PgroupController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:2048' // 2MB limit
+            'file' => 'required|file|mimes:csv,txt|max:2048', // 2MB limit
         ]);
 
         $file = $request->file('file');
         $path = $file->getRealPath();
 
         // Check if file is readable
-        if (!is_readable($path)) {
+        if (! is_readable($path)) {
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! Unable to read the uploaded file.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -247,7 +251,7 @@ class PgroupController extends Controller
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! The uploaded file is empty.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -257,11 +261,11 @@ class PgroupController extends Controller
         // Validate headers
         $expectedHeaders = ['name', 'sgroup'];
         $missingHeaders = array_diff($expectedHeaders, $headers);
-        if (!empty($missingHeaders)) {
+        if (! empty($missingHeaders)) {
             return redirect()->back()
                 ->with([
-                    'message' => 'Import failed! Missing required columns: ' . implode(', ', $missingHeaders),
-                    'msg_type' => 'danger'
+                    'message' => 'Import failed! Missing required columns: '.implode(', ', $missingHeaders),
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -270,7 +274,7 @@ class PgroupController extends Controller
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! No data rows found in the file.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -283,6 +287,7 @@ class PgroupController extends Controller
             // Skip empty rows
             if (empty(array_filter($record))) {
                 $rowNumber++;
+
                 continue;
             }
 
@@ -299,7 +304,7 @@ class PgroupController extends Controller
             ]);
 
             if ($validator->fails()) {
-                $errors[] = "Row {$rowNumber}: " . implode(', ', $validator->errors()->all());
+                $errors[] = "Row {$rowNumber}: ".implode(', ', $validator->errors()->all());
             } else {
                 $validatedData[] = $validator->validated();
             }
@@ -308,12 +313,13 @@ class PgroupController extends Controller
         }
 
         // If there are any validation errors, redirect back with errors
-        if (!empty($errors)) {
-            $errorMessage = "Import failed! Please fix the following errors:\n\n" . implode("\n", $errors);
+        if (! empty($errors)) {
+            $errorMessage = "Import failed! Please fix the following errors:\n\n".implode("\n", $errors);
+
             return redirect()->back()
                 ->with([
                     'message' => $errorMessage,
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -330,16 +336,17 @@ class PgroupController extends Controller
 
             return redirect()->route('pgroup.index')
                 ->with([
-                    'message' => count($validatedData) . ' pgroup records imported successfully!',
-                    'msg_type' => 'success'
+                    'message' => count($validatedData).' pgroup records imported successfully!',
+                    'msg_type' => 'success',
                 ]);
         } catch (\Exception $e) {
             \DB::rollback();
-            \Log::error('Pgroup import failed: ' . $e->getMessage());
+            \Log::error('Pgroup import failed: '.$e->getMessage());
+
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! An unexpected error occurred while importing the data. Please try again.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
     }

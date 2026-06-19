@@ -2,17 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\Role;
-use Inertia\Inertia;
+use App\Http\Controllers\Controller;
 use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
+use Inertia\Inertia;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class RoleController extends Controller
 {
@@ -52,15 +51,13 @@ class RoleController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-
-
         if (Auth::user()->can('role_export')) {
             $this->resourceNeo['bulkActions']['csvExport'] = [];
         }
 
         return Inertia::render('Admin/IndexView', ['resourceData' => $roles, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) {
             $table->withGlobalSearch()
-                ->column('name', 'Name', searchable: false, sortable: true, )
+                ->column('name', 'Name', searchable: false, sortable: true)
 
                 ->column(label: 'Actions')
                 ->perPageOptions([10, 15, 30, 50, 100]);
@@ -91,7 +88,7 @@ class RoleController extends Controller
                 continue;
             }
             foreach ($moduleKeys as $mKey) {
-                $prefix = $mKey . '_';
+                $prefix = $mKey.'_';
                 if (str_starts_with($name, $prefix)) {
                     $action = substr($name, strlen($prefix));
                     if ($action !== '' && $action !== false) {
@@ -104,7 +101,7 @@ class RoleController extends Controller
 
         // Remove modules with no actions, but keep keys
         $allpermissions = array_filter($allpermissions, function ($group) {
-            return !empty($group['child']);
+            return ! empty($group['child']);
         });
 
         return Inertia::render('Admin/RoleAddEditView', compact('allpermissions'));
@@ -113,7 +110,6 @@ class RoleController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
@@ -171,7 +167,7 @@ class RoleController extends Controller
                 continue;
             }
             foreach ($moduleKeys as $mKey) {
-                $prefix = $mKey . '_';
+                $prefix = $mKey.'_';
                 if (str_starts_with($name, $prefix)) {
                     $action = substr($name, strlen($prefix));
                     if ($action !== '' && $action !== false) {
@@ -186,7 +182,7 @@ class RoleController extends Controller
 
         // Remove modules with no actions, but keep keys
         $allpermissions = array_filter($allpermissions, function ($group) {
-            return !empty($group['child']);
+            return ! empty($group['child']);
         });
 
         return Inertia::render('Admin/RoleAddEditView', compact('formdata', 'allpermissions'));
@@ -195,11 +191,9 @@ class RoleController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-
     public function update(Request $request, Role $role)
     {
         $request->validate([
@@ -244,9 +238,9 @@ class RoleController extends Controller
         } else {
             $res = ['message' => 'No Value  Updated in Role .', 'msg_type' => 'warning'];
         }
+
         return redirect()->route('role.index')->with($res);
     }
-
 
     /**
      * Remove the specified resource from storage.
@@ -264,6 +258,7 @@ class RoleController extends Controller
         $uname = $role->name;
         $role->delete();
         \ActivityLog::add(['action' => 'deleted', 'module' => 'role', 'data_key' => $uname]);
+
         return redirect()->route('role.index')->with('message', 'Role Deleted !!');
     }
 }

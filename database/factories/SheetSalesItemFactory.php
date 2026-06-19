@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\SheetSales;
 use App\Models\Grade;
+use App\Models\SheetSales;
 use App\Models\Thickness;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\SheetSalesItem>
@@ -20,11 +20,11 @@ class SheetSalesItemFactory extends Factory
     public function definition(): array
     {
         $qty = $this->faker->numberBetween(10, 100);
-                $weightPerSheet = $this->faker->randomFloat(3, 10, 100);
-                $weight = $qty * $weightPerSheet;
-                $rate = $this->faker->randomFloat(2, 50, 200);
-                $amount = $weight * $rate;
-        
+        $weightPerSheet = $this->faker->randomFloat(3, 10, 100);
+        $weight = $qty * $weightPerSheet;
+        $rate = $this->faker->randomFloat(2, 50, 200);
+        $amount = $weight * $rate;
+
         return [
             'sheet_sales_id' => SheetSales::inRandomOrder()->first()?->id ?? SheetSales::factory(),
             'grade' => Grade::inRandomOrder()->first()?->name ?? '304',

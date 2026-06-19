@@ -21,14 +21,14 @@ enum Department: int
 
     public static function options(): array
     {
-        return collect(self::cases())->mapWithKeys(fn($case) => [
+        return collect(self::cases())->mapWithKeys(fn ($case) => [
             $case->value => $case->label(),
         ])->all();
     }
 
     public static function toArray(): array
     {
-        return collect(self::cases())->map(fn($case) => [
+        return collect(self::cases())->map(fn ($case) => [
             'id' => $case->value,
             'label' => $case->label(),
         ])->all();

@@ -43,8 +43,8 @@ return [
                     'url' => 'api.mailjet.com',
                     'version' => 'v3.1',
                     'call' => true,
-                    'secured' => true
-                ]
+                    'secured' => true,
+                ],
             ],
             'common' => [
                 'call' => true,
@@ -52,9 +52,9 @@ return [
                     'url' => 'api.mailjet.com',
                     'version' => 'v3',
                     'call' => true,
-                    'secured' => true
-                ]
-            ]
+                    'secured' => true,
+                ],
+            ],
         ],
         'smtp' => [
             'transport' => 'smtp',

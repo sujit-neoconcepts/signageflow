@@ -3,16 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Request;
 use App\Models\SigninLog;
-use Inertia\Inertia;
-use Spatie\QueryBuilder\AllowedSort;
-use Spatie\QueryBuilder\AllowedFilter;
-use Spatie\QueryBuilder\QueryBuilder;
-use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
 use Illuminate\Support\Collection;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\AllowedSort;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class SigninlogController extends Controller
 {
@@ -51,7 +49,6 @@ class SigninlogController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-
         if (Auth::user()->can('signinlog_delete')) {
             $this->resourceNeo['bulkActions'] = ['bulk_delete' => []];
         }
@@ -61,7 +58,7 @@ class SigninlogController extends Controller
 
         return Inertia::render('Admin/IndexView', ['resourceData' => $signinlogs, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) {
             $table->withGlobalSearch()
-                ->column('formatted_date', 'Date', searchable: false, sortable: true,)
+                ->column('formatted_date', 'Date', searchable: false, sortable: true)
                 ->column('email', 'Email', searchable: true, sortable: true)
                 ->column('ip', 'IP', searchable: false, sortable: false)
                 ->column('msg', 'Log', searchable: false, sortable: false)
@@ -79,8 +76,6 @@ class SigninlogController extends Controller
         });
     }
 
-
-
     /**
      * Remove the specified resource from storage.
      */
@@ -89,9 +84,9 @@ class SigninlogController extends Controller
         $uname = $signinlog->id;
         $signinlog->delete();
         \ActivityLog::add(['action' => 'deleted', 'module' => 'signinlog', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Logs Deleted !!');
     }
-
 
     /**
      * bulk delete.
@@ -101,6 +96,7 @@ class SigninlogController extends Controller
         SigninLog::whereIn('id', request('ids'))->delete();
         $uname = (count(request('ids')) > 50) ? 'Many' : $uname = implode(',', request('ids'));
         \ActivityLog::add(['action' => 'deleted', 'module' => 'signinlog', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Selected Logs Deleted !!');
     }
 }

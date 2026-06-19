@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Client;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\SheetEnquiry>
@@ -18,7 +18,7 @@ class SheetEnquiryFactory extends Factory
     public function definition(): array
     {
         $enquiryDate = $this->faker->dateTimeBetween('-1 year', 'now');
-        
+
         return [
             'enquiry_number' => null,
             'enquiry_date' => $this->faker->dateTimeBetween('-1 year', 'now'),

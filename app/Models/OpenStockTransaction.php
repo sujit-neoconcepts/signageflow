@@ -9,7 +9,7 @@ use Illuminate\Support\Carbon;
 
 class OpenStockTransaction extends Model
 {
-    use HasFactory, FinancialYearScope;
+    use FinancialYearScope, HasFactory;
 
     const DATE_COLUMN = 'txn_date';
 
@@ -34,12 +34,14 @@ class OpenStockTransaction extends Model
     public function scopeTxnDateStart($query, $sd)
     {
         $start = ($sd instanceof Carbon) ? $sd : Carbon::parse($sd);
+
         return $query->where('txn_date', '>=', $start->startOfDay());
     }
 
     public function scopeTxnDateEnd($query, $ed)
     {
         $end = ($ed instanceof Carbon) ? $ed : Carbon::parse($ed);
+
         return $query->where('txn_date', '<=', $end->endOfDay());
     }
 }

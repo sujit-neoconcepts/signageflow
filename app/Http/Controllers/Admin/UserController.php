@@ -2,22 +2,20 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
-
-use Inertia\Inertia;
-use Illuminate\Http\Request;
 use App\Rules\NotUsedPassword;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
 use Illuminate\Support\Facades\Session;
-use Spatie\Permission\Models\Permission;
+use Inertia\Inertia;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
+use Spatie\Permission\Models\Permission;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class UserController extends Controller
 {
@@ -62,9 +60,9 @@ class UserController extends Controller
         // Append role_name to each user for frontend display
         $users->getCollection()->transform(function ($user) {
             $user->append('role_name');
+
             return $user;
         });
-
 
         if (Auth::user()->can('user_export')) {
             $this->resourceNeo['bulkActions']['csvExport'] = [];
@@ -84,6 +82,7 @@ class UserController extends Controller
     public function profile()
     {
         $formdata = auth()->user();
+
         return Inertia::render('Admin/ProfileView', compact('formdata'));
     }
 
@@ -102,7 +101,6 @@ class UserController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
@@ -110,27 +108,26 @@ class UserController extends Controller
         $validationRules = [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|unique:users,email',
+            'phone' => 'nullable|string|max:20',
             'password' => 'required|string|min:8',
             'role' => 'required',
         ];
-
-
 
         $request->validate($validationRules);
 
         $role = Role::findById($request->role['id']);
 
-
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
+            'phone' => $request->phone,
             'password' => $request->password,
             'twofa' => $request->twofa,
 
         ]);
         $user->assignRole($role);
 
-        $uname = $request->input('name') . '-' . $role->name;
+        $uname = $request->input('name').'-'.$role->name;
         \ActivityLog::add(['action' => 'created', 'module' => 'user', 'data_key' => $uname]);
 
         User::neUserMail(
@@ -141,7 +138,6 @@ class UserController extends Controller
                 'userAgent' => $request->userAgent(),
             ]
         );
-
 
         return redirect()->route('user.index')->with(['message' => 'User Created Successfully', 'msg_type' => 'success']);
     }
@@ -189,7 +185,7 @@ class UserController extends Controller
             $action = null;
 
             foreach ($moduleKeys as $mKey) {
-                $prefix = $mKey . '_';
+                $prefix = $mKey.'_';
                 if (str_starts_with($name, $prefix)) {
                     $matchedModule = $mKey;
                     $action = substr($name, strlen($prefix));
@@ -197,7 +193,7 @@ class UserController extends Controller
                 }
             }
 
-            if (!$matchedModule || $action === '' || $action === false) {
+            if (! $matchedModule || $action === '' || $action === false) {
                 continue;
             }
 
@@ -208,7 +204,7 @@ class UserController extends Controller
 
         // Remove modules with no actions
         $grouped = array_values(array_filter($grouped, function ($group) {
-            return !empty($group['child']);
+            return ! empty($group['child']);
         }));
 
         return Inertia::render('Admin/UserPermissionsEditView', [
@@ -233,7 +229,7 @@ class UserController extends Controller
                 if ($permdata[2]) {
                     $permission = Permission::findById($permdata[0]);
                     $allnewpermission[] = $permdata[0];
-                    if (!$user->hasPermissionTo($permission)) {
+                    if (! $user->hasPermissionTo($permission)) {
                         $user->givePermissionTo($permission);
                     }
                 }
@@ -252,6 +248,7 @@ class UserController extends Controller
         } else {
             $res = ['message' => 'No Value  Updated in UserPermission .', 'msg_type' => 'warning'];
         }
+
         return redirect()->route('user.permissions', $request->userid)->with($res);
     }
 
@@ -271,20 +268,16 @@ class UserController extends Controller
         $formdata->role = count($formdata->roles) > 0 ? Role::select('id', 'name as label')->where('id', $formdata->roles[0]->id)->get() : 0;
         $roles = array_merge([['id' => 0, 'label' => 'Select']], Role::select('id', 'name as label')->where('id', '<>', 3)->get()->toArray());
 
-
-
-        //dd($roles);
+        // dd($roles);
         return Inertia::render('Admin/UserAddEditView', compact('roles', 'formdata'));
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-
     public function update(Request $request, user $user)
     {
         // dd($request);
@@ -294,27 +287,25 @@ class UserController extends Controller
         $isDirty = false;
         $validationRules = [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|unique:users,email,' . $user->id,
+            'email' => 'required|string|email|unique:users,email,'.$user->id,
+            'phone' => 'nullable|string|max:20',
             'role' => 'required',
         ];
-
-
 
         $request->validate($validationRules);
 
         $user->name = $request->name;
         $user->email = $request->email;
+        $user->phone = $request->phone;
         $user->twofa = $request->twofa ? 1 : 0;
 
-        if (!empty($request->password)) {
+        if (! empty($request->password)) {
             $user->password = $request->password;
         }
         if ($user->isDirty()) {
             $user->save();
             $isDirty = true;
         }
-
-
 
         if ($request->role['id'] > 0) {
             $prevrole = $user->roles[0]->id;
@@ -327,12 +318,13 @@ class UserController extends Controller
             $user->roles()->detach();
         }
         if ($isDirty) {
-            $uname = $user->name . '-' . $user->role_name;
+            $uname = $user->name.'-'.$user->role_name;
             \ActivityLog::add(['action' => 'updated', 'module' => 'user', 'data_key' => $uname]);
             $res = ['message' => 'User Updated Successfully.', 'msg_type' => 'success'];
         } else {
             $res = ['message' => 'No Value  Updated in user .', 'msg_type' => 'warning'];
         }
+
         return redirect()->route('user.index')->with($res);
     }
 
@@ -342,12 +334,14 @@ class UserController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|unique:users,email,' . $user->id,
-            'password' => [new NotUsedPassword()],
+            'email' => 'required|string|email|unique:users,email,'.$user->id,
+            'phone' => 'nullable|string|max:20',
+            'password' => [new NotUsedPassword],
             'current_password' => 'current_password',
         ]);
         $user->name = $request->name;
         $user->email = $request->email;
+        $user->phone = $request->phone;
         $user->twofa = $request->twofa;
         if ($request->twofa) {
             Session::put('user_2fa', auth()->user()->id);
@@ -355,12 +349,13 @@ class UserController extends Controller
             Session::remove('user_2fa');
         }
 
-        if (!empty($request->password)) {
+        if (! empty($request->password)) {
             $user->password = $request->password;
         }
         $user->save();
-        $uname = $user->name . '-' . $user->role_name;
+        $uname = $user->name.'-'.$user->role_name;
         \ActivityLog::add(['action' => 'updated', 'module' => 'profile', 'data_key' => $uname]);
+
         return redirect()->route('profile.profile')->with(['message' => 'Profile Updated Successfully', 'msg_type' => 'success']);
     }
 
@@ -379,9 +374,10 @@ class UserController extends Controller
             return redirect()->route('user.index')->with(['message' => 'You Can\'t delete yourself.Request Super admin to do it.', 'msg_type' => 'danger']);
         }
 
-        $uname = $user->name . '-' . $user->role_name;
+        $uname = $user->name.'-'.$user->role_name;
         $user->delete();
         \ActivityLog::add(['action' => 'deleted', 'module' => 'user', 'data_key' => $uname]);
+
         return redirect()->route('user.index')->with(['message' => 'User Deleted !!']);
     }
 

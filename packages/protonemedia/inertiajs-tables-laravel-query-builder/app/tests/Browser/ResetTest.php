@@ -61,7 +61,7 @@ class ResetTest extends DuskTestCase
     {
         $this->browse(function (Browser $browser) {
             User::first()->forceFill([
-                'name'  => 'Pascal Baljet',
+                'name' => 'Pascal Baljet',
                 'email' => 'pascal@protone.media',
             ])->save();
 
@@ -88,7 +88,7 @@ class ResetTest extends DuskTestCase
     {
         $this->browse(function (Browser $browser) {
             User::first()->forceFill([
-                'name'  => 'Pascal Baljet',
+                'name' => 'Pascal Baljet',
                 'email' => 'pascal@protone.media',
             ])->save();
 

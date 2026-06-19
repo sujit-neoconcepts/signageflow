@@ -28,6 +28,7 @@ class PaginationTest extends DuskTestCase
 
     /**
      * @test
+     *
      * @dataProvider fullUrls
      */
     public function it_generates_a_paginator_with_links($url)
@@ -80,7 +81,7 @@ class PaginationTest extends DuskTestCase
                 ->waitUntilMissingText($users->get(0)->name)
                 ->assertSeeIn('tr:first-child td:nth-child(1)', $users->get(10)->name)
                 ->assertSeeIn('tr:last-child td:nth-child(1)', $users->get(19)->name)
-                ->visit($url . '?page=10')
+                ->visit($url.'?page=10')
                 ->waitUntilMissingText($users->get(10)->name)
                 ->assertMissing('@pagination-simple-next')
                 ->press('@pagination-simple-previous')
@@ -92,6 +93,7 @@ class PaginationTest extends DuskTestCase
 
     /**
      * @test
+     *
      * @dataProvider simpleUrls
      */
     public function it_generates_a_simple_paginator($url, $method)
@@ -104,8 +106,8 @@ class PaginationTest extends DuskTestCase
                 ->orderBy('name')
                 ->get();
 
-            $cursor = '?cursor=' . str_replace(['+', '/', '='], ['-', '_', ''], base64_encode(json_encode([
-                'name'               => $users->get(89)->name,
+            $cursor = '?cursor='.str_replace(['+', '/', '='], ['-', '_', ''], base64_encode(json_encode([
+                'name' => $users->get(89)->name,
                 '_pointsToNextItems' => true,
             ])));
 
@@ -126,7 +128,7 @@ class PaginationTest extends DuskTestCase
                 ->waitUntilMissingText($users->get(0)->name)
                 ->assertSeeIn('tr:first-child td:nth-child(1)', $users->get(10)->name)
                 ->assertSeeIn('tr:last-child td:nth-child(1)', $users->get(19)->name)
-                ->visit($url . $pageTen)
+                ->visit($url.$pageTen)
                 ->waitUntilMissingText($users->get(10)->name)
                 ->assertMissing('@pagination-simple-next')
                 ->press('@pagination-simple-previous')
@@ -148,7 +150,7 @@ class PaginationTest extends DuskTestCase
                 ->waitUntilMissingText($users->get(0)->name)
                 ->assertSeeIn('tr:first-child td:nth-child(1)', $users->get(10)->name)
                 ->assertSeeIn('tr:last-child td:nth-child(1)', $users->get(19)->name)
-                ->visit($url . $pageTen)
+                ->visit($url.$pageTen)
                 ->waitUntilMissingText($users->get(10)->name)
                 ->assertMissing('@pagination-simple-next')
                 ->press('@pagination-simple-previous')

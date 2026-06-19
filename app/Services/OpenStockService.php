@@ -134,7 +134,7 @@ class OpenStockService
 
             $availableQty = (float) ($balance->qty ?? 0);
 
-            if (!$balance || $availableQty < $qty) {
+            if (! $balance || $availableQty < $qty) {
                 throw ValidationException::withMessages([
                     "items.{$index}.qty" => "Insufficient open stock for {$internalName} at {$location} / {$incharge}. Available: {$availableQty}",
                 ]);
@@ -230,7 +230,7 @@ class OpenStockService
                 'source_type' => 'salesOrderReverse',
                 'source_id' => $salesOrder->id,
                 'source_item_id' => $item->id,
-                'remark' => 'Reversal for Sales Order ' . $salesOrder->order_no,
+                'remark' => 'Reversal for Sales Order '.$salesOrder->order_no,
             ]);
         }
     }
@@ -239,7 +239,7 @@ class OpenStockService
     {
         $consumable = ConsumableInternalName::where('name', $internalName)->first();
 
-        if (!$consumable) {
+        if (! $consumable) {
             throw ValidationException::withMessages([
                 'internal_name' => "Internal name {$internalName} is not configured in Product Internal Name.",
             ]);
@@ -281,7 +281,7 @@ class OpenStockService
             ->lockForUpdate()
             ->first();
 
-        if (!$balance) {
+        if (! $balance) {
             return OpenStockBalance::create([
                 'internal_name' => $internalName,
                 'location' => $location,
@@ -303,14 +303,14 @@ class OpenStockService
     protected function buildSalesOrderTxnRemark(SalesOrder $salesOrder): string
     {
         $parts = [
-            'Order No: ' . ($salesOrder->order_no ?? ''),
-            'Project: ' . ($salesOrder->project_name ?? ''),
-            'Product: ' . ($salesOrder->product_name ?? ''),
+            'Order No: '.($salesOrder->order_no ?? ''),
+            'Project: '.($salesOrder->project_name ?? ''),
+            'Product: '.($salesOrder->product_name ?? ''),
         ];
 
         $base = implode(' | ', $parts);
         $userRemark = trim((string) ($salesOrder->remark ?? ''));
 
-        return $userRemark !== '' ? $base . ' | Remark: ' . $userRemark : $base;
+        return $userRemark !== '' ? $base.' | Remark: '.$userRemark : $base;
     }
 }

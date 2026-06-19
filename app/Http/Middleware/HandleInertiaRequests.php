@@ -18,7 +18,7 @@ class HandleInertiaRequests extends Middleware
     /**
      * Determine the current asset version.
      */
-    public function version(Request $request): string|null
+    public function version(Request $request): ?string
     {
         return parent::version($request);
     }
@@ -34,16 +34,16 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => ['name' => $request->user()->name ?? '', 'id' => $request->user()->id ?? null],
             ],
-            'version' => config('custom.vite_ver'),/*
+            'version' => config('custom.vite_ver'), /*
             'ziggy' => function () use ($request) {
                 return array_merge((new Ziggy())->toArray(), [
                     'location' => $request->url(),
                 ]);
             },*/
             'flash' => [
-                'financial_year' => fn() => $request->session()->get('financial_year'),
-                'message' => fn() => $request->session()->get('message'),
-                'msg_type' => fn() => $request->session()->get('msg_type')
+                'financial_year' => fn () => $request->session()->get('financial_year'),
+                'message' => fn () => $request->session()->get('message'),
+                'msg_type' => fn () => $request->session()->get('msg_type'),
             ],
             /*
             'can' => function () use ($request) {

@@ -2,11 +2,11 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\BlusterEnquiry;
+use App\Models\CandleSize;
 use App\Models\Grade;
 use App\Models\Thickness;
-use App\Models\CandleSize;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\BlusterEnquiryItem>

@@ -31,6 +31,7 @@ const selectOptions = props.roles;
 const formData = {
   name: props.formdata.name,
   email: props.formdata.email,
+  phone: props.formdata.phone || '',
   twofa: props.formdata.twofa == 1 ? true : false,
   role: props.formdata.role ? props.formdata.role[0] : selectOptions[0],
   password: ''
@@ -71,6 +72,9 @@ const submitform = () => {
             </FormField>
             <FormField label="Email" help="" :error="form.errors.email">
               <FormControl name="eemail" v-model="form.email" autocomplete="new-email" required />
+            </FormField>
+            <FormField label="Phone" help="" :error="form.errors.phone">
+              <FormControl name="phone" v-model="form.phone" />
             </FormField>
             <FormField v-if="props.formdata.id" label="Password" help="leave blank if not to change"
               :error="form.errors.password">

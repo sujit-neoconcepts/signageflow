@@ -4,13 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Session;
-use App\Models\UserEmailCode;
-use Inertia\Inertia;
 use App\Models\SigninLog;
-
+use App\Models\UserEmailCode;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
+use Inertia\Inertia;
 
 class TwoFAController extends Controller
 {
@@ -23,6 +22,7 @@ class TwoFAController extends Controller
     {
         $setting = Setting::where('slug', 'otp_reset_duration')->get()->first();
         $lockPeriod = $setting && $setting->value ? $setting->value : 120;
+
         return Inertia::render('Auth/2Fa', ['lockPeriod' => $lockPeriod]);
     }
 
@@ -41,7 +41,7 @@ class TwoFAController extends Controller
             ->where('code', $request->code)
             ->where('updated_at', '>=', now()->subMinutes(5))
             ->first();
-        if (!is_null($find)) {
+        if (! is_null($find)) {
             Session::put('user_2fa', auth()->user()->id);
 
             SigninLog::create(
@@ -68,6 +68,7 @@ class TwoFAController extends Controller
 
         return back()->with(['message' => 'You entered wrong code.', 'msg_type' => 'danger']);
     }
+
     /**
      * Write code on Method
      *

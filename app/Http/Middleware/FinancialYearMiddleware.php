@@ -10,7 +10,7 @@ class FinancialYearMiddleware
     public function handle(Request $request, Closure $next)
     {
         // Default financial year if not set
-        if (!session()->has('financial_year')) {
+        if (! session()->has('financial_year')) {
             $currentYear = date('Y');
             $month = date('n');
 
@@ -18,9 +18,9 @@ class FinancialYearMiddleware
             $startYear = ($month <= 3) ? $currentYear - 1 : $currentYear;
 
             session([
-                'financial_year_start' => $startYear . '-04-01',
-                'financial_year_end' => ($startYear + 1) . '-03-31',
-                'financial_year' => $startYear . '-' . ($startYear + 1)
+                'financial_year_start' => $startYear.'-04-01',
+                'financial_year_end' => ($startYear + 1).'-03-31',
+                'financial_year' => $startYear.'-'.($startYear + 1),
             ]);
         }
 

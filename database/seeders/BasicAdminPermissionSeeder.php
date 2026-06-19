@@ -7,8 +7,6 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
-use Illuminate\Support\Facades\Hash;
-
 class BasicAdminPermissionSeeder extends Seeder
 {
     /**
@@ -49,7 +47,7 @@ class BasicAdminPermissionSeeder extends Seeder
         }
         // create roles and assign existing permissions
         $role1 = Role::firstOrCreate(['name' => 'supervisor']);
-        //$role1->givePermissionTo('page_list');
+        // $role1->givePermissionTo('page_list');
         $role2 = Role::firstOrCreate(['name' => 'admin']);
         foreach ($permissions as $permission) {
             $role2->givePermissionTo($permission);
@@ -61,25 +59,25 @@ class BasicAdminPermissionSeeder extends Seeder
             ['email' => 'superadmin@superadmin.com'],
             [
                 'name' => 'Super Admin',
-                'password' =>'superadmin',
+                'password' => 'superadmin',
             ]
         );
         $user->assignRole($role3);
-        
+
         $user = \App\Models\User::firstOrCreate(
             ['email' => 'admin@admin.com'],
             [
                 'name' => 'Admin User',
-                'password' =>'admin',
+                'password' => 'admin',
             ]
         );
         $user->assignRole($role2);
-        
+
         $user = \App\Models\User::firstOrCreate(
             ['email' => 'supervisor@supervisor.com'],
             [
                 'name' => 'supervisor User',
-                'password' =>'supervisor',
+                'password' => 'supervisor',
             ]
         );
         $user->assignRole($role1);
@@ -89,7 +87,7 @@ class BasicAdminPermissionSeeder extends Seeder
             ['email' => 'incharge@incharge.com'],
             [
                 'name' => 'Incharge',
-                'password' =>'incharge',
+                'password' => 'incharge',
             ]
         );
         $incharge->assignRole($role4);

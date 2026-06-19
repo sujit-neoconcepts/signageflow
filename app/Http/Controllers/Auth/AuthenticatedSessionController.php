@@ -4,14 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Providers\RouteServiceProvider;
+use App\Models\SigninLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
-use App\Models\SigninLog;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -24,14 +23,14 @@ class AuthenticatedSessionController extends Controller
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
             'sitekey' => config('services.recaptcha.sitekey'),
-            'captcha_en' => config('services.recaptcha.enabled', false)
+            'captcha_en' => config('services.recaptcha.enabled', false),
         ]);
     }
 
     /**
      * Handle an incoming authentication request.
      */
-    public function store(LoginRequest $request) //: RedirectResponse
+    public function store(LoginRequest $request) // : RedirectResponse
     {
         $request->authenticate();
 
@@ -40,8 +39,6 @@ class AuthenticatedSessionController extends Controller
         if (Auth::user()->twofa) {
             Auth::user()->generateCode();
         }
-
-
 
         // log success
         SigninLog::create(
@@ -83,8 +80,6 @@ class AuthenticatedSessionController extends Controller
                 'userAgent' => $request->userAgent(),
             ]
         );
-
-
 
         Auth::guard('web')->logout();
 
