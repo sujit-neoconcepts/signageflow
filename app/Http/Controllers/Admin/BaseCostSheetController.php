@@ -25,7 +25,7 @@ abstract class BaseCostSheetController extends Controller
     {
         $permissionKey = $this->permissionKey();
         $this->middleware("can:{$permissionKey}_list", ['only' => ['index', 'show']]);
-        $this->middleware("can:{$permissionKey}_create", ['only' => ['create', 'store', 'importView', 'import']]);
+        $this->middleware("can:{$permissionKey}_create", ['only' => ['create', 'store', 'importView', 'import', 'importWithCompositionView', 'importWithComposition']]);
         $this->middleware("can:{$permissionKey}_delete", ['only' => ['destroy', 'bulkDestroy']]);
         $this->middleware("can:{$permissionKey}_edit", ['only' => ['edit', 'update']]);
     }
@@ -77,6 +77,11 @@ abstract class BaseCostSheetController extends Controller
         }
         $resourceNeo['extraMainLinks'] = [
             [
+                'label' => 'Import with Composition',
+                'link' => $this->resourceName() . '.importWithComposition',
+                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z',
+            ],
+            [
                 'label' => 'Import',
                 'link' => $this->resourceName().'.import',
                 'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z',
@@ -106,7 +111,7 @@ abstract class BaseCostSheetController extends Controller
                 );
             }
 
-            $table->column(label: 'Actions')->perPageOptions([10, 15, 30, 50, 100]);
+            $table->column(label: 'Actions')->perPageOptions([10, 15, 30, 50, 100, 10000]);
         });
     }
 
@@ -440,6 +445,302 @@ abstract class BaseCostSheetController extends Controller
 
             return redirect()->back()->with([
                 'message' => 'Import failed! Error: '.$e->getMessage(),
+                'msg_type' => 'danger',
+            ]);
+        }
+    }
+
+    public function importWithCompositionView()
+    {
+        $resourceNeo = $this->buildResourceNeo();
+        $units = \App\Models\Munit::select('name')->orderBy('name')->pluck('name')->values();
+        $qtyUnit1 = $units->get(0, '');
+        $altUnit = $units->get(2, $qtyUnit1);
+
+        // Fetch existing group names and cost sheet names for the sample
+        $groupName = \App\Models\ConsumableInternalNameGroup::orderBy('name')->value('name') ?? 'Acrylic Group';
+        $childName = CostSheet::where('prod_type', '!=', $this->prodType())->orderBy('name')->value('name') ?? 'LED Module';
+
+        $resourceNeo['extraMainLinks'] = [
+            [
+                'link' => $this->resourceName() . '.index',
+                'label' => 'Back to List',
+                'icon' => 'M12 2L4 5V11C4 16.55 7.84 21.74 13 23C18.16 21.74 22 16.55 22 11V5L12 2M11 18V13H8L13 8V13H16L11 18Z',
+            ],
+        ];
+
+        $sampleData = [
+            ['name' => 'Acrylic Sign Board', 'qty_unit' => $qtyUnit1, 'alt_units' => $altUnit, 'rate' => '1200.00', 'comp_section' => 'raw_material', 'comp_group_name' => $groupName, 'comp_child_name' => '', 'comp_quantity' => '2.5', 'comp_margin' => '10'],
+            ['name' => 'Acrylic Sign Board', 'qty_unit' => $qtyUnit1, 'alt_units' => $altUnit, 'rate' => '1200.00', 'comp_section' => 'signage', 'comp_group_name' => '', 'comp_child_name' => $childName, 'comp_quantity' => '5', 'comp_margin' => '0'],
+            ['name' => 'Steel Frame', 'qty_unit' => $qtyUnit1, 'alt_units' => '', 'rate' => '850.00', 'comp_section' => '', 'comp_group_name' => '', 'comp_child_name' => '', 'comp_quantity' => '', 'comp_margin' => ''],
+        ];
+
+        $importRoute = $this->resourceName() . '.importWithCompositionStore';
+
+        return Inertia::render('Admin/CostSheetImportWithCompositionView', compact('resourceNeo', 'sampleData', 'importRoute'));
+    }
+
+    public function importWithComposition(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:2048',
+        ]);
+
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+
+        if (!is_readable($path)) {
+            return redirect()->back()->with([
+                'message' => 'Import failed! Unable to read the uploaded file.',
+                'msg_type' => 'danger',
+            ]);
+        }
+
+        $records = array_map('str_getcsv', file($path));
+        if (empty($records)) {
+            return redirect()->back()->with([
+                'message' => 'Import failed! The uploaded file is empty.',
+                'msg_type' => 'danger',
+            ]);
+        }
+
+        $headers = array_map('trim', array_shift($records));
+        $requiredHeaders = ['name', 'qty_unit', 'rate'];
+        $missingHeaders = array_diff($requiredHeaders, $headers);
+        if (!empty($missingHeaders)) {
+            return redirect()->back()->with([
+                'message' => 'Import failed! Missing required columns: ' . implode(', ', $missingHeaders),
+                'msg_type' => 'danger',
+            ]);
+        }
+
+        if (empty($records)) {
+            return redirect()->back()->with([
+                'message' => 'Import failed! No data rows found in the file.',
+                'msg_type' => 'danger',
+            ]);
+        }
+
+        // ── Pre-load lookups ─────────────────────────────────────────
+        $allUnits = \App\Models\Munit::pluck('name')->toArray();
+        $allUnitsLookup = array_flip($allUnits);
+        $groupLookup = \App\Models\ConsumableInternalNameGroup::pluck('id', 'name')->toArray();
+        $validSections = ['raw_material', 'signage', 'cabinet', 'letters'];
+
+        // ── Pass 1: Validate and group rows by cost sheet name ───────
+        $errors = [];
+        $rowNumber = 2;
+        $grouped = []; // name => ['header' => [...], 'compositions' => [...]]
+
+        foreach ($records as $record) {
+            if (empty(array_filter($record, fn ($val) => $val !== null && $val !== ''))) {
+                $rowNumber++;
+                continue;
+            }
+
+            if (count($record) < count($headers)) {
+                $record = array_pad($record, count($headers), '');
+            }
+            $data = array_combine($headers, array_map('trim', $record));
+
+            // Validate header fields
+            if (empty($data['name'])) {
+                $errors[] = "Row {$rowNumber}: Name is required.";
+                $rowNumber++;
+                continue;
+            }
+            if (empty($data['qty_unit'])) {
+                $errors[] = "Row {$rowNumber}: Qty Unit is required.";
+                $rowNumber++;
+                continue;
+            }
+            if (!isset($allUnitsLookup[$data['qty_unit']])) {
+                $errors[] = "Row {$rowNumber}: Qty Unit '{$data['qty_unit']}' does not exist in Measurement Unit master.";
+            }
+            if (!empty($data['alt_units']) && !isset($allUnitsLookup[$data['alt_units']])) {
+                $errors[] = "Row {$rowNumber}: Alt Units '{$data['alt_units']}' does not exist in Measurement Unit master.";
+            }
+            if (!is_numeric($data['rate'] ?? '') || (float) ($data['rate'] ?? 0) < 0) {
+                $errors[] = "Row {$rowNumber}: Rate must be a non-negative number.";
+            }
+
+            $name = $data['name'];
+            if (!isset($grouped[$name])) {
+                $grouped[$name] = [
+                    'header' => [
+                        'name' => $name,
+                        'qty_unit' => $data['qty_unit'],
+                        'alt_units' => $data['alt_units'] ?? null,
+                        'rate' => $data['rate'],
+                    ],
+                    'compositions' => [],
+                ];
+            }
+
+            // Parse composition columns (if they exist and section is filled)
+            $section = trim($data['comp_section'] ?? '');
+            if ($section !== '') {
+                if (!in_array($section, $validSections)) {
+                    $errors[] = "Row {$rowNumber}: comp_section '{$section}' is invalid. Must be one of: " . implode(', ', $validSections) . '.';
+                } else {
+                    $compGroupName = trim($data['comp_group_name'] ?? '');
+                    $compChildName = trim($data['comp_child_name'] ?? '');
+                    $compQty = $data['comp_quantity'] ?? 0;
+                    $compMargin = $data['comp_margin'] ?? 0;
+
+                    if (!is_numeric($compQty) || (float) $compQty < 0) {
+                        $errors[] = "Row {$rowNumber}: comp_quantity must be a non-negative number.";
+                    }
+                    if ($compMargin !== '' && (!is_numeric($compMargin) || (float) $compMargin < 0)) {
+                        $errors[] = "Row {$rowNumber}: comp_margin must be a non-negative number.";
+                    }
+
+                    if ($section === 'raw_material') {
+                        if (empty($compGroupName)) {
+                            $errors[] = "Row {$rowNumber}: comp_group_name is required for raw_material section.";
+                        } elseif (!isset($groupLookup[$compGroupName])) {
+                            $errors[] = "Row {$rowNumber}: comp_group_name '{$compGroupName}' does not exist in Internal Name Group master.";
+                        }
+                    } else {
+                        if (empty($compChildName)) {
+                            $errors[] = "Row {$rowNumber}: comp_child_name is required for {$section} section.";
+                        }
+                    }
+
+                    $grouped[$name]['compositions'][] = [
+                        'section' => $section,
+                        'comp_group_name' => $compGroupName,
+                        'comp_child_name' => $compChildName,
+                        'comp_quantity' => (float) $compQty,
+                        'comp_margin' => $compMargin !== '' ? (float) $compMargin : 0,
+                        'row' => $rowNumber,
+                    ];
+                }
+            }
+
+            $rowNumber++;
+        }
+
+        if (!empty($errors)) {
+            return redirect()->back()->with([
+                'message' => "Import failed! Please fix the following errors:\n\n" . implode("\n", $errors),
+                'msg_type' => 'danger',
+            ]);
+        }
+
+        // ── Pass 2: Resolve child cost sheet names to IDs ────────────
+        // We need to resolve comp_child_name to cost sheet IDs.
+        // Child cost sheets may reference each other, so collect all names first.
+        $allChildNames = [];
+        foreach ($grouped as $entry) {
+            foreach ($entry['compositions'] as $comp) {
+                if ($comp['section'] !== 'raw_material' && !empty($comp['comp_child_name'])) {
+                    $allChildNames[] = $comp['comp_child_name'];
+                }
+            }
+        }
+        $allChildNames = array_unique($allChildNames);
+        $childLookup = CostSheet::whereIn('name', $allChildNames)->pluck('id', 'name')->toArray();
+
+        // Validate child names exist
+        $missingChildren = array_diff($allChildNames, array_keys($childLookup));
+        if (!empty($missingChildren)) {
+            // Check if they are being created in this same import
+            $beingCreated = array_keys($grouped);
+            $stillMissing = array_diff($missingChildren, $beingCreated);
+            if (!empty($stillMissing)) {
+                return redirect()->back()->with([
+                    'message' => "Import failed! The following comp_child_name values do not exist as cost sheets and are not being created in this import:\n" . implode(', ', $stillMissing),
+                    'msg_type' => 'danger',
+                ]);
+            }
+        }
+
+        // ── Pass 3: Create/update in a transaction ───────────────────
+        try {
+            \DB::beginTransaction();
+
+            $createdCount = 0;
+            $updatedCount = 0;
+            $compositionCount = 0;
+            $createdSheets = []; // name => model for self-referencing
+
+            foreach ($grouped as $name => $entry) {
+                $costSheet = CostSheet::updateOrCreate(
+                    [
+                        'prod_type' => $this->prodType(),
+                        'name' => $entry['header']['name'],
+                    ],
+                    [
+                        'qty_unit' => $entry['header']['qty_unit'],
+                        'alt_units' => $entry['header']['alt_units'],
+                        'rate' => $entry['header']['rate'],
+                    ]
+                );
+
+                $createdSheets[$name] = $costSheet;
+
+                if ($costSheet->wasRecentlyCreated) {
+                    $createdCount++;
+                } else {
+                    $updatedCount++;
+                }
+
+                // Delete existing compositions and re-create (full replace on import)
+                if (!empty($entry['compositions'])) {
+                    $costSheet->compositions()->delete();
+
+                    foreach ($entry['compositions'] as $comp) {
+                        $groupId = null;
+                        $childId = null;
+                        $unit = null;
+
+                        if ($comp['section'] === 'raw_material') {
+                            $groupId = $groupLookup[$comp['comp_group_name']] ?? null;
+                            // Resolve unit from group
+                            if ($groupId) {
+                                $firstInternal = \App\Models\ConsumableInternalName::where('consumable_internal_name_group_id', $groupId)->first();
+                                $unit = $firstInternal ? $firstInternal->unitName : null;
+                            }
+                        } else {
+                            // Look up child cost sheet (may have been created in this import)
+                            $childId = $childLookup[$comp['comp_child_name']] ?? ($createdSheets[$comp['comp_child_name']]->id ?? null);
+                            if ($childId) {
+                                $child = CostSheet::find($childId);
+                                $unit = $child ? $child->qty_unit : null;
+                            }
+                        }
+
+                        $costSheet->compositions()->create([
+                            'section' => $comp['section'],
+                            'consumable_internal_name_group_id' => $groupId,
+                            'child_cost_sheet_id' => $childId,
+                            'unit' => $unit,
+                            'quantity' => $comp['comp_quantity'],
+                            'margin' => $comp['comp_margin'],
+                        ]);
+                        $compositionCount++;
+                    }
+                }
+            }
+
+            \DB::commit();
+
+            \ActivityLog::add([
+                'action' => 'imported',
+                'module' => $this->resourceName(),
+                'data_key' => count($grouped) . ' items with ' . $compositionCount . ' compositions',
+            ]);
+
+            return redirect()->route($this->resourceName() . '.index')->with([
+                'message' => $this->resourceTitle() . ' import completed. Created: ' . $createdCount . ', Updated: ' . $updatedCount . ', Compositions: ' . $compositionCount . '.',
+                'msg_type' => 'success',
+            ]);
+        } catch (\Exception $e) {
+            \DB::rollBack();
+
+            return redirect()->back()->with([
+                'message' => 'Import failed! Error: ' . $e->getMessage(),
                 'msg_type' => 'danger',
             ]);
         }

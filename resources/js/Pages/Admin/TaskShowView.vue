@@ -47,6 +47,14 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    jobContext: {
+        type: Object,
+        default: null,
+    },
+    jobFiles: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const commentForm = useForm({
@@ -434,6 +442,40 @@ onMounted(() => {
 
                 <!-- Col 3: Side Panel (Assignees, CC loop) -->
                 <div class="space-y-6">
+                    <!-- Job Context Card -->
+                    <CardBox v-if="props.jobContext">
+                        <h3 class="text-md font-semibold text-gray-700 dark:text-slate-200 mb-3 flex items-center justify-between">
+                            <span>Job Context</span>
+                            <span :class="['text-xs font-semibold px-2 py-0.5 rounded border capitalize', getStatusColor(props.jobContext.status)]">
+                                {{ props.jobContext.status.replace('_', ' ') }}
+                            </span>
+                        </h3>
+                        <div class="space-y-3 text-sm">
+                            <div>
+                                <span class="text-xs text-gray-400 block">Job Title</span>
+                                <Link :href="route('job.show', props.jobContext.id)" class="text-blue-600 font-bold hover:underline">
+                                    {{ props.jobContext.title }}
+                                </Link>
+                            </div>
+                            <div class="flex justify-between border-t border-gray-150 dark:border-slate-800 pt-2">
+                                <span class="text-gray-500">Job Due Date:</span>
+                                <span class="font-semibold text-gray-700 dark:text-slate-300">{{ props.jobContext.due_date || 'N/A' }}</span>
+                            </div>
+                            <div v-if="props.jobFiles.length > 0" class="border-t border-gray-150 dark:border-slate-800 pt-2">
+                                <span class="text-xs text-gray-400 block mb-2">Job Attachments (Read-Only)</span>
+                                <div class="space-y-1.5 max-h-40 overflow-y-auto">
+                                    <div v-for="file in props.jobFiles" :key="file.id" class="flex items-center justify-between p-1 bg-gray-50 dark:bg-slate-800/40 rounded text-xs border border-gray-100 dark:border-slate-850">
+                                        <span class="truncate text-gray-700 dark:text-slate-300 max-w-44 flex-1">📁 {{ file.file_name }}</span>
+                                        <div class="flex items-center space-x-1.5 ml-2">
+                                            <span class="text-gray-400 text-xxs font-mono">{{ formatBytes(file.file_size) }}</span>
+                                            <a :href="file.download_url" class="text-blue-500 font-semibold hover:underline">Download</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </CardBox>
+
                     <CardBox>
                         <h3 class="text-md font-semibold text-gray-700 dark:text-slate-200 mb-4">
                             Assignees Status

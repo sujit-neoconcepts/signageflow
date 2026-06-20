@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Job;
 use App\Models\Task;
 use App\Models\TaskComment;
 use App\Models\TaskCommentFile;
@@ -23,7 +24,7 @@ class TaskController extends Controller
 {
     protected $resourceNeo = [
         'resourceName' => 'task',
-        'resourceTitle' => 'Task Manager',
+        'resourceTitle' => 'Tasks',
         'iconPath' => 'M19,3H14.82C14.4,1.84 13.3,1 12,1C10.7,1 9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3M14,17H7V15H14V17M17,13H7V11H17V13M17,9H7V7H17V9Z',
     ];
 
@@ -39,7 +40,7 @@ class TaskController extends Controller
 
     public function index()
     {
-        $query = Task::query()->with(['creator', 'assignees']);
+        $query = Task::query()->with(['creator', 'assignees', 'job']);
 
         // Global search callback
         $globalSearch = AllowedFilter::callback('global', function ($query, $value) {
@@ -66,6 +67,7 @@ class TaskController extends Controller
                         $q->where('users.id', $value);
                     });
                 }),
+                AllowedFilter::exact('job_id'),
                 $globalSearch,
             ])
             ->paginate($perPage)
@@ -102,6 +104,7 @@ class TaskController extends Controller
         ])->table(function (InertiaTable $table) use ($statusOptions, $assigneeOptions) {
             $table->withGlobalSearch()
                 ->column('title', 'Title', searchable: true, sortable: true)
+                ->column('job.title', 'Job')
                 ->column('due_date', 'Due Date', sortable: true)
                 ->column('status', 'Status', sortable: true)
                 ->column('priority', 'Priority', sortable: true)
@@ -120,10 +123,12 @@ class TaskController extends Controller
     {
         $executives = User::role('executive')->select('id', 'name as label', 'email')->orderBy('name')->get();
         $loopUsers = User::select('id', 'name as label', 'email')->orderBy('name')->get();
+        $openJobs = Job::whereIn('status', ['not_started', 'in_progress'])->select('id', 'title as label')->orderBy('title')->get();
 
         return Inertia::render('Admin/TaskAddEditView', [
             'executives' => $executives,
             'loopUsers' => $loopUsers,
+            'openJobs' => $openJobs,
         ]);
     }
 
@@ -161,6 +166,7 @@ class TaskController extends Controller
                 'recurrence_end_date' => $request->recurrence_end_date,
                 'notify_channels' => $request->notify_channels,
                 'reminder_before_due' => $request->reminder_before_due,
+                'job_id' => $request->job_id,
             ]);
 
             // Sync assignees
@@ -213,18 +219,20 @@ class TaskController extends Controller
 
     public function edit(Task $task)
     {
-        $task->load(['assignees:id,name as label,email', 'viewers:id,name as label,email', 'files']);
+        $task->load(['assignees:id,name as label,email', 'viewers:id,name as label,email', 'files', 'job:id,title']);
 
         $task->due_date_formatted = $task->due_date ? $task->due_date->format('Y-m-d H:i:s') : null;
         $task->recurrence_end_date_formatted = $task->recurrence_end_date ? $task->recurrence_end_date->format('Y-m-d') : null;
 
         $executives = User::role('executive')->select('id', 'name as label', 'email')->orderBy('name')->get();
         $loopUsers = User::select('id', 'name as label', 'email')->orderBy('name')->get();
+        $openJobs = Job::whereIn('status', ['not_started', 'in_progress'])->select('id', 'title as label')->orderBy('title')->get();
 
         return Inertia::render('Admin/TaskAddEditView', [
             'formdata' => $task,
             'executives' => $executives,
             'loopUsers' => $loopUsers,
+            'openJobs' => $openJobs,
         ]);
     }
 
@@ -260,6 +268,7 @@ class TaskController extends Controller
                 'recurrence_end_date' => $request->recurrence_end_date,
                 'notify_channels' => $request->notify_channels,
                 'reminder_before_due' => $request->reminder_before_due,
+                'job_id' => $request->job_id,
             ]);
 
             // Sync assignees
@@ -320,6 +329,7 @@ class TaskController extends Controller
             'files',
             'comments.user',
             'comments.files',
+            'job.files',
         ]);
 
         $comments = $task->comments->map(function ($c) {
@@ -366,6 +376,27 @@ class TaskController extends Controller
             ];
         });
 
+        // Job context data
+        $jobContext = null;
+        $jobFiles = [];
+        if ($task->job) {
+            $jobContext = [
+                'id' => $task->job->id,
+                'title' => $task->job->title,
+                'status' => $task->job->status,
+                'due_date' => $task->job->due_date ? $task->job->due_date->format('d-m-Y H:i') : null,
+            ];
+            $jobFiles = $task->job->files->map(function ($f) {
+                return [
+                    'id' => $f->id,
+                    'file_name' => $f->file_name,
+                    'file_type' => $f->file_type,
+                    'file_size' => $f->file_size,
+                    'download_url' => route('job.file.download', $f->id),
+                ];
+            });
+        }
+
         return Inertia::render('Admin/TaskShowView', [
             'task' => [
                 'id' => $task->id,
@@ -385,6 +416,8 @@ class TaskController extends Controller
             'viewers' => $task->viewers->pluck('name')->all(),
             'files' => $files,
             'comments' => $comments,
+            'jobContext' => $jobContext,
+            'jobFiles' => $jobFiles,
         ]);
     }
 
@@ -553,6 +586,11 @@ class TaskController extends Controller
 
             if ($taskNewStatus !== $task->status) {
                 $task->update(['status' => $taskNewStatus]);
+            }
+
+            // Recalculate job status if task belongs to a job
+            if ($task->job_id) {
+                $task->job->recalculateStatus();
             }
 
             DB::commit();

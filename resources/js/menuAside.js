@@ -23,6 +23,8 @@ import {
     mdiInvoiceList,
     mdiClipboardCheckOutline,
     mdiCalendarCheck,
+    mdiSitemap,
+    mdiBriefcase,
 } from "@mdi/js";
 
 export default [
@@ -70,6 +72,12 @@ export default [
                 label: "Product Internal Name",
                 icon: mdiFormatListBulletedType,
                 resource: "consumableInternalName",
+            },
+            {
+                route: "consumableInternalNameGroup.index",
+                label: "Internal name Group",
+                icon: mdiFormatListBulletedType,
+                resource: "consumableInternalNameGroup",
             },
             {
                 route: "openStock.index",
@@ -241,12 +249,24 @@ export default [
         ],
     },
     {
-        label: "Tasks",
+        label: "Tasks Manager",
         icon: mdiClipboardCheckOutline,
         menu: [
             {
+                route: "workflow.index",
+                label: "Workflows",
+                icon: mdiSitemap,
+                resource: "workflow",
+            },
+            {
+                route: "job.index",
+                label: "Jobs",
+                icon: mdiBriefcase,
+                resource: "job",
+            },
+            {
                 route: "task.index",
-                label: "Task Manager",
+                label: "Tasks",
                 icon: mdiClipboardCheckOutline,
                 resource: "task",
             },

@@ -15,6 +15,10 @@ class Task extends Model
         'description',
         'creator_id',
         'due_date',
+        'start_date',
+        'end_date',
+        'estimated_hours',
+        'start_on_previous_complete',
         'status',
         'priority',
         'is_recurring',
@@ -22,6 +26,8 @@ class Task extends Model
         'recurrence_config',
         'recurrence_end_date',
         'parent_task_id',
+        'job_id',
+        'job_stage_sort_order',
         'last_recurrence_generated_at',
         'notify_channels',
         'reminder_before_due',
@@ -30,6 +36,10 @@ class Task extends Model
 
     protected $casts = [
         'due_date' => 'datetime',
+        'start_date' => 'datetime',
+        'end_date' => 'datetime',
+        'estimated_hours' => 'decimal:2',
+        'start_on_previous_complete' => 'boolean',
         'is_recurring' => 'boolean',
         'recurrence_config' => 'array',
         'recurrence_end_date' => 'date',
@@ -74,6 +84,11 @@ class Task extends Model
     public function childTasks()
     {
         return $this->hasMany(Task::class, 'parent_task_id');
+    }
+
+    public function job()
+    {
+        return $this->belongsTo(Job::class, 'job_id');
     }
 
     public function scopeDueDateStart($query, $sd)

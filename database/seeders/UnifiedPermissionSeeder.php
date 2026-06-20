@@ -34,6 +34,7 @@ class UnifiedPermissionSeeder extends Seeder
         'expuser' => ['list', 'create', 'edit', 'delete', 'export', 'import'],
         'expcate' => ['list', 'create', 'edit', 'delete', 'export'],
         'consumableInternalName' => ['list', 'create', 'edit', 'delete', 'export', 'import'],
+        'consumableInternalNameGroup' => ['list', 'create', 'edit', 'delete', 'export', 'import'],
         'consumableInternalNameReport' => ['list'],
 
         // Consumables Operational Modules
@@ -49,6 +50,8 @@ class UnifiedPermissionSeeder extends Seeder
         'lettersCostSheet' => ['list', 'create', 'edit', 'delete', 'export'],
         'salesOrder' => ['list', 'create', 'edit', 'delete', 'export'],
         'enquiry' => ['list', 'create', 'edit', 'delete', 'export'],
+        'workflow' => ['list', 'create', 'edit', 'delete', 'view'],
+        'job' => ['list', 'create', 'edit', 'delete', 'view'],
     ];
 
     public function run(): void

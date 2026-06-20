@@ -198,6 +198,13 @@ const getAssigneeStatusColor = (status) => {
                         <span>{{ item.creator?.name }}</span>
                     </template>
 
+                    <template v-slot:cell(job.title)="{ item }">
+                        <Link v-if="item.job" :href="route('job.show', item.job.id)" class="text-blue-600 dark:text-blue-400 hover:underline">
+                            {{ item.job.title }}
+                        </Link>
+                        <span v-else class="text-gray-400">—</span>
+                    </template>
+
                     <template #cell(actions)="{ item }">
                         <div class="flex items-center space-x-2">
                             <Link :href="route('task.show', item.id)">

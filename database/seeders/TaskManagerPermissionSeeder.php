@@ -25,7 +25,27 @@ class TaskManagerPermissionSeeder extends Seeder
             'task_MyTasksList',
         ];
 
-        foreach ($permissions as $permission) {
+        // Workflow permissions
+        $workflowPermissions = [
+            'workflow_list',
+            'workflow_create',
+            'workflow_edit',
+            'workflow_delete',
+            'workflow_view',
+        ];
+
+        // Job permissions
+        $jobPermissions = [
+            'job_list',
+            'job_create',
+            'job_edit',
+            'job_delete',
+            'job_view',
+        ];
+
+        $allNewPermissions = array_merge($permissions, $workflowPermissions, $jobPermissions);
+
+        foreach ($allNewPermissions as $permission) {
             Permission::firstOrCreate(['name' => $permission]);
         }
 
@@ -36,22 +56,17 @@ class TaskManagerPermissionSeeder extends Seeder
         $superAdminRole = Role::firstOrCreate(['name' => 'super-admin']);
 
         // Give permissions to manager
-        $managerRole->givePermissionTo([
-            'task_list',
-            'task_create',
-            'task_edit',
-            'task_delete',
-            'task_view',
-            'task_MyTasksList',
-        ]);
+        $managerRole->givePermissionTo($allNewPermissions);
 
         // Give permissions to executive
         $executiveRole->givePermissionTo([
             'task_MyTasksList',
+            'workflow_view',
+            'job_view',
         ]);
 
         // Give permissions to admin
-        foreach ($permissions as $permission) {
+        foreach ($allNewPermissions as $permission) {
             $adminRole->givePermissionTo($permission);
         }
 

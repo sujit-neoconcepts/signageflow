@@ -296,6 +296,7 @@ return [
         'expuser' => 'Expense User',
         'expcate' => 'Expense Category',
         'consumableInternalName' => 'Consumable Internal Name',
+        'consumableInternalNameGroup' => 'Internal name Group',
         'consumableInternalNameReport' => 'Product Internal Price',
 
         // Consumables Operational Modules
@@ -309,5 +310,7 @@ return [
         'cabinetCostSheet' => 'Cabinet Cost Sheet',
         'lettersCostSheet' => 'Letters Cost Sheet',
         'task' => 'Task Manager',
+        'workflow' => 'Workflow Manager',
+        'job' => 'Job Manager',
     ],
 ];

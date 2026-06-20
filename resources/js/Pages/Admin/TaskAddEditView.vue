@@ -38,6 +38,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    openJobs: {
+        type: Array,
+        default: () => [],
+    },
     resourceNeo: {
         type: Object,
         default: () => ({}),
@@ -60,10 +64,12 @@ const form = useForm({
     },
     recurrence_end_date: "",
     temp_files: [],
+    job_id: null,
 });
 
 const selectedAssignees = ref([]);
 const selectedLoopUsers = ref([]);
+const selectedJob = ref(null);
 const existingFiles = ref([]);
 const newFiles = ref([]);
 const fileInputRef = ref(null);
@@ -107,6 +113,12 @@ onBeforeMount(() => {
                 file_type: f.file_type,
                 download_url: `/admin/task-file/${f.id}/download`,
             }));
+        }
+
+        // Set job selection
+        if (props.formdata.job_id && props.openJobs) {
+            selectedJob.value = props.openJobs.find(j => j.id === props.formdata.job_id) || null;
+            form.job_id = props.formdata.job_id;
         }
     }
 });
@@ -220,6 +232,7 @@ const submitform = () => {
     form.assignees = selectedAssignees.value;
     form.loop_users = selectedLoopUsers.value;
     form.temp_files = tempFiles.value;
+    form.job_id = selectedJob.value ? selectedJob.value.id : null;
 
     if (props.formdata.id) {
         form.put(route("task.update", props.formdata.id));
@@ -437,6 +450,24 @@ const submitform = () => {
                                     />
                                 </FormField>
                             </div>
+                        </CardBox>
+
+                        <!-- Link to Job (Optional) -->
+                        <CardBox v-if="props.openJobs && props.openJobs.length > 0">
+                            <h3 class="text-md font-semibold mb-4 text-gray-700 dark:text-slate-300">Link to Job (Optional)</h3>
+                            <FormField label="Select Job">
+                                <Multiselect
+                                    v-model="selectedJob"
+                                    placeholder="Link this task to a job..."
+                                    track-by="id"
+                                    label="label"
+                                    :multiple="false"
+                                    :options="props.openJobs"
+                                    :allow-empty="true"
+                                    class="mt-1"
+                                />
+                            </FormField>
+                            <p class="text-xs text-gray-400 mt-2">Optionally link this task to an open job. The task will appear in the job's task list.</p>
                         </CardBox>
 
                         <CardBox>
