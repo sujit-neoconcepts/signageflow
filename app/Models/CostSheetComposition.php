@@ -9,7 +9,7 @@ class CostSheetComposition extends Model
     protected $fillable = [
         'cost_sheet_id',
         'section',
-        'consumable_internal_name_id',
+        'consumable_internal_name_group_id',
         'child_cost_sheet_id',
         'unit',
         'quantity',
@@ -21,9 +21,9 @@ class CostSheetComposition extends Model
         return $this->belongsTo(CostSheet::class);
     }
 
-    public function consumable()
+    public function group()
     {
-        return $this->belongsTo(ConsumableInternalName::class, 'consumable_internal_name_id');
+        return $this->belongsTo(ConsumableInternalNameGroup::class, 'consumable_internal_name_group_id');
     }
 
     public function childCostSheet()

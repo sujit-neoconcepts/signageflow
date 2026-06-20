@@ -70,6 +70,12 @@ export default [
                 resource: "consumableInternalName",
             },
             {
+                route: "consumableInternalNameGroup.index",
+                label: "Internal name Group",
+                icon: mdiFormatListBulletedType,
+                resource: "consumableInternalNameGroup",
+            },
+            {
                 route: "openStock.index",
                 icon: mdiInvoiceList,
                 label: "Open Stock",

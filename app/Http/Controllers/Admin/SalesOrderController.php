@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\CostSheet;
 use App\Models\SalesOrder;
+use App\Models\SalesOrderItem;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
 use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\AllowedSort;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class SalesOrderController extends Controller
@@ -33,7 +35,7 @@ class SalesOrderController extends Controller
 
     public function __construct()
     {
-        $this->middleware('can:salesOrder_list', ['only' => ['index', 'show', 'detail', 'print']]);
+        $this->middleware('can:salesOrder_list', ['only' => ['index', 'itemwiseIndex', 'show', 'detail', 'print']]);
         $this->middleware('can:salesOrder_create', ['only' => ['create', 'store']]);
         $this->middleware('can:salesOrder_edit', ['only' => ['edit', 'update']]);
         $this->middleware('can:salesOrder_delete', ['only' => ['destroy', 'bulkDestroy']]);
@@ -89,6 +91,14 @@ class SalesOrderController extends Controller
             $this->resourceNeo['bulkActions']['csvExport'] = [];
         }
 
+        $this->resourceNeo['extraMainLinks'] = [
+            [
+                'label' => 'Itemwise List',
+                'link' => 'salesOrder.itemwise',
+                'icon' => 'M3,13H11V11H3M3,6V8H21V6M3,18H11V16H3V18M13,18H21V16H13M13,13H21V11H13V13Z',
+            ],
+        ];
+
         $this->resourceNeo['showTotal'] = true;
         $this->resourceNeo['showall'] = true;
 
@@ -119,6 +129,136 @@ class SalesOrderController extends Controller
                     'cabinet' => 'Cabinet',
                     'letters' => 'Letters',
                 ], noFilterOptionLabel: 'All')
+                ->perPageOptions([10, 15, 30, 50, 100, 10000]);
+        });
+    }
+
+    public function itemwiseIndex()
+    {
+        $formInfo = [
+            'order_no' => ['label' => 'Order No', 'searchable' => true, 'sortable' => true],
+            'order_date' => ['label' => 'Order Date', 'searchable' => true, 'sortable' => true, 'type' => 'datepicker'],
+            'client_name' => ['label' => 'Client', 'searchable' => true, 'sortable' => true],
+            'product_type' => ['label' => 'Product Type', 'searchable' => true, 'sortable' => true],
+            'item_name' => ['label' => 'Item Name', 'searchable' => true, 'sortable' => true],
+            'qty_mode' => ['label' => 'Qty Mode', 'searchable' => true, 'sortable' => true],
+            'length' => ['label' => 'Length', 'sortable' => true, 'align' => 'right'],
+            'width' => ['label' => 'Width', 'sortable' => true, 'align' => 'right'],
+            'pieces' => ['label' => 'Pieces', 'sortable' => true, 'align' => 'right', 'showTotal' => true],
+            'qty' => ['label' => 'Qty', 'sortable' => true, 'align' => 'right', 'showTotal' => true],
+            'rate' => ['label' => 'Rate', 'sortable' => true, 'align' => 'right'],
+            'taxable_amount' => ['label' => 'Taxable Amount', 'sortable' => true, 'align' => 'right', 'showTotal' => true],
+            'gst_percent' => ['label' => 'GST %', 'sortable' => true, 'align' => 'right'],
+            'gst_amount' => ['label' => 'GST Amount', 'sortable' => true, 'align' => 'right', 'showTotal' => true],
+            'line_total' => ['label' => 'Line Total', 'sortable' => true, 'align' => 'right', 'showTotal' => true],
+        ];
+
+        $globalSearch = AllowedFilter::callback('global', function ($query, $value) {
+            $query->where(function ($query) use ($value) {
+                Collection::wrap($value)->each(function ($value) use ($query) {
+                    $query->orWhere('sales_orders.order_no', 'LIKE', "%{$value}%")
+                        ->orWhere('sales_orders.product_type', 'LIKE', "%{$value}%")
+                        ->orWhere('sales_order_items.item_name', 'LIKE', "%{$value}%")
+                        ->orWhere('clients.cl_name', 'LIKE', "%{$value}%");
+                });
+            });
+        });
+
+        $perPage = request()->query('perPage') ?? 10;
+
+        $query = SalesOrderItem::select(
+            'sales_order_items.*',
+            'sales_orders.order_no',
+            'sales_orders.order_date',
+            'sales_orders.product_type',
+            'clients.cl_name as client_name'
+        )
+        ->join('sales_orders', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
+        ->leftJoin('clients', 'clients.id', '=', 'sales_orders.client_id')
+        ->whereBetween('sales_orders.order_date', [
+            session('financial_year_start'),
+            session('financial_year_end')
+        ]);
+
+        $resourceData = QueryBuilder::for($query)
+            ->defaultSort('-order_date')
+            ->allowedSorts([
+                AllowedSort::field('id', 'sales_order_items.id'),
+                AllowedSort::field('order_no', 'sales_orders.order_no'),
+                AllowedSort::field('order_date', 'sales_orders.order_date'),
+                AllowedSort::field('client_name', 'clients.cl_name'),
+                AllowedSort::field('product_type', 'sales_orders.product_type'),
+                AllowedSort::field('item_name', 'sales_order_items.item_name'),
+                AllowedSort::field('qty_mode', 'sales_order_items.qty_mode'),
+                AllowedSort::field('length', 'sales_order_items.length'),
+                AllowedSort::field('width', 'sales_order_items.width'),
+                AllowedSort::field('pieces', 'sales_order_items.pieces'),
+                AllowedSort::field('qty', 'sales_order_items.qty'),
+                AllowedSort::field('rate', 'sales_order_items.rate'),
+                AllowedSort::field('taxable_amount', 'sales_order_items.taxable_amount'),
+                AllowedSort::field('gst_percent', 'sales_order_items.gst_percent'),
+                AllowedSort::field('gst_amount', 'sales_order_items.gst_amount'),
+                AllowedSort::field('line_total', 'sales_order_items.line_total'),
+            ])
+            ->allowedFilters([
+                AllowedFilter::exact('client_id', 'sales_orders.client_id'),
+                AllowedFilter::exact('product_type', 'sales_orders.product_type'),
+                AllowedFilter::callback('order_date_start', function ($query, $value) {
+                    $query->where('sales_orders.order_date', '>=', Carbon::parse($value)->startOfDay());
+                }),
+                AllowedFilter::callback('order_date_end', function ($query, $value) {
+                    $query->where('sales_orders.order_date', '<=', Carbon::parse($value)->endOfDay());
+                }),
+                $globalSearch,
+            ])
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $resourceNeo = $this->resourceNeo;
+        $resourceNeo['resourceTitle'] = 'Sales Order Itemised List';
+        $resourceNeo['actions'] = ['r'];
+
+        $resourceNeo['extraMainLinks'] = [
+            [
+                'label' => 'Grouped List',
+                'link' => 'salesOrder.index',
+                'icon' => 'M3,13H11V11H3M3,6V8H21V6M3,18H11V16H3V18M13,18H21V16H13M13,13H21V11H13V13Z',
+            ],
+        ];
+
+        $resourceNeo['showTotal'] = true;
+        $resourceNeo['showall'] = true;
+
+        $clients = Client::orderBy('cl_name')->pluck('cl_name', 'id')->toArray();
+
+        return Inertia::render('Admin/IndexView', [
+            'resourceData' => $resourceData,
+            'resourceNeo' => $resourceNeo,
+        ])->table(function (InertiaTable $table) use ($formInfo, $clients) {
+            $table->withGlobalSearch();
+            foreach ($formInfo as $key => $value) {
+                $table->column(
+                    $key,
+                    $value['label'],
+                    searchable: $value['searchable'] ?? false,
+                    sortable: $value['sortable'] ?? false,
+                    extra: [
+                        'type' => $value['type'] ?? '',
+                        'align' => $value['align'] ?? 'left',
+                        'showTotal' => $value['showTotal'] ?? false,
+                    ]
+                );
+            }
+
+            $table->column(label: 'Actions')
+                ->dateFilter(key: 'order_date_start', label: 'Date From')
+                ->dateFilter(key: 'order_date_end', label: 'Date To')
+                ->selectFilter(key: 'product_type', label: 'Product Type', options: [
+                    'signage' => 'Signage',
+                    'cabinet' => 'Cabinet',
+                    'letters' => 'Letters',
+                ], noFilterOptionLabel: 'All')
+                ->selectFilter(key: 'client_id', label: 'Client', options: $clients, noFilterOptionLabel: 'All')
                 ->perPageOptions([10, 15, 30, 50, 100, 10000]);
         });
     }

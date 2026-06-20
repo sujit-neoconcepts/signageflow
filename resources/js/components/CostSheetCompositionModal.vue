@@ -82,10 +82,10 @@ const calculatedMarginPct = computed(() => {
 // ─── Load options ────────────────────────────────────────────────────────────
 const fetchConsumableOptions = async () => {
     try {
-        const { data } = await axios.get(route("consumableInternalName.options"));
+        const { data } = await axios.get(route("consumableInternalNameGroup.options"));
         consumableOptions.value = data;
     } catch {
-        useToast().error("Failed to load consumable options");
+        useToast().error("Failed to load group options");
     }
 };
 
@@ -116,21 +116,21 @@ const fetchCompositions = async () => {
 
         data.forEach((c) => {
             const section = c.section || "raw_material";
-            const consumable = c.consumable;
+            const group = c.group;
             const childCostSheet = c.child_cost_sheet || c.childCostSheet;
 
             if (section === "raw_material") {
-                const basePrice = Number(consumable?.unitPrice || 0);
-                const margin    = Number(consumable?.openStockMarginPercent || 0);
+                const basePrice = Number(group?.unitPrice || 0);
+                const margin    = Number(group?.openStockMarginPercent || 0);
                 rows.value.raw_material.push({
-                    id:                          c.id,
-                    selectedItem:                consumable,
-                    consumable_internal_name_id: c.consumable_internal_name_id,
-                    child_cost_sheet_id:         null,
-                    unit:                        c.unit,
-                    unitPrice:                   basePrice * (1 + margin / 100),
-                    quantity:                    c.quantity,
-                    margin:                      c.margin || 0,
+                    id:                                 c.id,
+                    selectedItem:                       group,
+                    consumable_internal_name_group_id:  c.consumable_internal_name_group_id,
+                    child_cost_sheet_id:                null,
+                    unit:                               c.unit,
+                    unitPrice:                          basePrice * (1 + margin / 100),
+                    quantity:                           c.quantity,
+                    margin:                             c.margin || 0,
                 });
             } else {
                 const child = childCostSheet;
@@ -173,14 +173,14 @@ watch(isOpen, (newVal) => {
 // ─── Row mutations ────────────────────────────────────────────────────────────
 const addRow = (section) => {
     rows.value[section].push({
-        id:                          null,
-        selectedItem:                null,
-        consumable_internal_name_id: null,
-        child_cost_sheet_id:         null,
-        unit:                        "",
-        unitPrice:                   0,
-        quantity:                    0,
-        margin:                      0,
+        id:                                 null,
+        selectedItem:                       null,
+        consumable_internal_name_group_id:  null,
+        child_cost_sheet_id:                null,
+        unit:                               "",
+        unitPrice:                          0,
+        quantity:                           0,
+        margin:                             0,
     });
 };
 
@@ -191,14 +191,14 @@ const removeRow = (section, index) => {
 // ─── Selection handlers ──────────────────────────────────────────────────────
 const handleRawMaterialChange = (row, selected) => {
     if (selected) {
-        row.consumable_internal_name_id = selected.id;
-        row.child_cost_sheet_id         = null;
-        row.unit                        = selected.unitName;
+        row.consumable_internal_name_group_id = selected.id;
+        row.child_cost_sheet_id               = null;
+        row.unit                              = selected.unitName;
         const base   = Number(selected.unitPrice || 0);
         const marg   = Number(selected.openStockMarginPercent || 0);
         row.unitPrice = base * (1 + marg / 100);
     } else {
-        row.consumable_internal_name_id = null;
+        row.consumable_internal_name_group_id = null;
         row.unit      = "";
         row.unitPrice = 0;
     }
@@ -223,16 +223,16 @@ const saveCompositions = async () => {
 
     for (const s of SECTIONS) {
         for (const row of rows.value[s.key]) {
-            if (s.key === "raw_material" && !row.consumable_internal_name_id) continue;
+            if (s.key === "raw_material" && !row.consumable_internal_name_group_id) continue;
             if (s.key !== "raw_material" && !row.child_cost_sheet_id) continue;
             allRows.push({
-                id:                          row.id,
-                section:                     s.key,
-                consumable_internal_name_id: row.consumable_internal_name_id ?? null,
-                child_cost_sheet_id:         row.child_cost_sheet_id ?? null,
-                unit:                        row.unit,
-                quantity:                    row.quantity,
-                margin:                      row.margin,
+                id:                                 row.id,
+                section:                            s.key,
+                consumable_internal_name_group_id:  row.consumable_internal_name_group_id ?? null,
+                child_cost_sheet_id:                row.child_cost_sheet_id ?? null,
+                unit:                               row.unit,
+                quantity:                           row.quantity,
+                margin:                             row.margin,
             });
         }
     }
@@ -369,7 +369,7 @@ const getCostSheetUnitPrice = (item) => {
                         <thead class="text-xs uppercase bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
                             <tr>
                                 <th class="px-3 py-2 min-w-[220px]">
-                                    {{ sec.key === 'raw_material' ? 'Consumable Internal Name' : sec.label + ' Item' }}
+                                    {{ sec.key === 'raw_material' ? 'Internal name Group' : sec.label + ' Item' }}
                                 </th>
                                 <th class="px-3 py-2 w-20">Unit</th>
                                 <th class="px-3 py-2 w-24 text-right">Unit Price</th>
@@ -391,7 +391,7 @@ const getCostSheetUnitPrice = (item) => {
                                         :options="consumableOptions"
                                         label="name"
                                         track-by="id"
-                                        placeholder="Search consumable…"
+                                        placeholder="Search group…"
                                         :searchable="true"
                                         :close-on-select="true"
                                         @update:modelValue="handleRawMaterialChange(row, $event)"

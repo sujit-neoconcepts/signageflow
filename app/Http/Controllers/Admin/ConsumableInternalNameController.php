@@ -43,16 +43,38 @@ class ConsumableInternalNameController extends Controller
             $query->where(function ($query) use ($value, $formInfo, $formInfoMulti) {
                 Collection::wrap($value)->each(function ($value) use ($query, $formInfo, $formInfoMulti) {
                     foreach (array_keys($formInfo) as $key) {
-                        $query->orWhere($key, 'LIKE', "%{$value}%");
+                        if ($key === 'consumable_internal_name_group_id') {
+                            $query->orWhere('consumable_internal_name_groups.name', 'LIKE', "%{$value}%");
+                        } else {
+                            $query->orWhere('consumable_internal_names.' . $key, 'LIKE', "%{$value}%");
+                        }
                     }
                 });
             });
         });
         $perPage = request()->query('perPage') ?? 10;
+        
+        $allowedSorts = [];
+        foreach (array_keys($formInfo) as $key) {
+            if ($key === 'name') {
+                $allowedSorts[] = \Spatie\QueryBuilder\AllowedSort::field('name', 'consumable_internal_names.name');
+            } elseif ($key === 'consumable_internal_name_group_id') {
+                $allowedSorts[] = \Spatie\QueryBuilder\AllowedSort::field('consumable_internal_name_group_id', 'consumable_internal_name_groups.name');
+            } else {
+                $allowedSorts[] = $key;
+            }
+        }
+        $allowedSorts[] = 'group_name';
+
         $resourceData = QueryBuilder::for(ConsumableInternalName::class)
-            ->defaultSort('name')
-            ->allowedSorts(array_keys($formInfo))
-            ->allowedFilters(array_merge(array_keys($formInfo), [$globalSearch]))
+            ->select('consumable_internal_names.*', 'consumable_internal_name_groups.name as group_name')
+            ->leftJoin('consumable_internal_name_groups', 'consumable_internal_name_groups.id', '=', 'consumable_internal_names.consumable_internal_name_group_id')
+            ->defaultSort('consumable_internal_names.name')
+            ->allowedSorts($allowedSorts)
+            ->allowedFilters(array_merge(
+                array_diff(array_keys($formInfo), ['consumable_internal_name_group_id']),
+                [AllowedFilter::exact('consumable_internal_name_group_id'), $globalSearch]
+            ))
             ->paginate($perPage)
             ->withQueryString();
 
@@ -80,9 +102,21 @@ class ConsumableInternalNameController extends Controller
         return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' =>
         $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo) {
             $table->withGlobalSearch();
-            foreach (array_keys($formInfo) as $key) {
+            
+            $arrKey = array_diff(array_keys($formInfo), ['consumable_internal_name_group_id']);
+            foreach ($arrKey as $key) {
                 $table->column($key, $formInfo[$key]['label'], searchable: $formInfo[$key]['searchable'] ?? false, sortable: $formInfo[$key]['sortable'] ?? false, hidden: $formInfo[$key]['hidden'] ?? false);
             }
+            $table->column('group_name', 'Internal name Group', sortable: true);
+
+            $allgroups = [];
+            try {
+                $allgroups = \App\Models\ConsumableInternalNameGroup::orderBy('name')->pluck('name', 'id')->toArray();
+            } catch (\Exception $e) {}
+            if (!empty($allgroups)) {
+                $table->selectFilter('consumable_internal_name_group_id', $allgroups, label: 'Internal name Group', noFilterOption: true, noFilterOptionLabel: 'All');
+            }
+
             $table->column(label: 'Actions')->perPageOptions([10, 15, 30, 50, 100]);
         });
     }
@@ -91,7 +125,7 @@ class ConsumableInternalNameController extends Controller
     {
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = ConsumableInternalName::formInfo();
-        return Inertia::render('Admin/AddEditView', compact('resourceNeo'));
+        return Inertia::render('Admin/ConsumableInternalNameAddEditView', compact('resourceNeo'));
     }
 
     public function store(Request $request)
@@ -100,6 +134,15 @@ class ConsumableInternalNameController extends Controller
         $attributeNames = [];
         $validateRule = [];
         $savedArray = [];
+
+        if ($request->has('consumable_internal_name_group_id')) {
+            $groupId = $request->consumable_internal_name_group_id;
+            if (is_array($groupId)) {
+                $groupId = $groupId['id'] ?? null;
+            }
+            $request->merge(['consumable_internal_name_group_id' => $groupId]);
+        }
+
         foreach (array_keys($formInfo) as $key) {
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
@@ -139,9 +182,13 @@ class ConsumableInternalNameController extends Controller
         $formdata = $consumableInternalName;
         $mode = $this->normalizeOpenStockUnit($consumableInternalName->openStockUnit);
         $formdata->openStockUnit = ['id' => $mode, 'label' => $this->openStockUnitLabel($mode)];
+        
+        $group = $consumableInternalName->group;
+        $formdata->consumable_internal_name_group_id = $group ? ['id' => $group->id, 'label' => $group->name] : null;
+
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = ConsumableInternalName::formInfo();
-        return Inertia::render('Admin/AddEditView', compact('formdata', 'resourceNeo'));
+        return Inertia::render('Admin/ConsumableInternalNameAddEditView', compact('formdata', 'resourceNeo'));
     }
 
     public function update(Request $request, ConsumableInternalName $consumableInternalName)
@@ -149,6 +196,15 @@ class ConsumableInternalNameController extends Controller
         $formInfo = ConsumableInternalName::formInfo();
         $attributeNames = [];
         $validateRule = [];
+
+        if ($request->has('consumable_internal_name_group_id')) {
+            $groupId = $request->consumable_internal_name_group_id;
+            if (is_array($groupId)) {
+                $groupId = $groupId['id'] ?? null;
+            }
+            $request->merge(['consumable_internal_name_group_id' => $groupId]);
+        }
+
         foreach (array_keys($formInfo) as $key) {
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
@@ -243,8 +299,8 @@ class ConsumableInternalNameController extends Controller
         ];
 
         $sampleData = [
-            ['name' => 'Item A', 'unitPrice' => '100', 'unitName' => 'Kg', 'unitAltName' => 'Packet', 'openStockUnit' => '0', 'openStockMarginPercent' => '0'],
-            ['name' => 'Item B', 'unitPrice' => '200', 'unitName' => 'Ltr', 'unitAltName' => 'Bottle', 'openStockUnit' => '1', 'openStockMarginPercent' => '2.5'],
+            ['name' => 'Item A', 'group' => 'Group A', 'unitPrice' => '100', 'unitName' => 'Kg', 'unitAltName' => 'Packet', 'openStockUnit' => '0', 'openStockMarginPercent' => '0'],
+            ['name' => 'Item B', 'group' => 'Group B', 'unitPrice' => '200', 'unitName' => 'Ltr', 'unitAltName' => 'Bottle', 'openStockUnit' => '1', 'openStockMarginPercent' => '2.5'],
         ];
 
         $resourceNeo = $this->resourceNeo;
@@ -271,7 +327,7 @@ class ConsumableInternalNameController extends Controller
         }
 
         $headers = array_shift($records);
-        $expectedHeaders = ['name', 'unitPrice', 'unitName', 'unitAltName', 'openStockUnit', 'openStockMarginPercent'];
+        $expectedHeaders = ['name', 'group', 'unitPrice', 'unitName', 'unitAltName', 'openStockUnit', 'openStockMarginPercent'];
         
         $requiredHeaders = ['name', 'unitPrice', 'unitName'];
         $missingHeaders = array_diff($requiredHeaders, $headers);
@@ -310,6 +366,7 @@ class ConsumableInternalNameController extends Controller
             
             $validator = Validator::make($data, [
                 'name' => 'required|unique:consumable_internal_names,name',
+                'group' => 'nullable',
                 'unitPrice' => 'required|numeric',
                 'unitName' => 'required',
                 'unitAltName' => 'nullable',
@@ -334,6 +391,17 @@ class ConsumableInternalNameController extends Controller
             foreach ($validatedData as $data) {
                 $data['openStockUnit'] = $this->normalizeOpenStockUnit($data['openStockUnit'] ?? 0);
                 $data['openStockMarginPercent'] = $data['openStockMarginPercent'] ?? 0;
+                
+                $groupName = isset($data['group']) ? trim($data['group']) : null;
+                $groupId = null;
+                if (!empty($groupName)) {
+                    $group = \App\Models\ConsumableInternalNameGroup::firstOrCreate(['name' => $groupName]);
+                    $groupId = $group->id;
+                }
+                
+                unset($data['group']);
+                $data['consumable_internal_name_group_id'] = $groupId;
+                
                 ConsumableInternalName::create($data);
             }
             DB::commit();

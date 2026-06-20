@@ -15,7 +15,7 @@ class CostSheetCompositionController extends Controller
     {
         $compositions = $costSheet->compositions()
             ->with([
-                'consumable:id,name,unitName,unitAltName,unitPrice,openStockMarginPercent',
+                'group:id,name',
                 'childCostSheet:id,name,qty_unit,alt_units,rate,no_of_unit,prod_type',
             ])
             ->get();
@@ -30,7 +30,7 @@ class CostSheetCompositionController extends Controller
             'total_cost'             => 'nullable|numeric|min:0',
             'compositions.*.id'      => 'nullable|integer',
             'compositions.*.section' => 'required|in:raw_material,signage,cabinet,letters',
-            'compositions.*.consumable_internal_name_id' => 'nullable|exists:consumable_internal_names,id',
+            'compositions.*.consumable_internal_name_group_id' => 'nullable|exists:consumable_internal_name_groups,id',
             'compositions.*.child_cost_sheet_id'         => 'nullable|exists:cost_sheets,id',
             'compositions.*.quantity' => 'required|numeric|min:0',
             'compositions.*.margin'   => 'nullable|numeric|min:0',
@@ -41,12 +41,12 @@ class CostSheetCompositionController extends Controller
 
         foreach ($data['compositions'] ?? [] as $compData) {
             $payload = [
-                'section'                    => $compData['section'],
-                'consumable_internal_name_id'=> $compData['consumable_internal_name_id'] ?? null,
-                'child_cost_sheet_id'        => $compData['child_cost_sheet_id'] ?? null,
-                'quantity'                   => $compData['quantity'],
-                'margin'                     => $compData['margin'] ?? 0.00,
-                'unit'                       => $compData['unit'] ?? null,
+                'section'                            => $compData['section'],
+                'consumable_internal_name_group_id'  => $compData['consumable_internal_name_group_id'] ?? null,
+                'child_cost_sheet_id'                => $compData['child_cost_sheet_id'] ?? null,
+                'quantity'                           => $compData['quantity'],
+                'margin'                             => $compData['margin'] ?? 0.00,
+                'unit'                               => $compData['unit'] ?? null,
             ];
 
             $composition = $costSheet->compositions()->updateOrCreate(
@@ -66,7 +66,7 @@ class CostSheetCompositionController extends Controller
             'message'      => 'Compositions saved successfully.',
             'compositions' => $costSheet->compositions()
                 ->with([
-                    'consumable:id,name,unitName,unitAltName,unitPrice,openStockMarginPercent',
+                    'group:id,name',
                     'childCostSheet:id,name,qty_unit,alt_units,rate,no_of_unit,prod_type',
                 ])->get(),
         ]);
@@ -80,7 +80,7 @@ class CostSheetCompositionController extends Controller
         $prodType = $request->query('prod_type');
         $query    = CostSheet::select('id', 'name', 'qty_unit', 'alt_units', 'rate', 'no_of_unit', 'prod_type')
             ->with([
-                'compositions.consumable:id,name,unitName,unitAltName,unitPrice,openStockMarginPercent',
+                'compositions.group:id,name',
                 'compositions.childCostSheet:id,name,qty_unit,alt_units,rate,no_of_unit,prod_type'
             ])
             ->orderBy('name');

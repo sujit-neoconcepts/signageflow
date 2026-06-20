@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\OpeningController;
 use App\Http\Controllers\Admin\StocksController;
 use App\Http\Controllers\Admin\ExpenseController;
 use App\Http\Controllers\Admin\ConsumableInternalNameController;
+use App\Http\Controllers\Admin\ConsumableInternalNameGroupController;
 use App\Http\Controllers\Admin\OpenStockController;
 use App\Http\Controllers\Admin\SalesOrderController;
 use App\Http\Controllers\Admin\SignageCostSheetController;
@@ -57,6 +58,13 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
         Route::get('consumableInternalName/sync', [ConsumableInternalNameController::class, 'sync'])->name('consumableInternalName.sync');
         Route::resource('consumableInternalName', ConsumableInternalNameController::class);
         Route::delete('consumableInternalName-bulk-destroy', [ConsumableInternalNameController::class, 'bulkDestroy'])->name('consumableInternalName.bulkDestroy');
+
+        // consumableInternalNameGroup Route
+        Route::get('consumableInternalNameGroup/options', [ConsumableInternalNameGroupController::class, 'options'])->name('consumableInternalNameGroup.options');
+        Route::get('consumableInternalNameGroup-import', [ConsumableInternalNameGroupController::class, 'importView'])->name('consumableInternalNameGroup.import');
+        Route::post('consumableInternalNameGroup-import', [ConsumableInternalNameGroupController::class, 'import']);
+        Route::resource('consumableInternalNameGroup', ConsumableInternalNameGroupController::class);
+        Route::delete('consumableInternalNameGroup-bulk-destroy', [ConsumableInternalNameGroupController::class, 'bulkDestroy'])->name('consumableInternalNameGroup.bulkDestroy');
         
         // consumableInternalNameReport Route
         Route::get('consumableInternalNameReport', [\App\Http\Controllers\Admin\ConsumableInternalNameReportController::class, 'index'])->name('consumableInternalNameReport.index');
@@ -140,22 +148,29 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::post('/openStock/detail', [OpenStockController::class, 'detail'])->name('openStock.detail');
     Route::get('signageCostSheet-import', [SignageCostSheetController::class, 'importView'])->name('signageCostSheet.import');
     Route::post('signageCostSheet-import', [SignageCostSheetController::class, 'import']);
+    Route::get('signageCostSheet-import-with-composition', [SignageCostSheetController::class, 'importWithCompositionView'])->name('signageCostSheet.importWithComposition');
+    Route::post('signageCostSheet-import-with-composition', [SignageCostSheetController::class, 'importWithComposition'])->name('signageCostSheet.importWithCompositionStore');
     Route::post('signageCostSheet-quick-store', [SignageCostSheetController::class, 'quickStore'])->name('signageCostSheet.quickStore');
     Route::resource('signageCostSheet', SignageCostSheetController::class)
         ->parameters(['signageCostSheet' => 'costSheet']);
     Route::delete('signageCostSheet-bulk-destroy', [SignageCostSheetController::class, 'bulkDestroy'])->name('signageCostSheet.bulkDestroy');
     Route::get('cabinetCostSheet-import', [CabinetCostSheetController::class, 'importView'])->name('cabinetCostSheet.import');
     Route::post('cabinetCostSheet-import', [CabinetCostSheetController::class, 'import']);
+    Route::get('cabinetCostSheet-import-with-composition', [CabinetCostSheetController::class, 'importWithCompositionView'])->name('cabinetCostSheet.importWithComposition');
+    Route::post('cabinetCostSheet-import-with-composition', [CabinetCostSheetController::class, 'importWithComposition'])->name('cabinetCostSheet.importWithCompositionStore');
     Route::post('cabinetCostSheet-quick-store', [CabinetCostSheetController::class, 'quickStore'])->name('cabinetCostSheet.quickStore');
     Route::resource('cabinetCostSheet', CabinetCostSheetController::class)
         ->parameters(['cabinetCostSheet' => 'costSheet']);
     Route::delete('cabinetCostSheet-bulk-destroy', [CabinetCostSheetController::class, 'bulkDestroy'])->name('cabinetCostSheet.bulkDestroy');
     Route::get('lettersCostSheet-import', [LettersCostSheetController::class, 'importView'])->name('lettersCostSheet.import');
     Route::post('lettersCostSheet-import', [LettersCostSheetController::class, 'import']);
+    Route::get('lettersCostSheet-import-with-composition', [LettersCostSheetController::class, 'importWithCompositionView'])->name('lettersCostSheet.importWithComposition');
+    Route::post('lettersCostSheet-import-with-composition', [LettersCostSheetController::class, 'importWithComposition'])->name('lettersCostSheet.importWithCompositionStore');
     Route::post('lettersCostSheet-quick-store', [LettersCostSheetController::class, 'quickStore'])->name('lettersCostSheet.quickStore');
     Route::resource('lettersCostSheet', LettersCostSheetController::class)
         ->parameters(['lettersCostSheet' => 'costSheet']);
     Route::delete('lettersCostSheet-bulk-destroy', [LettersCostSheetController::class, 'bulkDestroy'])->name('lettersCostSheet.bulkDestroy');
+    Route::get('salesOrder-itemwise', [SalesOrderController::class, 'itemwiseIndex'])->name('salesOrder.itemwise');
     Route::resource('salesOrder', SalesOrderController::class);
     Route::post('/salesOrder/detail', [SalesOrderController::class, 'detail'])->name('salesOrder.detail');
     Route::get('/salesOrder/{salesOrder}/print', [SalesOrderController::class, 'print'])->name('salesOrder.print');
