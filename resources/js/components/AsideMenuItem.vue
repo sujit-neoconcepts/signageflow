@@ -57,7 +57,12 @@ const componentClass = computed(() => {
   ];
 });
 
-const filteredMenu = computed(() => props.item.menu.filter(i => !i.resource || can(i.resource + '_list')))
+const filteredMenu = computed(() => props.item.menu.filter(i => {
+  if (i.permission) {
+    return can(i.permission);
+  }
+  return !i.resource || can(i.resource + '_list');
+}))
 
 const hasDropdown = computed(() => !!props.item.menu && filteredMenu.value.length > 0);
 

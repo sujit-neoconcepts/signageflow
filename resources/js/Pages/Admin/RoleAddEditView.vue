@@ -47,12 +47,14 @@ const organizedPermissions = computed(() => {
     const resources = [];
     for (const item of items) {
       if (item.resource && props.allpermissions[item.resource]) {
-        resources.push({
-          key: item.resource,
-          label: item.label,
-          data: props.allpermissions[item.resource]
-        });
-        usedKeys.add(item.resource);
+        if (!usedKeys.has(item.resource)) {
+          resources.push({
+            key: item.resource,
+            label: item.label,
+            data: props.allpermissions[item.resource]
+          });
+          usedKeys.add(item.resource);
+        }
       }
       if (item.menu) {
         resources.push(...extractResources(item.menu));

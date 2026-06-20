@@ -14,6 +14,7 @@ import SectionMain from "@/components/SectionMain.vue";
 import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
 import BaseButton from "@/components/BaseButton.vue";
 import CardBox from "@/components/CardBox.vue";
+import CardBoxModal from "@/components/CardBoxModal.vue";
 import FormField from "@/components/FormField.vue";
 import NotificationBar from "@/components/NotificationBar.vue";
 import VoiceRecorder from "@/components/VoiceRecorder.vue";
@@ -101,16 +102,46 @@ const postComment = () => {
     });
 };
 
-const updateTaskStatus = (newStatus) => {
-    const reason = prompt(`Optional feedback/reason for marking task as ${newStatus.toUpperCase()}:`);
-    if (reason === null) return; // cancelled
+const isStatusModalActive = ref(false);
+const statusModalAction = ref("");
+const statusModalTitle = computed(() => {
+    switch (statusModalAction.value) {
+        case 'verified': return 'Verify Task';
+        case 'closed': return 'Close Task';
+        case 'in_progress': return 'Reject Task';
+        default: return 'Update Task Status';
+    }
+});
+const statusModalButtonLabel = computed(() => {
+    switch (statusModalAction.value) {
+        case 'verified': return 'Verify';
+        case 'closed': return 'Close';
+        case 'in_progress': return 'Reject';
+        default: return 'Submit';
+    }
+});
+const statusModalButtonColor = computed(() => {
+    switch (statusModalAction.value) {
+        case 'verified': return 'success';
+        case 'closed': return 'info';
+        case 'in_progress': return 'danger';
+        default: return 'info';
+    }
+});
 
+const updateTaskStatus = (newStatus) => {
+    statusModalAction.value = newStatus;
     statusForm.status = newStatus;
-    statusForm.comment = reason;
+    statusForm.comment = "";
+    isStatusModalActive.value = true;
+};
+
+const submitStatusUpdate = () => {
     statusForm.post(route("task.updateTaskStatus", props.task.id), {
         preserveScroll: true,
         onSuccess: () => {
-            useToast().success(`Task status updated to ${newStatus.toUpperCase()}`);
+            isStatusModalActive.value = false;
+            useToast().success(`Task status updated successfully`);
         }
     });
 };
@@ -477,5 +508,24 @@ onMounted(() => {
                 </div>
             </div>
         </SectionMain>
+
+        <!-- Task Status Action Modal -->
+        <CardBoxModal
+            v-model="isStatusModalActive"
+            :title="statusModalTitle"
+            :button="statusModalButtonColor"
+            :buttonLabel="statusModalButtonLabel"
+            has-cancel
+            @confirm="submitStatusUpdate"
+        >
+            <FormField label="Feedback / Reason" help="Please provide optional feedback or reason for this status update.">
+                <textarea
+                    v-model="statusForm.comment"
+                    class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500"
+                    rows="3"
+                    placeholder="Enter reason or feedback..."
+                ></textarea>
+            </FormField>
+        </CardBoxModal>
     </LayoutAuthenticated>
 </template>

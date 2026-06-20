@@ -34,7 +34,7 @@ class TaskController extends Controller
         $this->middleware('can:task_edit', ['only' => ['edit', 'update']]);
         $this->middleware('can:task_delete', ['only' => ['destroy', 'bulkDestroy']]);
         $this->middleware('can:task_view', ['only' => ['show']]);
-        $this->middleware('can:task_myTasks', ['only' => ['myTasks', 'updateAssigneeStatus', 'addComment']]);
+        $this->middleware('can:task_MyTasksList', ['only' => ['myTasks', 'updateAssigneeStatus', 'addComment']]);
     }
 
     public function index()
@@ -362,7 +362,7 @@ class TaskController extends Controller
                 'phone' => $u->phone,
                 'status' => $u->pivot->status,
                 'feedback' => $u->pivot->feedback,
-                'completed_at' => $u->pivot->completed_at ? $u->pivot->completed_at->format('d-m-Y H:i') : null,
+                'completed_at' => $u->pivot->completed_at ? \Illuminate\Support\Carbon::parse($u->pivot->completed_at)->format('d-m-Y H:i') : null,
             ];
         });
 
@@ -456,7 +456,7 @@ class TaskController extends Controller
             ->with(['creator', 'assignees' => function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             }])
-            ->orderBy('due_date', 'asc')
+            ->orderBy('created_at', 'desc')
             ->get();
 
         $formattedTasks = $tasks->map(function ($task) use ($user) {
@@ -474,7 +474,7 @@ class TaskController extends Controller
                 'is_assignee' => $isAssignee,
                 'my_status' => $pivot ? $pivot->status : 'viewer',
                 'my_feedback' => $pivot ? $pivot->feedback : null,
-                'completed_at' => $pivot && $pivot->completed_at ? $pivot->completed_at->format('d-m-Y H:i') : null,
+                'completed_at' => $pivot && $pivot->completed_at ? \Illuminate\Support\Carbon::parse($pivot->completed_at)->format('d-m-Y H:i') : null,
             ];
         });
 
@@ -776,7 +776,7 @@ class TaskController extends Controller
                 'phone' => $u->phone,
                 'status' => $u->pivot->status,
                 'feedback' => $u->pivot->feedback,
-                'completed_at' => $u->pivot->completed_at ? $u->pivot->completed_at->format('d-m-Y H:i') : null,
+                'completed_at' => $u->pivot->completed_at ? \Illuminate\Support\Carbon::parse($u->pivot->completed_at)->format('d-m-Y H:i') : null,
             ];
         });
 

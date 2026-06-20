@@ -22,8 +22,7 @@ class TaskManagerPermissionSeeder extends Seeder
             'task_edit',
             'task_delete',
             'task_view',
-            'task_myTasks',
-            'taskMyTasks_list',
+            'task_MyTasksList',
         ];
 
         foreach ($permissions as $permission) {
@@ -43,14 +42,12 @@ class TaskManagerPermissionSeeder extends Seeder
             'task_edit',
             'task_delete',
             'task_view',
-            'task_myTasks',
-            'taskMyTasks_list',
+            'task_MyTasksList',
         ]);
 
         // Give permissions to executive
         $executiveRole->givePermissionTo([
-            'task_myTasks',
-            'taskMyTasks_list',
+            'task_MyTasksList',
         ]);
 
         // Give permissions to admin
