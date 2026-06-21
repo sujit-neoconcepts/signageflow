@@ -84,6 +84,30 @@ class TaskNotificationService
     }
 
     /**
+     * Notify assignees that a task has started.
+     */
+    public static function notifyTaskStart(Task $task)
+    {
+        $task->load(['creator', 'assignees']);
+        $channels = $task->notify_channels ?? ['email'];
+
+        $title = "Task Started: {$task->title}";
+
+        foreach ($task->assignees as $assignee) {
+            $body = "Hello {$assignee->name},<br><br>".
+                    "The task assigned to you has now started and is ready to accept.<br><br>".
+                    "<strong>Task Title:</strong> {$task->title}<br>".
+                    "<strong>Description:</strong> {$task->description}<br>".
+                    '<strong>Priority:</strong> '.ucfirst($task->priority).'<br>'.
+                    '<strong>Start Date/Time:</strong> '.($task->start_date ? $task->start_date->format('d-m-Y H:i') : 'N/A').'<br>'.
+                    '<strong>Due Date:</strong> '.$task->due_date->format('d-m-Y H:i').'<br><br>'.
+                    "Please log in to the portal, accept, and start working on the task.<br>";
+
+            self::send($assignee, $title, $body, $channels);
+        }
+    }
+
+    /**
      * Internal sender router.
      */
     private static function send(User $user, string $subject, string $body, array $channels)

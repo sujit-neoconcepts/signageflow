@@ -22,6 +22,7 @@ const msg_type = computed(() => usePage().props.flash.msg_type ?? "warning");
 const props = defineProps({
     job: { type: Object, default: () => ({}) },
     tasks: { type: Array, default: () => [] },
+    customTasks: { type: Array, default: () => [] },
     files: { type: Array, default: () => [] },
     progress: { type: Number, default: 0 },
     totalTasks: { type: Number, default: 0 },
@@ -209,6 +210,72 @@ onMounted(() => {
                                                 <span v-if="task.due_date">Due: {{ task.due_date }}</span>
                                                 <span v-if="task.estimated_hours"> · {{ task.estimated_hours }}h est.</span>
                                                 <span v-if="task.start_on_previous_complete" class="text-blue-500 ml-1">⟳ Auto-start</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center space-x-2">
+                                        <span :class="['text-xs font-semibold px-2 py-0.5 rounded border capitalize', getStatusColor(task.status)]">
+                                            {{ (task.status || '').replace(/_/g, ' ') }}
+                                        </span>
+                                        <Link :href="route('task.show', task.id)">
+                                            <BaseButton
+                                                :icon="mdiEye"
+                                                color="info"
+                                                small
+                                                title="View Task"
+                                            />
+                                        </Link>
+                                    </div>
+                                </div>
+
+                                <!-- Assignees -->
+                                <div v-if="task.assignees && task.assignees.length > 0" class="mt-3 flex flex-wrap gap-2">
+                                    <span
+                                        v-for="a in task.assignees"
+                                        :key="a.id"
+                                        :class="['text-xs px-2 py-0.5 rounded border', getStatusColor(a.status)]"
+                                    >
+                                        {{ a.name }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </CardBox>
+
+                    <!-- Custom Tasks -->
+                    <CardBox v-if="props.customTasks && props.customTasks.length > 0">
+                        <h3 class="text-md font-semibold text-gray-700 dark:text-slate-200 mb-4">
+                            Custom Tasks
+                        </h3>
+
+                        <div class="space-y-3">
+                            <div
+                                v-for="(task, idx) in props.customTasks"
+                                :key="task.id"
+                                class="border rounded-lg p-4 transition-all hover:shadow-sm"
+                                :class="[
+                                    ['completed', 'verified', 'closed'].includes(task.status)
+                                        ? 'border-green-200 bg-green-50/30 dark:border-green-900/30 dark:bg-green-950/10'
+                                        : task.status === 'in_progress'
+                                            ? 'border-purple-200 bg-purple-50/30 dark:border-purple-900/30 dark:bg-purple-950/10'
+                                            : 'border-gray-200 bg-gray-50/30 dark:border-slate-700 dark:bg-slate-900/20'
+                                ]"
+                            >
+                                <div class="flex justify-between items-start">
+                                    <div class="flex items-center space-x-3">
+                                        <span
+                                            class="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400"
+                                        >
+                                            C{{ idx + 1 }}
+                                        </span>
+                                        <div>
+                                            <Link :href="route('task.show', task.id)" class="text-sm font-bold text-gray-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400">
+                                                {{ task.title }}
+                                            </Link>
+                                            <div class="text-xs text-gray-500 mt-0.5">
+                                                <span v-if="task.due_date">Due: {{ task.due_date }}</span>
+                                                <span v-if="task.estimated_hours"> · {{ task.estimated_hours }}h est.</span>
                                             </div>
                                         </div>
                                     </div>

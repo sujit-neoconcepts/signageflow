@@ -36,6 +36,12 @@ const props = defineProps({
 const selectedTask = ref(null);
 const selectedTaskDetails = ref(null);
 const loadingDetails = ref(false);
+const visibleCount = ref(5);
+const detailSection = ref(null);
+
+const visibleTasks = computed(() => {
+    return props.tasks.slice(0, visibleCount.value);
+});
 
 const commentForm = useForm({
     comment: "",
@@ -78,34 +84,19 @@ const formatBytes = (bytes) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 };
 
-const selectTask = async (task) => {
+const selectTask = async (task, isManualClick = false) => {
     selectedTask.value = task;
     loadingDetails.value = true;
     selectedTaskDetails.value = null;
     fileList.value = [];
     statusFileList.value = [];
 
+    // Scroll to detailSection on mobile layout if manually clicked
+    if (isManualClick && detailSection.value && window.innerWidth < 1024) {
+        detailSection.value.scrollIntoView({ behavior: 'smooth' });
+    }
+
     try {
-        const res = await axios.get(route("task.show", task.id));
-        // Note: we can parse details returned by show, but task.show renders Inertia.
-        // We can make an API request or load data from inertia or query directly.
-        // Wait, task.show return Inertia. But we can fetch task details via json if we load them.
-        // Wait! Let's check: how can we load details?
-        // Since we want task details, let's look at TaskController.php: we don't have a json details route yet.
-        // Wait, we can add a method `taskDetails` or we can just make `show` return JSON if request expects JSON!
-        // Let's look at TaskController.php. We wrote `show` method, which does Inertia rendering.
-        // We can easily fetch details by hitting a JSON API or modifying the controller.
-        // Wait, let's check: can we call a custom endpoint?
-        // Let's add a custom API endpoint in `TaskController.php` or `routes/web.php`?
-        // Actually, in `routes/web.php`, let's check if we registered:
-        // `Route::resource('task', TaskController::class)` which handles `task.show`.
-        // Let's write an API endpoint `task.details` in `TaskController.php` that returns the task with all relations as JSON!
-        // That is extremely clean and standard!
-        // Let's implement it: `public function getDetails(Task $task) { ... return response()->json(...); }`
-        // Wait, let's verify if we already wrote `show(Task $task)` to return details. Yes, it formats the details for Inertia rendering.
-        // We can make a separate route `Route::get('task/{task}/json-details', [TaskController::class, 'jsonDetails'])->name('task.jsonDetails');`
-        // Let's first make sure we write this route and controller method, or fetch it directly.
-        // Let's write the fetch in `MyTasksView.vue` to hit `/admin/task/${task.id}/json-details`.
         const response = await axios.get(`/admin/task/${task.id}/json-details`);
         selectedTaskDetails.value = response.data;
     } catch (err) {
@@ -212,16 +203,25 @@ const getPriorityClass = (priority) => {
     switch (priority) {
         case 'low': return 'bg-gray-100 text-gray-650 dark:bg-gray-800 dark:text-gray-400';
         case 'medium': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
-        case 'high': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400';
+        case 'high': return 'bg-orange-100 text-orange-850 dark:bg-orange-950/20 dark:text-orange-400';
         case 'urgent': return 'bg-red-100 text-red-850 dark:bg-red-950/20 dark:text-red-400 font-bold';
         default: return 'bg-gray-100 text-gray-800';
     }
 };
 
+const canAccept = (task) => {
+    if (!task || !task.start_date_raw) {
+        return true;
+    }
+    const startTime = new Date(task.start_date_raw);
+    const now = new Date();
+    return now >= startTime;
+};
+
 // Select the first task on mount if available
 onMounted(() => {
     if (props.tasks.length > 0) {
-        selectTask(props.tasks[0]);
+        selectTask(props.tasks[0], false);
     }
 });
 </script>
@@ -255,23 +255,30 @@ onMounted(() => {
 
                         <div v-else class="space-y-1 pr-2">
                             <button
-                                v-for="t in props.tasks"
+                                v-for="t in visibleTasks"
                                 :key="t.id"
                                 type="button"
                                 class="w-full text-left p-3 rounded-lg border transition-all flex justify-between items-center group"
                                 :class="selectedTask && selectedTask.id === t.id
                                     ? 'bg-blue-50/70 border-blue-300 dark:bg-blue-950/10 dark:border-blue-900'
                                     : 'border-gray-100 hover:bg-gray-50 dark:border-slate-800/80 dark:hover:bg-slate-800/30'"
-                                @click="selectTask(t)"
+                                @click="selectTask(t, true)"
                             >
                                 <div class="space-y-1.5 truncate pr-2">
                                     <div class="text-sm font-bold text-gray-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">
                                         {{ t.title }}
                                     </div>
+                                    <div v-if="t.job_name" class="text-xs font-semibold text-blue-600 dark:text-blue-400 truncate flex items-center mb-1">
+                                        <span class="mr-1">📁</span> {{ t.job_name }}
+                                    </div>
                                     <div class="flex items-center space-x-2 text-xxs text-gray-500">
                                         <span>Due: {{ t.due_date }}</span>
                                         <span>•</span>
                                         <span class="capitalize">{{ t.creator_name }}</span>
+                                    </div>
+                                    <div v-if="t.job_stage_sort_order !== null" class="flex items-center space-x-2 text-xxs text-gray-550 mt-1">
+                                        <span v-if="t.start_date" class="text-blue-600 dark:text-blue-400 font-semibold">Start: {{ t.start_date }}</span>
+                                        <span v-if="t.estimated_hours" class="font-semibold">Est: {{ t.estimated_hours }} hrs</span>
                                     </div>
                                     <div class="flex items-center space-x-1.5 mt-1">
                                         <span :class="['text-xxs font-semibold px-2 py-0.5 rounded capitalize border', getStatusClass(t.my_status)]">
@@ -284,12 +291,23 @@ onMounted(() => {
                                 </div>
                                 <BaseIcon :path="mdiChevronRight" size="20" class="text-gray-400 group-hover:text-blue-500" />
                             </button>
+
+                            <!-- Load More Button -->
+                            <div v-if="visibleCount < props.tasks.length" class="mt-3 pt-2">
+                                <button 
+                                    type="button"
+                                    class="w-full py-2.5 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50/50 hover:bg-blue-100/70 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-lg transition-colors focus:outline-none"
+                                    @click="visibleCount += 5"
+                                >
+                                    Load More Tasks
+                                </button>
+                            </div>
                         </div>
                     </CardBox>
                 </div>
 
                 <!-- Right Pane: Task Detail & Work Console -->
-                <div class="lg:col-span-2 space-y-6">
+                <div ref="detailSection" class="lg:col-span-2 space-y-6">
                     <CardBox v-if="loadingDetails" class="flex flex-col items-center justify-center py-20">
                         <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
                         <span class="text-xs text-gray-500 mt-2">Loading task details...</span>
@@ -314,6 +332,17 @@ onMounted(() => {
                                 {{ selectedTaskDetails.task.title }}
                             </h2>
 
+                            <div v-if="selectedTask.job_stage_sort_order !== null" class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-800/80 p-3 rounded-lg mb-4 text-xs">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-gray-500 font-medium dark:text-slate-400">Estimated Duration:</span>
+                                    <span class="font-bold text-gray-800 dark:text-slate-200">{{ selectedTask.estimated_hours || 'N/A' }} Hours</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-gray-500 font-medium dark:text-slate-400">Start Date/Time:</span>
+                                    <span class="font-bold text-blue-600 dark:text-blue-400">{{ selectedTask.start_date || 'Not Scheduled' }}</span>
+                                </div>
+                            </div>
+
                             <p class="text-sm text-gray-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed mb-6">
                                 {{ selectedTaskDetails.task.description || "No description provided." }}
                             </p>
@@ -332,7 +361,7 @@ onMounted(() => {
                                             <audio :src="file.download_url" controls class="w-full h-8"></audio>
                                         </div>
                                         <div v-else-if="isImageFile(file.file_type)" class="space-y-1">
-                                            <div class="text-xs text-gray-500 truncate mb-1">🖼 {{ file.file_name }}</div>
+                                            <div class="text-xs text-gray-550 truncate mb-1">🖼 {{ file.file_name }}</div>
                                             <img :src="file.download_url" class="max-h-24 rounded object-cover" />
                                             <a :href="file.download_url" target="_blank" class="text-xs text-blue-500 hover:underline block">View Image</a>
                                         </div>
@@ -343,94 +372,30 @@ onMounted(() => {
                                     </div>
                                 </div>
                             </div>
-                        </CardBox>
 
-                        <!-- Action Console for Assignee -->
-                        <CardBox v-if="selectedTask.is_assignee && !['verified', 'closed'].includes(selectedTask.my_status)">
-                            <h3 class="text-md font-semibold text-gray-700 dark:text-slate-200 mb-4">Work Console</h3>
-
-                            <!-- State 1: Pending (Unaccepted) -->
-                            <div v-if="selectedTask.my_status === 'pending'" class="flex items-center space-x-3 bg-amber-55 bg-opacity-20 border border-amber-200 p-4 rounded-lg bg-amber-50/40 dark:border-amber-900/30">
-                                <span class="text-amber-600">🔔 You have not accepted this task yet.</span>
-                                <BaseButton
-                                    type="button"
-                                    color="info"
-                                    :icon="mdiCheck"
-                                    label="Accept Task"
-                                    @click="updateStatus('accepted')"
-                                />
-                            </div>
-
-                            <!-- State 2: Accepted -->
-                            <div v-else-if="selectedTask.my_status === 'accepted'" class="flex items-center space-x-3 bg-blue-50 bg-opacity-20 border border-blue-200 p-4 rounded-lg dark:border-blue-900/30">
-                                <span class="text-blue-600">🚀 Task accepted. Start when ready.</span>
-                                <BaseButton
-                                    type="button"
-                                    color="success"
-                                    :icon="mdiPlay"
-                                    label="Start Work (In Progress)"
-                                    @click="updateStatus('in_progress')"
-                                />
-                            </div>
-
-                            <!-- State 3: In Progress (Completing form) -->
-                            <div v-else-if="selectedTask.my_status === 'in_progress'" class="space-y-4 border border-purple-200 p-4 rounded-lg bg-purple-50/5 dark:border-purple-900/30">
-                                <h4 class="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-1">Submit Progress/Complete Task</h4>
-                                
-                                <FormField label="Submit Comments / Work Summary">
-                                    <textarea
-                                        v-model="statusForm.comment"
-                                        class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500"
-                                        rows="3"
-                                        placeholder="Summarize what you completed or describe progress..."
-                                        required
-                                    ></textarea>
-                                </FormField>
-
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <!-- Files list -->
-                                    <div>
-                                        <label class="text-xs font-semibold text-gray-500 block mb-1">Attach Completed Files</label>
-                                        <BaseButton
-                                            type="button"
-                                            color="info"
-                                            label="Select File"
-                                            small
-                                            outline
-                                            @click="statusFileInputRef.click()"
-                                        />
-                                        <input
-                                            ref="statusFileInputRef"
-                                            type="file"
-                                            multiple
-                                            class="hidden"
-                                            @change="onStatusFilesSelected"
-                                        />
-
-                                        <div v-if="statusFileList.length > 0" class="mt-2 space-y-1">
-                                            <div
-                                                v-for="(f, idx) in statusFileList"
-                                                :key="idx"
-                                                class="flex justify-between items-center bg-gray-100 dark:bg-slate-800 p-1.5 px-2.5 rounded text-xs"
-                                            >
-                                                <span class="truncate font-medium max-w-44">{{ f.name }}</span>
-                                                <button type="button" class="text-red-500 font-bold text-xs ml-2" @click="removeStatusFile(idx)">✕</button>
-                                            </div>
+                            <!-- Job Attachments -->
+                            <div v-if="selectedTaskDetails.job_files && selectedTaskDetails.job_files.length > 0" class="border-t border-gray-100 dark:border-slate-700/60 pt-4">
+                                <h4 class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2">Job Attachments (📁 {{ selectedTask.job_name }})</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div
+                                        v-for="file in selectedTaskDetails.job_files"
+                                        :key="file.id"
+                                        class="border rounded p-2.5 bg-blue-50/10 dark:bg-slate-800/10 border-blue-100 dark:border-slate-700/40"
+                                    >
+                                        <div v-if="isAudioFile(file)">
+                                            <div class="text-xs text-gray-500 truncate mb-1">🎤 {{ file.file_name }}</div>
+                                            <audio :src="file.download_url" controls class="w-full h-8"></audio>
+                                        </div>
+                                        <div v-else-if="isImageFile(file.file_type)" class="space-y-1">
+                                            <div class="text-xs text-gray-550 truncate mb-1">🖼 {{ file.file_name }}</div>
+                                            <img :src="file.download_url" class="max-h-24 rounded object-cover" />
+                                            <a :href="file.download_url" target="_blank" class="text-xs text-blue-500 hover:underline block">View Image</a>
+                                        </div>
+                                        <div v-else class="flex items-center justify-between text-xs">
+                                            <span class="truncate font-medium flex-1 text-gray-700 dark:text-slate-300">📄 {{ file.file_name }}</span>
+                                            <a :href="file.download_url" target="_blank" class="text-blue-600 hover:underline font-semibold ml-2">Download</a>
                                         </div>
                                     </div>
-
-                                    <!-- Voice note recorder -->
-                                    <VoiceRecorder @recorded="handleStatusRecordedVoiceNote" />
-                                </div>
-
-                                <div class="flex justify-end pt-2">
-                                    <BaseButton
-                                        type="button"
-                                        color="success"
-                                        label="Submit Task for Verification"
-                                        :disabled="statusForm.processing || !statusForm.comment.trim()"
-                                        @click="submitCompletedTask"
-                                    />
                                 </div>
                             </div>
                         </CardBox>
@@ -535,6 +500,101 @@ onMounted(() => {
                                         label="Post Comment"
                                         :disabled="commentForm.processing || !commentForm.comment.trim()"
                                         @click="postComment"
+                                    />
+                                </div>
+                            </div>
+                        </CardBox>
+
+                        <!-- Action Console for Assignee -->
+                        <CardBox v-if="selectedTask.is_assignee && !['verified', 'closed'].includes(selectedTask.my_status)">
+                            <h3 class="text-md font-semibold text-gray-700 dark:text-slate-200 mb-4">Work Console</h3>
+
+                            <!-- State 1: Pending (Unaccepted) -->
+                            <div v-if="selectedTask.my_status === 'pending'" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50 bg-opacity-20 border border-amber-200 p-4 rounded-lg bg-amber-50/40 dark:border-amber-900/30">
+                                <div class="flex items-center space-x-2 text-amber-600 dark:text-amber-400">
+                                    <BaseIcon :path="mdiAlert" size="20" />
+                                    <span v-if="canAccept(selectedTask)">You have not accepted this task yet.</span>
+                                    <span v-else>This task cannot be accepted before its start date/time: <strong>{{ selectedTask.start_date }}</strong></span>
+                                </div>
+                                <BaseButton
+                                    v-if="canAccept(selectedTask)"
+                                    type="button"
+                                    color="info"
+                                    :icon="mdiCheck"
+                                    label="Accept Task"
+                                    @click="updateStatus('accepted')"
+                                />
+                            </div>
+
+                            <!-- State 2: Accepted -->
+                            <div v-else-if="selectedTask.my_status === 'accepted'" class="flex items-center space-x-3 bg-blue-50 bg-opacity-20 border border-blue-200 p-4 rounded-lg dark:border-blue-900/30">
+                                <span class="text-blue-600">🚀 Task accepted. Start when ready.</span>
+                                <BaseButton
+                                    type="button"
+                                    color="success"
+                                    :icon="mdiPlay"
+                                    label="Start Work (In Progress)"
+                                    @click="updateStatus('in_progress')"
+                                />
+                            </div>
+
+                            <!-- State 3: In Progress (Completing form) -->
+                            <div v-else-if="selectedTask.my_status === 'in_progress'" class="space-y-4 border border-purple-200 p-4 rounded-lg bg-purple-50/5 dark:border-purple-900/30">
+                                <h4 class="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-1">Submit Progress/Complete Task</h4>
+                                
+                                <FormField label="Submit Comments / Work Summary">
+                                    <textarea
+                                        v-model="statusForm.comment"
+                                        class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500"
+                                        rows="3"
+                                        placeholder="Summarize what you completed or describe progress..."
+                                        required
+                                    ></textarea>
+                                </FormField>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <!-- Files list -->
+                                    <div>
+                                        <label class="text-xs font-semibold text-gray-500 block mb-1">Attach Completed Files</label>
+                                        <BaseButton
+                                            type="button"
+                                            color="info"
+                                            label="Select File"
+                                            small
+                                            outline
+                                            @click="statusFileInputRef.click()"
+                                        />
+                                        <input
+                                            ref="statusFileInputRef"
+                                            type="file"
+                                            multiple
+                                            class="hidden"
+                                            @change="onStatusFilesSelected"
+                                        />
+
+                                        <div v-if="statusFileList.length > 0" class="mt-2 space-y-1">
+                                            <div
+                                                v-for="(f, idx) in statusFileList"
+                                                :key="idx"
+                                                class="flex justify-between items-center bg-gray-100 dark:bg-slate-800 p-1.5 px-2.5 rounded text-xs"
+                                            >
+                                                <span class="truncate font-medium max-w-44">{{ f.name }}</span>
+                                                <button type="button" class="text-red-550 font-bold text-xs ml-2" @click="removeStatusFile(idx)">✕</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Voice note recorder -->
+                                    <VoiceRecorder @recorded="handleStatusRecordedVoiceNote" />
+                                </div>
+
+                                <div class="flex justify-end pt-2">
+                                    <BaseButton
+                                        type="button"
+                                        color="success"
+                                        label="Submit Task for Verification"
+                                        :disabled="statusForm.processing || !statusForm.comment.trim()"
+                                        @click="submitCompletedTask"
                                     />
                                 </div>
                             </div>

@@ -14,6 +14,8 @@ import CardBox from "@/components/CardBox.vue";
 import FormField from "@/components/FormField.vue";
 import FormControl from "@/components/FormControl.vue";
 import FormCheckRadio from "@/components/FormCheckRadio.vue";
+import Multiselect from "vue-multiselect";
+import "../../../css/vue-multiselect.css";
 
 const props = defineProps({
   formdata: {
@@ -33,7 +35,7 @@ const formData = {
   email: props.formdata.email,
   phone: props.formdata.phone || '',
   twofa: props.formdata.twofa == 1 ? true : false,
-  role: props.formdata.role ? props.formdata.role[0] : selectOptions[0],
+  roles: props.formdata.roles_data || [],
   password: ''
 };
 
@@ -86,8 +88,16 @@ const submitform = () => {
                 required />
             </FormField>
 
-            <FormField label="Role" :error="form.errors.role">
-              <FormControl v-model="form.role" :options="selectOptions" required />
+            <FormField label="Roles" :error="form.errors.roles">
+              <Multiselect
+                v-model="form.roles"
+                :options="selectOptions"
+                :multiple="true"
+                track-by="id"
+                label="label"
+                placeholder="Select Roles"
+                select-label=""
+              />
             </FormField>
             <FormField label="2FA">
               <FormCheckRadio type="switch" v-model="form.twofa" name="twofa" input-value="0" label='ON' prelabel='OFF' />

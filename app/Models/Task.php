@@ -32,6 +32,7 @@ class Task extends Model
         'notify_channels',
         'reminder_before_due',
         'reminder_sent',
+        'start_notified',
     ];
 
     protected $casts = [
@@ -46,6 +47,7 @@ class Task extends Model
         'last_recurrence_generated_at' => 'datetime',
         'notify_channels' => 'array',
         'reminder_sent' => 'boolean',
+        'start_notified' => 'boolean',
     ];
 
     public function creator()

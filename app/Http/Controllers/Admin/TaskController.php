@@ -96,12 +96,18 @@ class TaskController extends Controller
             $assigneeOptions[$usr->id] = $usr->name;
         }
 
+        $allJobs = Job::select('id', 'title')->orderBy('title')->get();
+        $jobOptions = [];
+        foreach ($allJobs as $jb) {
+            $jobOptions[$jb->id] = $jb->title;
+        }
+
         return Inertia::render('Admin/TaskIndexView', [
             'tasks' => $tasks,
             'resourceNeo' => $this->resourceNeo,
             'executives' => $executives,
             'creators' => $creators,
-        ])->table(function (InertiaTable $table) use ($statusOptions, $assigneeOptions) {
+        ])->table(function (InertiaTable $table) use ($statusOptions, $assigneeOptions, $jobOptions) {
             $table->withGlobalSearch()
                 ->column('title', 'Title', searchable: true, sortable: true)
                 ->column('job.title', 'Job')
@@ -114,6 +120,7 @@ class TaskController extends Controller
                 ->perPageOptions([10, 15, 30, 50, 100])
                 ->selectFilter(key: 'status', label: 'Status', options: $statusOptions)
                 ->selectFilter(key: 'assignee_id', label: 'Assignee', options: $assigneeOptions)
+                ->selectFilter(key: 'job_id', label: 'Job', options: $jobOptions)
                 ->dateFilter(key: 'due_date_start', label: 'Due Date From')
                 ->dateFilter(key: 'due_date_end', label: 'Due Date To');
         });
@@ -149,6 +156,7 @@ class TaskController extends Controller
             'recurrence_type' => 'required_if:is_recurring,true|nullable|in:daily,weekly,monthly,yearly',
             'recurrence_config' => 'nullable|array',
             'recurrence_end_date' => 'required_if:is_recurring,true|nullable|date|after_or_equal:due_date',
+            'job_id' => 'nullable|exists:jobs_manager,id',
         ]);
 
         DB::beginTransaction();
@@ -196,6 +204,10 @@ class TaskController extends Controller
                         ]);
                     }
                 }
+            }
+
+            if ($task->job_id) {
+                $task->job->recalculateStatus();
             }
 
             DB::commit();
@@ -253,6 +265,7 @@ class TaskController extends Controller
             'recurrence_type' => 'required_if:is_recurring,true|nullable|in:daily,weekly,monthly,yearly',
             'recurrence_config' => 'nullable|array',
             'recurrence_end_date' => 'required_if:is_recurring,true|nullable|date|after_or_equal:due_date',
+            'job_id' => 'nullable|exists:jobs_manager,id',
         ]);
 
         DB::beginTransaction();
@@ -302,6 +315,10 @@ class TaskController extends Controller
                         ]);
                     }
                 }
+            }
+
+            if ($task->job_id) {
+                $task->job->recalculateStatus();
             }
 
             DB::commit();
@@ -486,7 +503,7 @@ class TaskController extends Controller
             ->orWhereHas('viewers', function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             })
-            ->with(['creator', 'assignees' => function ($q) use ($user) {
+            ->with(['creator', 'job', 'assignees' => function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             }])
             ->orderBy('created_at', 'desc')
@@ -508,6 +525,11 @@ class TaskController extends Controller
                 'my_status' => $pivot ? $pivot->status : 'viewer',
                 'my_feedback' => $pivot ? $pivot->feedback : null,
                 'completed_at' => $pivot && $pivot->completed_at ? \Illuminate\Support\Carbon::parse($pivot->completed_at)->format('d-m-Y H:i') : null,
+                'job_name' => $task->job ? $task->job->title : null,
+                'start_date' => $task->start_date ? $task->start_date->format('d-m-Y H:i') : null,
+                'start_date_raw' => $task->start_date ? $task->start_date->toIso8601String() : null,
+                'estimated_hours' => $task->estimated_hours,
+                'job_stage_sort_order' => $task->job_stage_sort_order,
             ];
         });
 
@@ -530,6 +552,13 @@ class TaskController extends Controller
         $assignee = $task->assignees()->where('users.id', $user->id)->first();
         if (! $assignee) {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if (in_array($request->status, ['accepted', 'in_progress']) && $task->start_date && now()->lt($task->start_date)) {
+            return redirect()->back()->with([
+                'message' => 'You cannot accept or start this task before its start date/time: ' . $task->start_date->format('d-m-Y H:i'),
+                'msg_type' => 'danger'
+            ]);
         }
 
         DB::beginTransaction();
@@ -693,6 +722,10 @@ class TaskController extends Controller
                 'status_update' => $newStatus,
             ]);
 
+            if ($task->job_id) {
+                $task->job->recalculateStatus();
+            }
+
             DB::commit();
 
             \ActivityLog::add([
@@ -772,6 +805,7 @@ class TaskController extends Controller
             'files',
             'comments.user',
             'comments.files',
+            'job.files',
         ]);
 
         $comments = $task->comments->map(function ($c) {
@@ -807,6 +841,19 @@ class TaskController extends Controller
             ];
         });
 
+        $jobFiles = [];
+        if ($task->job) {
+            $jobFiles = $task->job->files->map(function ($f) {
+                return [
+                    'id' => $f->id,
+                    'file_name' => $f->file_name,
+                    'file_type' => $f->file_type,
+                    'file_size' => $f->file_size,
+                    'download_url' => route('job.file.download', $f->id),
+                ];
+            });
+        }
+
         $assigneeStatuses = $task->assignees->map(function ($u) {
             return [
                 'id' => $u->id,
@@ -832,11 +879,16 @@ class TaskController extends Controller
                 'recurrence_end_date' => $task->recurrence_end_date ? $task->recurrence_end_date->format('d-m-Y') : null,
                 'created_at' => $task->created_at->format('d-m-Y H:i'),
                 'creator' => $task->creator->name,
+                'start_date' => $task->start_date ? $task->start_date->format('d-m-Y H:i') : null,
+                'start_date_raw' => $task->start_date ? $task->start_date->toIso8601String() : null,
+                'estimated_hours' => $task->estimated_hours,
+                'job_stage_sort_order' => $task->job_stage_sort_order,
             ],
             'assignees' => $assigneeStatuses,
             'viewers' => $task->viewers->pluck('name')->all(),
             'files' => $files,
             'comments' => $comments,
+            'job_files' => $jobFiles,
         ]);
     }
 }

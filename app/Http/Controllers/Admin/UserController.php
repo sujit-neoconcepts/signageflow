@@ -57,9 +57,9 @@ class UserController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        // Append role_name to each user for frontend display
+        // Append role_name and is_super_admin to each user for frontend display
         $users->getCollection()->transform(function ($user) {
-            $user->append('role_name');
+            $user->append(['role_name', 'is_super_admin']);
 
             return $user;
         });
@@ -93,7 +93,7 @@ class UserController extends Controller
      */
     public function create()
     {
-        $roles = Role::select('id', 'name as label')->where('id', '<>', 3)->get();
+        $roles = Role::select('id', 'name as label')->where('name', '<>', 'super-admin')->get();
 
         return Inertia::render('Admin/UserAddEditView', compact('roles'));
     }
@@ -110,12 +110,21 @@ class UserController extends Controller
             'email' => 'required|string|email|unique:users,email',
             'phone' => 'nullable|string|max:20',
             'password' => 'required|string|min:8',
-            'role' => 'required',
+            'roles' => 'required|array|min:1',
+            'roles.*.id' => 'required|exists:roles,id',
         ];
 
         $request->validate($validationRules);
 
-        $role = Role::findById($request->role['id']);
+        $roleIds = collect($request->roles)->pluck('id')->all();
+
+        // Enforce exclusivity of super-admin role
+        $hasSuperAdmin = Role::whereIn('id', $roleIds)->where('name', 'super-admin')->exists();
+        if ($hasSuperAdmin) {
+            return redirect()->back()->withErrors(['roles' => 'The super-admin role cannot be assigned.'])->withInput();
+        }
+
+        $roles = Role::whereIn('id', $roleIds)->get();
 
         $user = User::create([
             'name' => $request->name,
@@ -123,11 +132,10 @@ class UserController extends Controller
             'phone' => $request->phone,
             'password' => $request->password,
             'twofa' => $request->twofa,
-
         ]);
-        $user->assignRole($role);
+        $user->assignRole($roles);
 
-        $uname = $request->input('name').'-'.$role->name;
+        $uname = $request->input('name').'-'.$roles->pluck('name')->implode(', ');
         \ActivityLog::add(['action' => 'created', 'module' => 'user', 'data_key' => $uname]);
 
         User::neUserMail(
@@ -202,10 +210,10 @@ class UserController extends Controller
             $grouped[$matchedModule]['sts'] = $grouped[$matchedModule]['sts'] || $isChecked;
         }
 
-        // Remove modules with no actions
-        $grouped = array_values(array_filter($grouped, function ($group) {
+        // Remove modules with no actions, but keep keys
+        $grouped = array_filter($grouped, function ($group) {
             return ! empty($group['child']);
-        }));
+        });
 
         return Inertia::render('Admin/UserPermissionsEditView', [
             'user' => $user,
@@ -261,14 +269,20 @@ class UserController extends Controller
     public function edit($id)
     {
         $formdata = User::where('id', $id)->with('roles')->get()->first();
-        $formdata->append('role_name');
-        if ($formdata->role_name == 'super-admin') {
+        $formdata->append(['role_name', 'is_super_admin']);
+        if ($formdata->is_super_admin) {
             return redirect()->route('user.index')->with(['message' => 'You don\'t have permission to update Super Admin', 'msg_type' => 'danger']);
         }
-        $formdata->role = count($formdata->roles) > 0 ? Role::select('id', 'name as label')->where('id', $formdata->roles[0]->id)->get() : 0;
-        $roles = array_merge([['id' => 0, 'label' => 'Select']], Role::select('id', 'name as label')->where('id', '<>', 3)->get()->toArray());
 
-        // dd($roles);
+        $formdata->roles_data = $formdata->roles->map(function ($role) {
+            return [
+                'id' => $role->id,
+                'label' => $role->name,
+            ];
+        });
+
+        $roles = Role::select('id', 'name as label')->where('name', '<>', 'super-admin')->get();
+
         return Inertia::render('Admin/UserAddEditView', compact('roles', 'formdata'));
     }
 
@@ -278,10 +292,10 @@ class UserController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, user $user)
+    public function update(Request $request, User $user)
     {
-        // dd($request);
-        if ($user->role_name == 'super-admin') {
+        $user->append(['role_name', 'is_super_admin']);
+        if ($user->is_super_admin) {
             return redirect()->route('user.index')->with(['message' => 'You don\'t have permission to update Super Admin', 'msg_type' => 'danger']);
         }
         $isDirty = false;
@@ -289,10 +303,19 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|unique:users,email,'.$user->id,
             'phone' => 'nullable|string|max:20',
-            'role' => 'required',
+            'roles' => 'required|array|min:1',
+            'roles.*.id' => 'required|exists:roles,id',
         ];
 
         $request->validate($validationRules);
+
+        $roleIds = collect($request->roles)->pluck('id')->all();
+
+        // Enforce exclusivity of super-admin role
+        $hasSuperAdmin = Role::whereIn('id', $roleIds)->where('name', 'super-admin')->exists();
+        if ($hasSuperAdmin) {
+            return redirect()->back()->withErrors(['roles' => 'The super-admin role cannot be assigned.'])->withInput();
+        }
 
         $user->name = $request->name;
         $user->email = $request->email;
@@ -307,16 +330,17 @@ class UserController extends Controller
             $isDirty = true;
         }
 
-        if ($request->role['id'] > 0) {
-            $prevrole = $user->roles[0]->id;
-            $role = Role::findById($request->role['id']);
-            $user->syncRoles($role);
-            if ($prevrole != $request->role['id']) {
-                $isDirty = true;
-            }
-        } else {
-            $user->roles()->detach();
+        $prevRoleIds = $user->roles->pluck('id')->all();
+        sort($roleIds);
+        sort($prevRoleIds);
+
+        if ($roleIds !== $prevRoleIds) {
+            $user->syncRoles($roleIds);
+            $isDirty = true;
+            // Reload roles to ensure the dynamic role_name getter reflects the update
+            $user->load('roles');
         }
+
         if ($isDirty) {
             $uname = $user->name.'-'.$user->role_name;
             \ActivityLog::add(['action' => 'updated', 'module' => 'user', 'data_key' => $uname]);
@@ -367,7 +391,8 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
-        if ($user->role_name == 'super-admin') {
+        $user->append(['role_name', 'is_super_admin']);
+        if ($user->is_super_admin) {
             return redirect()->route('user.index')->with(['message' => 'You don\'t have permission to delete Super Admin', 'msg_type' => 'danger']);
         }
         if (auth()->user()->id == $user->id) {

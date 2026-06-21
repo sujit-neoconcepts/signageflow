@@ -77,6 +77,7 @@ onBeforeMount(() => {
         form.workflow_id = props.formdata.workflow_id;
         form.due_date = props.formdata.due_date ?? "";
         form.estimated_hours = props.formdata.estimated_hours ?? "";
+        form.stages = props.formdata.stages ?? [];
 
         if (props.formdata.client_id) {
             selectedClient.value = props.clients.find(c => c.id === props.formdata.client_id) || null;
@@ -116,6 +117,7 @@ watch(selectedWorkflow, async (newVal) => {
             start_date: "",
             end_date: "",
             start_on_previous_complete: false,
+            notify_channels: ["email"],
         }));
     } catch (err) {
         console.error("Failed to fetch stages:", err);
@@ -209,6 +211,25 @@ const uploadNewFiles = async () => {
     }
 };
 
+const addStageAt = (index) => {
+    form.stages.splice(index, 0, {
+        workflow_stage_id: null,
+        name: "",
+        description: "",
+        estimated_hours: "",
+        assignees: [],
+        loop_users: [],
+        start_date: "",
+        end_date: "",
+        start_on_previous_complete: false,
+        notify_channels: ["email"],
+    });
+};
+
+const removeStage = (index) => {
+    form.stages.splice(index, 1);
+};
+
 const submitform = () => {
     form.temp_files = tempFiles.value;
 
@@ -271,8 +292,11 @@ const submitform = () => {
                         </CardBox>
 
                         <!-- Workflow Stage Assignment (only for create) -->
-                        <CardBox v-if="!isEditMode">
-                            <h3 class="text-md font-semibold mb-4 text-gray-700 dark:text-slate-300">Workflow & Stage Assignment</h3>
+                        <!-- Workflow Stage Assignment -->
+                        <CardBox>
+                            <h3 class="text-md font-semibold mb-4 text-gray-700 dark:text-slate-300">
+                                {{ isEditMode ? 'Workflow Stages' : 'Workflow & Stage Assignment' }}
+                            </h3>
 
                             <FormField label="Select Workflow" :error="form.errors.workflow_id">
                                 <Multiselect
@@ -283,6 +307,7 @@ const submitform = () => {
                                     :multiple="false"
                                     :options="props.workflows"
                                     class="mt-1"
+                                    :disabled="isEditMode"
                                 />
                             </FormField>
 
@@ -292,95 +317,177 @@ const submitform = () => {
                             </div>
 
                             <!-- Stage Cards -->
-                            <div v-if="form.stages.length > 0 && !loadingStages" class="mt-6 space-y-4">
-                                <div
-                                    v-for="(stage, idx) in form.stages"
-                                    :key="idx"
-                                    class="border border-gray-200 dark:border-slate-700 rounded-lg p-4 bg-gray-50/30 dark:bg-slate-900/20"
-                                >
-                                    <div class="flex items-center space-x-2 mb-3">
-                                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold">
-                                            {{ idx + 1 }}
-                                        </span>
-                                        <span class="text-sm font-semibold text-gray-700 dark:text-slate-300">{{ stage.name }}</span>
-                                        <span v-if="stage.description" class="text-xs text-gray-400">— {{ stage.description }}</span>
-                                    </div>
-
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <FormField label="Assign Executives" :error="form.errors[`stages.${idx}.assignees`]">
-                                            <Multiselect
-                                                v-model="stage.assignees"
-                                                placeholder="Select assignees"
-                                                track-by="id"
-                                                label="label"
-                                                :multiple="true"
-                                                :close-on-select="false"
-                                                :options="props.executives"
-                                                class="mt-1"
-                                            />
-                                        </FormField>
-
-                                        <FormField label="Loop Users (CC)">
-                                            <Multiselect
-                                                v-model="stage.loop_users"
-                                                placeholder="Add to CC loop"
-                                                track-by="id"
-                                                label="label"
-                                                :multiple="true"
-                                                :close-on-select="false"
-                                                :options="props.loopUsers"
-                                                class="mt-1"
-                                            />
-                                        </FormField>
-                                    </div>
-
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-                                        <FormField label="Estimated Hours">
-                                            <FormControl v-model="stage.estimated_hours" type="number" step="0.5" min="0" placeholder="0" />
-                                        </FormField>
-
-                                        <FormField label="Start Date/Time">
-                                            <VueDatePicker
-                                                v-model="stage.start_date"
-                                                input-class-name="text-gray-500 dark:!text-white shadow-sm text-sm !bg-white dark:!bg-slate-800 !border-gray-700"
-                                                :month-change-on-scroll="false"
-                                                :range="false"
-                                                :enable-time-picker="true"
-                                                arrow-navigation
-                                                format="dd-MM-yyyy HH:mm"
-                                                model-type="yyyy-MM-dd HH:mm:ss"
-                                                auto-apply
-                                                :disabled="stage.start_on_previous_complete"
-                                            />
-                                        </FormField>
-
-                                        <FormField label="End Date/Time">
-                                            <VueDatePicker
-                                                v-model="stage.end_date"
-                                                input-class-name="text-gray-500 dark:!text-white shadow-sm text-sm !bg-white dark:!bg-slate-800 !border-gray-700"
-                                                :month-change-on-scroll="false"
-                                                :range="false"
-                                                :enable-time-picker="true"
-                                                arrow-navigation
-                                                format="dd-MM-yyyy HH:mm"
-                                                model-type="yyyy-MM-dd HH:mm:ss"
-                                                auto-apply
-                                            />
-                                        </FormField>
-                                    </div>
-
-                                    <div class="mt-3" v-if="idx > 0">
-                                        <label class="inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" v-model="stage.start_on_previous_complete" class="sr-only peer" />
-                                            <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                                            <span class="ms-2 text-xs font-medium text-gray-600 dark:text-gray-400">Start when previous stage completes</span>
-                                        </label>
-                                    </div>
+                            <div v-if="form.stages.length > 0 && !loadingStages" class="mt-6 space-y-6">
+                                <!-- Top Insertion Button -->
+                                <div class="flex justify-center -mb-4">
+                                    <button 
+                                        type="button" 
+                                        class="px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-950/60 border border-blue-200 dark:border-blue-900 rounded-full transition-all shadow-sm"
+                                        @click="addStageAt(0)"
+                                    >
+                                        + Insert Stage at Beginning
+                                    </button>
                                 </div>
+
+                                <template v-for="(stage, idx) in form.stages" :key="idx">
+                                    <div
+                                        class="border border-gray-200 dark:border-slate-700 rounded-lg p-4 bg-gray-50/30 dark:bg-slate-900/20 relative"
+                                    >
+                                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
+                                            <div class="flex items-center space-x-2 flex-grow">
+                                                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex-shrink-0">
+                                                    {{ idx + 1 }}
+                                                </span>
+                                                <input 
+                                                    v-model="stage.name" 
+                                                    placeholder="Stage Name" 
+                                                    class="px-3 py-1 text-sm font-semibold bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded w-full max-w-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-800 dark:text-slate-100 shadow-sm"
+                                                    required
+                                                />
+                                            </div>
+                                            <button 
+                                                type="button" 
+                                                class="text-red-500 hover:text-red-700 text-xs font-semibold px-3 py-1 border border-red-200 dark:border-red-950 rounded bg-red-50/50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-950/40 transition-colors shadow-sm"
+                                                @click="removeStage(idx)"
+                                            >
+                                                Remove Stage
+                                            </button>
+                                        </div>
+                                        <div class="mb-4">
+                                            <input 
+                                                v-model="stage.description" 
+                                                placeholder="Stage Description (optional)" 
+                                                class="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded w-full focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-600 dark:text-slate-400 shadow-sm"
+                                            />
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <FormField label="Assign Executives" :error="form.errors[`stages.${idx}.assignees`]">
+                                                <Multiselect
+                                                    v-model="stage.assignees"
+                                                    placeholder="Select assignees"
+                                                    track-by="id"
+                                                    label="label"
+                                                    :multiple="true"
+                                                    :close-on-select="false"
+                                                    :options="props.executives"
+                                                    class="mt-1"
+                                                />
+                                            </FormField>
+
+                                            <FormField label="Loop Users (CC)">
+                                                <Multiselect
+                                                    v-model="stage.loop_users"
+                                                    placeholder="Add to CC loop"
+                                                    track-by="id"
+                                                    label="label"
+                                                    :multiple="true"
+                                                    :close-on-select="false"
+                                                    :options="props.loopUsers"
+                                                    class="mt-1"
+                                                />
+                                            </FormField>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                                            <FormField label="Estimated Hours">
+                                                <FormControl v-model="stage.estimated_hours" type="number" step="0.5" min="0" placeholder="0" />
+                                            </FormField>
+
+                                            <FormField label="Start Date/Time">
+                                                <VueDatePicker
+                                                    v-model="stage.start_date"
+                                                    input-class-name="text-gray-500 dark:!text-white shadow-sm text-sm !bg-white dark:!bg-slate-800 !border-gray-700"
+                                                    :month-change-on-scroll="false"
+                                                    :range="false"
+                                                    :enable-time-picker="true"
+                                                    arrow-navigation
+                                                    format="dd-MM-yyyy HH:mm"
+                                                    model-type="yyyy-MM-dd HH:mm:ss"
+                                                    auto-apply
+                                                    :disabled="stage.start_on_previous_complete"
+                                                />
+                                            </FormField>
+
+                                            <FormField label="End Date/Time">
+                                                <VueDatePicker
+                                                    v-model="stage.end_date"
+                                                    input-class-name="text-gray-500 dark:!text-white shadow-sm text-sm !bg-white dark:!bg-slate-800 !border-gray-700"
+                                                    :month-change-on-scroll="false"
+                                                    :range="false"
+                                                    :enable-time-picker="true"
+                                                    arrow-navigation
+                                                    format="dd-MM-yyyy HH:mm"
+                                                    model-type="yyyy-MM-dd HH:mm:ss"
+                                                    auto-apply
+                                                />
+                                            </FormField>
+                                        </div>
+
+                                        <div class="mt-3">
+                                            <label class="block text-xs font-semibold text-gray-550 uppercase tracking-wider mb-2">Notify Channels</label>
+                                            <div class="flex items-center space-x-6 mt-1">
+                                                <label class="flex items-center space-x-2 text-xs text-gray-700 dark:text-slate-350 cursor-pointer">
+                                                    <input type="checkbox" v-model="stage.notify_channels" value="email" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                                    <span>Email</span>
+                                                </label>
+                                                <label class="flex items-center space-x-2 text-xs text-gray-700 dark:text-slate-350 cursor-pointer">
+                                                    <input type="checkbox" v-model="stage.notify_channels" value="whatsapp" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                                    <span>WhatsApp</span>
+                                                </label>
+                                                <label class="flex items-center space-x-2 text-xs text-gray-700 dark:text-slate-350 cursor-pointer">
+                                                    <input type="checkbox" v-model="stage.notify_channels" value="mobile" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                                    <span>Mobile App Push</span>
+                                                </label>
+                                            </div>
+                                            <div v-if="form.errors[`stages.${idx}.notify_channels`]" class="text-red-500 text-xs mt-1">
+                                                {{ form.errors[`stages.${idx}.notify_channels`] }}
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-3" v-if="idx > 0">
+                                            <label class="inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" v-model="stage.start_on_previous_complete" class="sr-only peer" />
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                                <span class="ms-2 text-xs font-medium text-gray-600 dark:text-gray-400">Start when previous stage completes</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- In-between Insertion Button -->
+                                    <div class="flex justify-center -my-2 relative z-10">
+                                        <button 
+                                            type="button" 
+                                            class="px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-950/60 border border-blue-200 dark:border-blue-900 rounded-full transition-all shadow-sm"
+                                            @click="addStageAt(idx + 1)"
+                                        >
+                                            + Insert Stage Here
+                                        </button>
+                                    </div>
+                                </template>
                             </div>
 
-                            <div v-if="!selectedWorkflow && !loadingStages" class="text-sm text-gray-400 mt-4 py-4 text-center">
-                                Select a workflow above to configure stage assignments.
+                            <div v-if="form.stages.length === 0 && !loadingStages" class="text-sm text-gray-400 mt-4 py-4 text-center">
+                                <template v-if="!isEditMode && !selectedWorkflow">
+                                    Select a workflow template above, or 
+                                    <button 
+                                        type="button"
+                                        class="text-blue-600 dark:text-blue-400 underline font-semibold focus:outline-none"
+                                        @click="addStageAt(0)"
+                                    >
+                                        start with a custom stage
+                                    </button>.
+                                </template>
+                                <template v-else>
+                                    <span class="block mb-2">No stages configured.</span>
+                                    <button 
+                                        type="button"
+                                        class="px-4 py-2 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-950/60 border border-blue-200 dark:border-blue-900 rounded shadow-sm"
+                                        @click="addStageAt(0)"
+                                    >
+                                        + Add Custom Stage
+                                    </button>
+                                </template>
                             </div>
                         </CardBox>
 

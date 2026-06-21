@@ -83,7 +83,12 @@ class User extends Authenticatable
 
     public function getRoleNameAttribute()
     {
-        return $this->getRoleNames()[0] ?? '';
+        return $this->getRoleNames()->implode(', ');
+    }
+
+    public function getIsSuperAdminAttribute()
+    {
+        return $this->hasRole(env('APP_SUPER_ADMIN', 'super-admin'));
     }
 
     public static function neUserMail($mailcontents)

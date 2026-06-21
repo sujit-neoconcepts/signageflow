@@ -137,6 +137,7 @@ class JobController extends Controller
             'stages.*.start_date' => 'nullable|date',
             'stages.*.end_date' => 'nullable|date',
             'stages.*.start_on_previous_complete' => 'nullable|boolean',
+            'stages.*.notify_channels' => 'required|array|min:1',
         ]);
 
         DB::beginTransaction();
@@ -168,7 +169,7 @@ class JobController extends Controller
                         'priority' => 'medium',
                         'job_id' => $job->id,
                         'job_stage_sort_order' => $index,
-                        'notify_channels' => ['email'],
+                        'notify_channels' => $stageData['notify_channels'] ?? ['email'],
                         'reminder_before_due' => 60,
                     ]);
 
@@ -234,7 +235,30 @@ class JobController extends Controller
             'tasks.comments.user',
         ]);
 
-        $tasks = $job->tasks->map(function ($task) {
+        $workflowTasks = $job->tasks->whereNotNull('job_stage_sort_order')->values()->map(function ($task) {
+            return [
+                'id' => $task->id,
+                'title' => $task->title,
+                'description' => $task->description,
+                'status' => $task->status,
+                'priority' => $task->priority,
+                'due_date' => $task->due_date ? $task->due_date->format('d-m-Y H:i') : null,
+                'start_date' => $task->start_date ? $task->start_date->format('d-m-Y H:i') : null,
+                'end_date' => $task->end_date ? $task->end_date->format('d-m-Y H:i') : null,
+                'estimated_hours' => $task->estimated_hours,
+                'start_on_previous_complete' => $task->start_on_previous_complete,
+                'job_stage_sort_order' => $task->job_stage_sort_order,
+                'assignees' => $task->assignees->map(fn ($a) => [
+                    'id' => $a->id,
+                    'name' => $a->name,
+                    'status' => $a->pivot->status,
+                ]),
+                'viewers' => $task->viewers->pluck('name'),
+                'comments_count' => $task->comments->count(),
+            ];
+        });
+
+        $customTasks = $job->tasks->whereNull('job_stage_sort_order')->values()->map(function ($task) {
             return [
                 'id' => $task->id,
                 'title' => $task->title,
@@ -285,7 +309,8 @@ class JobController extends Controller
                 'workflow' => $job->workflow ? $job->workflow->name : null,
                 'creator' => $job->creator->name,
             ],
-            'tasks' => $tasks,
+            'tasks' => $workflowTasks,
+            'customTasks' => $customTasks,
             'files' => $files,
             'progress' => $progress,
             'totalTasks' => $totalTasks,
@@ -311,6 +336,29 @@ class JobController extends Controller
             'due_date' => $job->due_date ? $job->due_date->format('Y-m-d H:i:s') : null,
             'estimated_hours' => $job->estimated_hours,
             'files' => $job->files,
+            'stages' => $job->tasks->whereNotNull('job_stage_sort_order')->values()->map(function ($task) {
+                return [
+                    'id' => $task->id,
+                    'workflow_stage_id' => null,
+                    'name' => $task->title,
+                    'description' => $task->description ?? '',
+                    'estimated_hours' => $task->estimated_hours,
+                    'assignees' => $task->assignees->map(fn ($a) => [
+                        'id' => $a->id,
+                        'label' => $a->label ?? $a->name,
+                        'email' => $a->email,
+                    ])->toArray(),
+                    'loop_users' => $task->viewers->map(fn ($v) => [
+                        'id' => $v->id,
+                        'label' => $v->label ?? $v->name,
+                        'email' => $v->email,
+                    ])->toArray(),
+                    'start_date' => $task->start_date ? $task->start_date->format('Y-m-d H:i:s') : '',
+                    'end_date' => $task->end_date ? $task->end_date->format('Y-m-d H:i:s') : '',
+                    'start_on_previous_complete' => (bool) $task->start_on_previous_complete,
+                    'notify_channels' => $task->notify_channels ?? ['email'],
+                ];
+            })->toArray(),
         ];
 
         return Inertia::render('Admin/JobAddEditView', [
@@ -330,6 +378,18 @@ class JobController extends Controller
             'client_id' => 'nullable|exists:clients,id',
             'due_date' => 'required|date',
             'estimated_hours' => 'nullable|numeric|min:0',
+            'stages' => 'nullable|array',
+            'stages.*.id' => 'nullable|exists:tasks,id',
+            'stages.*.name' => 'required|string|max:255',
+            'stages.*.assignees' => 'required|array|min:1',
+            'stages.*.assignees.*.id' => 'required|exists:users,id',
+            'stages.*.loop_users' => 'nullable|array',
+            'stages.*.loop_users.*.id' => 'required|exists:users,id',
+            'stages.*.estimated_hours' => 'nullable|numeric|min:0',
+            'stages.*.start_date' => 'nullable|date',
+            'stages.*.end_date' => 'nullable|date',
+            'stages.*.start_on_previous_complete' => 'nullable|boolean',
+            'stages.*.notify_channels' => 'required|array|min:1',
         ]);
 
         DB::beginTransaction();
@@ -341,6 +401,63 @@ class JobController extends Controller
                 'due_date' => $request->due_date,
                 'estimated_hours' => $request->estimated_hours,
             ]);
+
+            // Update / Create / Delete tasks for stages
+            if ($request->has('stages') && is_array($request->stages)) {
+                $existingTaskIds = $job->tasks()->whereNotNull('job_stage_sort_order')->pluck('id')->toArray();
+                $submittedTaskIds = [];
+
+                foreach ($request->stages as $index => $stageData) {
+                    $taskData = [
+                        'title' => $stageData['name'],
+                        'description' => $stageData['description'] ?? null,
+                        'due_date' => $stageData['end_date'] ?? $request->due_date,
+                        'start_date' => $stageData['start_date'] ?? null,
+                        'end_date' => $stageData['end_date'] ?? null,
+                        'estimated_hours' => $stageData['estimated_hours'] ?? null,
+                        'start_on_previous_complete' => $stageData['start_on_previous_complete'] ?? false,
+                        'job_stage_sort_order' => $index,
+                        'notify_channels' => $stageData['notify_channels'] ?? ['email'],
+                    ];
+
+                    if (!empty($stageData['id'])) {
+                        // Update existing task
+                        $task = Task::findOrFail($stageData['id']);
+                        $task->update($taskData);
+                        $submittedTaskIds[] = $task->id;
+                    } else {
+                        // Create new task
+                        $task = Task::create(array_merge($taskData, [
+                            'creator_id' => Auth::id(),
+                            'status' => 'pending',
+                            'priority' => 'medium',
+                            'job_id' => $job->id,
+                            'reminder_before_due' => 60,
+                        ]));
+                        
+                        // Notify assignees
+                        TaskNotificationService::notifyNewTask($task);
+                    }
+
+                    // Sync assignees
+                    $assigneeIds = collect($stageData['assignees'] ?? [])->pluck('id')->all();
+                    $syncData = [];
+                    foreach ($assigneeIds as $id) {
+                        $syncData[$id] = ['status' => 'pending'];
+                    }
+                    $task->assignees()->sync($syncData);
+
+                    // Sync loop users (viewers)
+                    $viewerIds = collect($stageData['loop_users'] ?? [])->pluck('id')->all();
+                    $task->viewers()->sync($viewerIds);
+                }
+
+                // Delete tasks that were removed
+                $tasksToDelete = array_diff($existingTaskIds, $submittedTaskIds);
+                if (!empty($tasksToDelete)) {
+                    Task::whereIn('id', $tasksToDelete)->delete();
+                }
+            }
 
             // Move temp files
             if ($request->has('temp_files') && is_array($request->temp_files)) {
