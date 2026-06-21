@@ -39,4 +39,9 @@ return [
     'sysmailing' => [
         'mailonlogin' => env('MAIL_ON_LOGIN'),
     ],
+
+    'whatsapp' => [
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
+    ],
 ];

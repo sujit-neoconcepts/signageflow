@@ -95,13 +95,13 @@ class TaskNotificationService
 
         foreach ($task->assignees as $assignee) {
             $body = "Hello {$assignee->name},<br><br>".
-                    "The task assigned to you has now started and is ready to accept.<br><br>".
+                    'The task assigned to you has now started and is ready to accept.<br><br>'.
                     "<strong>Task Title:</strong> {$task->title}<br>".
                     "<strong>Description:</strong> {$task->description}<br>".
                     '<strong>Priority:</strong> '.ucfirst($task->priority).'<br>'.
                     '<strong>Start Date/Time:</strong> '.($task->start_date ? $task->start_date->format('d-m-Y H:i') : 'N/A').'<br>'.
                     '<strong>Due Date:</strong> '.$task->due_date->format('d-m-Y H:i').'<br><br>'.
-                    "Please log in to the portal, accept, and start working on the task.<br>";
+                    'Please log in to the portal, accept, and start working on the task.<br>';
 
             self::send($assignee, $title, $body, $channels);
         }
@@ -126,10 +126,51 @@ class TaskNotificationService
             }
         }
 
-        // 2. WhatsApp Notification (Placeholder)
-        if (in_array('whatsapp', $channels)) {
-            $phone = $user->phone ?? 'N/A';
-            Log::info("WhatsApp Notification (Placeholder) sent to {$phone} (User: {$user->name}): {$subject} - ".strip_tags($body));
+        // 2. WhatsApp Notification (Official Meta WhatsApp Business Cloud API)
+        if (in_array('whatsapp', $channels) && ! empty($user->phone)) {
+            try {
+                $phoneId = config('services.whatsapp.phone_number_id');
+                $accessToken = config('services.whatsapp.access_token');
+
+                if ($phoneId && $accessToken) {
+                    // Sanitize phone number (remove non-digits)
+                    $phone = preg_replace('/[^0-9]/', '', $user->phone);
+                    // Default to prepend 91 for 10-digit Indian numbers
+                    if (strlen($phone) === 10) {
+                        $phone = '91'.$phone;
+                    }
+
+                    $plainBody = strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $body));
+                    $messageText = "*{$subject}*\n\n{$plainBody}";
+
+                    $apiUrl = "https://graph.facebook.com/v19.0/{$phoneId}/messages";
+
+                    // Send payload using official WhatsApp Business API format
+                    $response = \Illuminate\Support\Facades\Http::withToken($accessToken)
+                        ->post($apiUrl, [
+                            'messaging_product' => 'whatsapp',
+                            'recipient_type' => 'individual',
+                            'to' => $phone,
+                            'type' => 'text',
+                            'text' => [
+                                'preview_url' => false,
+                                'body' => $messageText,
+                            ],
+                        ]);
+
+                    if ($response->successful()) {
+                        Log::info("WhatsApp notification sent to {$phone} (User: {$user->name}) successfully via WhatsApp Business Cloud API.");
+                    } else {
+                        Log::error("Failed to send WhatsApp to {$phone} (User: {$user->name}). Status: {$response->status()}, Response: {$response->body()}");
+                    }
+                } else {
+                    $phone = $user->phone ?? 'N/A';
+                    Log::warning("WhatsApp Business API credentials not fully set in config or .env. Logging placeholder: *{$subject}*");
+                    Log::info("WhatsApp Notification (Placeholder) sent to {$phone} (User: {$user->name}): {$subject} - ".strip_tags($body));
+                }
+            } catch (\Exception $e) {
+                Log::error("Failed to send WhatsApp to {$user->phone} (User: {$user->name}): ".$e->getMessage());
+            }
         }
 
         // 3. Mobile App Notification (Placeholder)
