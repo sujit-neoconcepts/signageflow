@@ -8,6 +8,9 @@ import {
     mdiChartLine,
     mdiChartBar,
     mdiCalendar,
+    mdiClipboardListOutline,
+    mdiCheckCircleOutline,
+    mdiProgressClock,
 } from "@mdi/js";
 
 import { computed, ref } from "vue";
@@ -55,6 +58,11 @@ const props = defineProps({
     financialYear: Object,
     startDate: String,
     endDate: String,
+    taskStats: Object,
+    myActiveTasks: Array,
+    pendingVerificationTasks: Array,
+    activeJobsList: Array,
+    can: Object,
 });
 
 const message = computed(() => usePage().props.flash.message);
@@ -332,6 +340,7 @@ const formatCurrency = (amount) => {
             <!-- Key Metrics Row -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 <CardBox 
+                    v-if="props.can.view_stock_metrics"
                     class="bg-gradient-to-r from-blue-500 to-blue-600 text-white cursor-pointer"
                     is-hoverable
                     @click="router.get(route('product.index'), { perPage: 10000 })"
@@ -350,8 +359,9 @@ const formatCurrency = (amount) => {
                         />
                     </div>
                 </CardBox>
-
+ 
                 <CardBox 
+                    v-if="props.can.view_stock_metrics"
                     class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white cursor-pointer"
                     is-hoverable
                     @click="router.get(route('stocks.level'), { 'filter[status]': 'Below Threshold' })"
@@ -370,8 +380,9 @@ const formatCurrency = (amount) => {
                         />
                     </div>
                 </CardBox>
-
+ 
                 <CardBox 
+                    v-if="props.can.view_purchase_metrics"
                     class="bg-gradient-to-r from-green-500 to-green-600 text-white cursor-pointer"
                     is-hoverable
                     @click="router.get(route('purchase.index'), { 'filter[pur_date_start]': filterStartDate, 'filter[pur_date_end]': filterEndDate, perPage: 10000 })"
@@ -390,8 +401,9 @@ const formatCurrency = (amount) => {
                         />
                     </div>
                 </CardBox>
-
+ 
                 <CardBox 
+                    v-if="props.can.view_expense_metrics"
                     class="bg-gradient-to-r from-purple-500 to-purple-600 text-white cursor-pointer"
                     is-hoverable
                     @click="router.get(route('expense.index'), { 'filter[amt_type]': 'Expense', 'filter[exp_date_start]': filterStartDate, 'filter[exp_date_end]': filterEndDate, perPage: 10000 })"
@@ -412,33 +424,133 @@ const formatCurrency = (amount) => {
                 </CardBox>
             </div>
 
+            <!-- Task & Workflow Overview Section Title -->
+            <div v-if="props.can.view_job_metrics || props.can.view_my_tasks || props.can.view_task_metrics" class="flex items-center justify-between mb-4 mt-6">
+                <div class="flex items-center gap-2">
+                    <div class="bg-indigo-600 p-1.5 rounded-lg text-white">
+                        <BaseIcon :path="mdiClipboardListOutline" size="20" />
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-800 dark:text-white">Task &amp; Workflow Overview</h2>
+                </div>
+            </div>
+
+            <!-- Task & Workflow Metrics Row -->
+            <div v-if="props.can.view_job_metrics || props.can.view_my_tasks || props.can.view_task_metrics" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <!-- 1. Open Jobs -->
+                <CardBox 
+                    v-if="props.can.view_job_metrics"
+                    class="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white cursor-pointer"
+                    is-hoverable
+                    @click="router.get(route('job.index'))"
+                >
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-indigo-100 text-sm">Active Jobs</p>
+                            <p class="text-2xl font-bold">
+                                {{ formatNumber(taskStats.active_jobs_count) }}
+                            </p>
+                        </div>
+                        <BaseIcon
+                            :path="mdiClipboardListOutline"
+                            size="48"
+                            class="text-indigo-200"
+                        />
+                    </div>
+                </CardBox>
+
+                <!-- 2. My Active Tasks -->
+                <CardBox 
+                    v-if="props.can.view_my_tasks"
+                    class="bg-gradient-to-r from-teal-500 to-teal-600 text-white cursor-pointer"
+                    is-hoverable
+                    @click="router.get(route('task.myTasks'))"
+                >
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-teal-100 text-sm">My Active Tasks</p>
+                            <p class="text-2xl font-bold">
+                                {{ formatNumber(taskStats.my_active_tasks_count) }}
+                            </p>
+                        </div>
+                        <BaseIcon
+                            :path="mdiProgressClock"
+                            size="48"
+                            class="text-teal-200"
+                        />
+                    </div>
+                </CardBox>
+
+                <!-- 3. Overdue Tasks -->
+                <CardBox 
+                    v-if="props.can.view_task_metrics"
+                    class="bg-gradient-to-r from-rose-500 to-rose-600 text-white cursor-pointer"
+                    is-hoverable
+                    @click="router.get(route('task.index'), { overdue: true })"
+                >
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-rose-100 text-sm">Overdue Tasks</p>
+                            <p class="text-2xl font-bold">
+                                {{ formatNumber(taskStats.overdue_tasks_count) }}
+                            </p>
+                        </div>
+                        <BaseIcon
+                            :path="mdiAlert"
+                            size="48"
+                            class="text-rose-200"
+                        />
+                    </div>
+                </CardBox>
+
+                <!-- 4. Tasks Pending Verification -->
+                <CardBox 
+                    v-if="props.can.view_task_metrics"
+                    class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white cursor-pointer"
+                    is-hoverable
+                    @click="router.get(route('task.index'), { 'filter[status]': 'completed' })"
+                >
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-emerald-100 text-sm">Verification Queue</p>
+                            <p class="text-2xl font-bold">
+                                {{ formatNumber(taskStats.tasks_pending_verification_count) }}
+                            </p>
+                        </div>
+                        <BaseIcon
+                            :path="mdiCheckCircleOutline"
+                            size="48"
+                            class="text-emerald-200"
+                        />
+                    </div>
+                </CardBox>
+            </div>
             <!-- Expenses Summary -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <CardBox>
+            <div v-if="props.can.view_purchase_metrics || props.can.view_expense_metrics || props.can.view_outward_metrics || props.can.view_stock_metrics" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <CardBox v-if="props.can.view_purchase_metrics || props.can.view_expense_metrics || props.can.view_outward_metrics">
                     <h3 class="text-lg font-semibold mb-4 flex items-center">
                         <BaseIcon :path="mdiCashMultiple" class="mr-2 text-blue-600" />
                         Expenses Summary
                     </h3>
                     <div class="space-y-4">
-                        <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <div v-if="props.can.view_purchase_metrics" class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                             <span class="text-gray-700">Purchase Value</span>
                             <span class="font-bold text-blue-600">
                                 {{ formatCurrency(expensesData.total_purchase_value) }}
                             </span>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                        <div v-if="props.can.view_outward_metrics" class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                             <span class="text-gray-700">Outward Value</span>
                             <span class="font-bold text-green-600">
                                 {{ formatCurrency(expensesData.total_outward_value) }}
                             </span>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                        <div v-if="props.can.view_expense_metrics" class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
                             <span class="text-gray-700">Total Expenses</span>
                             <span class="font-bold text-purple-600">
                                 {{ formatCurrency(expensesData.total_expense) }}
                             </span>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
+                        <div v-if="props.can.view_expense_metrics" class="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
                             <span class="text-gray-700">Total Deposits</span>
                             <span class="font-bold text-yellow-600">
                                 {{ formatCurrency(expensesData.total_deposit) }}
@@ -447,13 +559,14 @@ const formatCurrency = (amount) => {
                     </div>
                 </CardBox>
 
-                <CardBox>
+                <CardBox v-if="props.can.view_stock_metrics || props.can.view_purchase_metrics || props.can.view_outward_metrics || props.can.view_expense_metrics">
                     <h3 class="text-lg font-semibold mb-4 flex items-center">
                         <BaseIcon :path="mdiChartLine" class="mr-2 text-green-600" />
                         Quick Links
                     </h3>
                     <div class="grid grid-cols-2 gap-4">
                         <a
+                            v-if="props.can.view_stock_metrics"
                             href="/admin/consumableInternalNameReport"
                             class="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg text-center transition"
                         >
@@ -461,6 +574,7 @@ const formatCurrency = (amount) => {
                             <p class="text-sm text-gray-600">View Price</p>
                         </a>
                         <a
+                            v-if="props.can.view_purchase_metrics"
                             href="/admin/purchase"
                             class="p-4 bg-green-50 hover:bg-green-100 rounded-lg text-center transition"
                         >
@@ -468,6 +582,7 @@ const formatCurrency = (amount) => {
                             <p class="text-sm text-gray-600">View Purchases</p>
                         </a>
                         <a
+                            v-if="props.can.view_outward_metrics"
                             href="/admin/outward"
                             class="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg text-center transition"
                         >
@@ -475,6 +590,7 @@ const formatCurrency = (amount) => {
                             <p class="text-sm text-gray-600">View Outwards</p>
                         </a>
                         <a
+                            v-if="props.can.view_stock_metrics"
                             href="/admin/stocks"
                             class="p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg text-center transition"
                         >
@@ -482,6 +598,7 @@ const formatCurrency = (amount) => {
                             <p class="text-sm text-gray-600">Check Stock Levels</p>
                         </a>
                         <a
+                            v-if="props.can.view_expense_metrics"
                             href="/admin/expense"
                             class="p-4 bg-red-50 hover:bg-red-100 rounded-lg text-center transition"
                         >
@@ -489,6 +606,7 @@ const formatCurrency = (amount) => {
                             <p class="text-sm text-gray-600">Track Expenses</p>
                         </a>
                         <a
+                            v-if="props.can.view_expense_metrics || props.can.view_purchase_metrics"
                             href="/admin/dashboard/expenses"
                             class="p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-center transition"
                         >
@@ -500,16 +618,16 @@ const formatCurrency = (amount) => {
             </div>
 
             <!-- Charts Row -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div v-if="props.can.view_purchase_metrics || props.can.view_outward_metrics" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <!-- Monthly Trend Chart -->
-                <CardBox>
+                <CardBox v-if="props.can.view_purchase_metrics || props.can.view_outward_metrics">
                     <div class="h-80">
                         <Bar :data="trendData" :options="trendOptions" />
                     </div>
                 </CardBox>
 
                 <!-- Top Suppliers Chart -->
-                <CardBox>
+                <CardBox v-if="props.can.view_purchase_metrics">
                     <h3 class="text-lg font-semibold mb-4 flex items-center">
                         <BaseIcon :path="mdiChartBar" class="mr-2 text-indigo-600" />
                         Top 10 Suppliers by Purchase Value
@@ -521,7 +639,7 @@ const formatCurrency = (amount) => {
             </div>
 
             <!-- Charts Row 2 -->
-            <div class="grid grid-cols-1 gap-6 mb-6">
+            <div v-if="props.can.view_expense_metrics" class="grid grid-cols-1 gap-6 mb-6">
                 <!-- Expenses by Category Chart -->
                 <CardBox>
                     <h3 class="text-lg font-semibold mb-4 flex items-center">
@@ -531,6 +649,132 @@ const formatCurrency = (amount) => {
                     <div class="text-sm text-gray-500 mb-2">Click on any bar to open the filtered expense report for that category.</div>
                     <div :style="{ height: expenseChartHeight }">
                         <Bar :data="expenseCategoryData" :options="expenseCategoryOptions" />
+                    </div>
+                </CardBox>
+            </div>
+
+            <!-- Task Lists Split Row -->
+            <div v-if="props.can.view_my_tasks || props.can.view_job_metrics" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- My Active Tasks List -->
+                <CardBox v-if="props.can.view_my_tasks">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center">
+                            <BaseIcon :path="mdiProgressClock" class="mr-2 text-teal-600" />
+                            My Active Tasks
+                        </h3>
+                        <a :href="route('task.myTasks')" class="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline">
+                            View All My Tasks →
+                        </a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead>
+                                <tr class="border-b dark:border-slate-700 text-slate-500 text-xs">
+                                    <th class="py-2">Task</th>
+                                    <th class="py-2">Job</th>
+                                    <th class="py-2">Status</th>
+                                    <th class="py-2 text-right">Due Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="props.myActiveTasks.length === 0" class="text-slate-500">
+                                    <td colspan="4" class="py-4 text-center">No active tasks assigned to you.</td>
+                                </tr>
+                                <tr v-else v-for="task in props.myActiveTasks" :key="task.id" class="border-b dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
+                                    <td class="py-3">
+                                        <a :href="route('task.myTasks')" class="font-semibold text-slate-700 dark:text-slate-200 hover:text-blue-600">
+                                            {{ task.title }}
+                                        </a>
+                                    </td>
+                                    <td class="py-3 text-slate-500 max-w-[150px] truncate">
+                                        {{ task.job_name || 'N/A' }}
+                                    </td>
+                                    <td class="py-3">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xxs font-semibold capitalize bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                                            {{ task.status.replace('_', ' ') }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 text-right text-slate-500 text-xs">
+                                        {{ task.due_date }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </CardBox>
+
+                <!-- Active Jobs Progress -->
+                <CardBox v-if="props.can.view_job_metrics">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center">
+                            <BaseIcon :path="mdiClipboardListOutline" class="mr-2 text-indigo-600" />
+                            Active Jobs Progress
+                        </h3>
+                        <a :href="route('job.index')" class="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline">
+                            View All Jobs →
+                        </a>
+                    </div>
+                    <div class="space-y-4">
+                        <div v-if="props.activeJobsList.length === 0" class="text-slate-500 text-center py-4">No active jobs.</div>
+                        <div v-else v-for="job in props.activeJobsList" :key="job.id" class="p-3 bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <a :href="route('job.show', job.id)" class="font-semibold text-slate-700 dark:text-slate-200 hover:text-blue-600">
+                                    {{ job.title }}
+                                </a>
+                                <span class="text-xs text-slate-500">Due: {{ job.due_date.split(' ')[0] }}</span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
+                                    <div class="bg-blue-650 h-2.5 rounded-full" :style="{ width: job.progress + '%' }"></div>
+                                </div>
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300 w-10 text-right">{{ job.progress }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                </CardBox>
+            </div>
+
+            <!-- Tasks Pending Verification Row (Only visible for managers/admins when items exist) -->
+            <div v-if="props.can.view_task_metrics && props.pendingVerificationTasks && props.pendingVerificationTasks.length > 0" class="grid grid-cols-1 gap-6 mb-6">
+                <CardBox>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center">
+                            <BaseIcon :path="mdiCheckCircleOutline" class="mr-2 text-emerald-600" />
+                            Tasks Pending Verification
+                        </h3>
+                        <a :href="route('task.index') + '?filter[status]=completed'" class="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline">
+                            View All Queue →
+                        </a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead>
+                                <tr class="border-b dark:border-slate-700 text-slate-500 text-xs">
+                                    <th class="py-2">Task</th>
+                                    <th class="py-2">Job</th>
+                                    <th class="py-2">Assignee</th>
+                                    <th class="py-2 text-right">Submitted</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="task in props.pendingVerificationTasks" :key="task.id" class="border-b dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
+                                    <td class="py-3">
+                                        <a :href="route('task.show', task.id)" class="font-semibold text-slate-700 dark:text-slate-200 hover:text-blue-600">
+                                            {{ task.title }}
+                                        </a>
+                                    </td>
+                                    <td class="py-3 text-slate-500 max-w-[200px] truncate">
+                                        {{ task.job_name || 'N/A' }}
+                                    </td>
+                                    <td class="py-3 text-slate-600 dark:text-slate-400">
+                                        {{ task.assignee_names }}
+                                    </td>
+                                    <td class="py-3 text-right text-slate-500 text-xs">
+                                        {{ task.due_date }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </CardBox>
             </div>

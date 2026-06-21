@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Expense;
+use App\Models\Job;
 use App\Models\Outward;
 use App\Models\Product;
 use App\Models\Purchase;
+use App\Models\Task;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +18,11 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        $user = \Auth::user();
+        if (! $user->can('dashboard_view')) {
+            abort(403, 'Unauthorized access to dashboard.');
+        }
+
         // Parse date range from request or use current month defaults
         $financialYearStart = Carbon::create(Carbon::now()->year, 4, 1);
         $financialYearEnd = Carbon::create(Carbon::now()->year + 1, 3, 31);
@@ -119,6 +126,92 @@ class DashboardController extends Controller
                 ];
             });
 
+        // Task & Workflow Dashboard Info
+        $authId = \Auth::id();
+
+        // 1. Metric Counts
+        $activeJobsCount = Job::whereIn('status', ['not_started', 'in_progress'])->count();
+
+        $myActiveTasksCount = Task::whereHas('assignees', function ($q) use ($authId) {
+            $q->where('users.id', $authId)->whereIn('task_assignees.status', ['pending', 'accepted', 'in_progress']);
+        })->count();
+
+        $tasksPendingVerificationCount = Task::where('status', 'completed')->count();
+
+        $overdueTasksCount = Task::whereNotIn('status', ['completed', 'verified', 'closed'])
+            ->where('due_date', '<', Carbon::now())
+            ->count();
+
+        // 2. My Active Tasks List (Limit 5)
+        $myActiveTasks = Task::whereHas('assignees', function ($q) use ($authId) {
+            $q->where('users.id', $authId)->whereIn('task_assignees.status', ['pending', 'accepted', 'in_progress']);
+        })
+            ->with(['job', 'creator'])
+            ->orderBy('due_date', 'asc')
+            ->limit(5)
+            ->get()
+            ->map(function ($task) use ($authId) {
+                $pivot = $task->assignees->firstWhere('id', $authId)->pivot;
+
+                return [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'job_name' => $task->job ? $task->job->title : null,
+                    'status' => $pivot ? $pivot->status : $task->status,
+                    'due_date' => $task->due_date->format('d-m-Y H:i'),
+                    'start_date' => $task->start_date ? $task->start_date->format('d-m-Y H:i') : null,
+                ];
+            });
+
+        // 3. Tasks Pending Verification List (Limit 5)
+        $pendingVerificationTasks = [];
+        if (\Auth::user()->hasRole(['super-admin', 'admin', 'supervisor']) || \Auth::user()->can('task_list')) {
+            $pendingVerificationTasks = Task::where('status', 'completed')
+                ->with(['job', 'assignees'])
+                ->orderBy('updated_at', 'desc')
+                ->limit(5)
+                ->get()
+                ->map(function ($task) {
+                    return [
+                        'id' => $task->id,
+                        'title' => $task->title,
+                        'job_name' => $task->job ? $task->job->title : null,
+                        'assignee_names' => $task->assignees->pluck('name')->join(', '),
+                        'due_date' => $task->due_date->format('d-m-Y H:i'),
+                    ];
+                });
+        }
+
+        // 4. Active Jobs List (Limit 5)
+        $activeJobsList = Job::whereIn('status', ['not_started', 'in_progress'])
+            ->with(['tasks'])
+            ->orderBy('due_date', 'asc')
+            ->limit(5)
+            ->get()
+            ->map(function ($job) {
+                $totalTasks = $job->tasks->count();
+                $completedTasks = $job->tasks->whereIn('status', ['completed', 'verified', 'closed'])->count();
+                $progress = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100) : 0;
+
+                return [
+                    'id' => $job->id,
+                    'title' => $job->title,
+                    'status' => $job->status,
+                    'progress' => (int) $progress,
+                    'due_date' => $job->due_date->format('d-m-Y H:i'),
+                ];
+            });
+
+        $can = [
+            'view_stock_metrics' => $user->can('dashboard_viewStockMetrics'),
+            'view_purchase_metrics' => $user->can('dashboard_viewPurchaseMetrics'),
+            'view_expense_metrics' => $user->can('dashboard_viewExpenseMetrics'),
+            'view_outward_metrics' => $user->can('dashboard_viewOutwardMetrics'),
+            'view_job_metrics' => $user->can('dashboard_viewJobMetrics'),
+            'view_task_metrics' => $user->can('dashboard_viewTaskMetrics'),
+            'view_my_tasks' => $user->can('dashboard_viewMyTasks'),
+        ];
+
         return Inertia::render('Admin/DashboardView', [
             'stockOverview' => $stockOverview,
             'financialYear' => [
@@ -131,11 +224,26 @@ class DashboardController extends Controller
             'monthlyTrend' => $monthlyTrend,
             'topSuppliers' => $topSuppliers,
             'expensesByCategory' => $expensesByCategory,
+            'taskStats' => [
+                'active_jobs_count' => $activeJobsCount,
+                'my_active_tasks_count' => $myActiveTasksCount,
+                'tasks_pending_verification_count' => $tasksPendingVerificationCount,
+                'overdue_tasks_count' => $overdueTasksCount,
+            ],
+            'myActiveTasks' => $myActiveTasks,
+            'pendingVerificationTasks' => $pendingVerificationTasks,
+            'activeJobsList' => $activeJobsList,
+            'can' => $can,
         ]);
     }
 
     public function expensesDetails(Request $request)
     {
+        $user = \Auth::user();
+        if (! $user->can('dashboard_viewExpenseMetrics')) {
+            abort(403, 'Unauthorized access to dashboard expense details.');
+        }
+
         // Parse date range from request or use financial year defaults
         $financialYearStart = Carbon::create(Carbon::now()->year, 4, 1);
         $financialYearEnd = Carbon::create(Carbon::now()->year + 1, 3, 31);

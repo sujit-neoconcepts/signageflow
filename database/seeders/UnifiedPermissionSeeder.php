@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 class UnifiedPermissionSeeder extends Seeder
@@ -52,6 +53,7 @@ class UnifiedPermissionSeeder extends Seeder
         'enquiry' => ['list', 'create', 'edit', 'delete', 'export'],
         'workflow' => ['list', 'create', 'edit', 'delete', 'view'],
         'job' => ['list', 'create', 'edit', 'delete', 'view'],
+        'dashboard' => ['view', 'viewStockMetrics', 'viewPurchaseMetrics', 'viewExpenseMetrics', 'viewOutwardMetrics', 'viewJobMetrics', 'viewTaskMetrics', 'viewMyTasks'],
     ];
 
     public function run(): void
@@ -71,5 +73,51 @@ class UnifiedPermissionSeeder extends Seeder
         foreach ($allPermissions as $permission) {
             Permission::firstOrCreate(['name' => $permission]);
         }
+
+        // Create/Retrieve Roles
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
+        $executiveRole = Role::firstOrCreate(['name' => 'executive']);
+        $inchargeRole = Role::firstOrCreate(['name' => 'incharge']);
+        $managerRole = Role::firstOrCreate(['name' => 'manager']);
+
+        // Give permissions to Admin
+        $adminRole->givePermissionTo([
+            'dashboard_view',
+            'dashboard_viewStockMetrics',
+            'dashboard_viewPurchaseMetrics',
+            'dashboard_viewExpenseMetrics',
+            'dashboard_viewOutwardMetrics',
+            'dashboard_viewJobMetrics',
+            'dashboard_viewTaskMetrics',
+            'dashboard_viewMyTasks',
+        ]);
+
+        // Give permissions to Supervisor
+        $supervisorRole->givePermissionTo([
+            'dashboard_view',
+            'dashboard_viewStockMetrics',
+            'dashboard_viewJobMetrics',
+            'dashboard_viewTaskMetrics',
+            'dashboard_viewMyTasks',
+        ]);
+
+        // Give permissions to Executive
+        $executiveRole->givePermissionTo([
+            'dashboard_view',
+            'dashboard_viewMyTasks',
+        ]);
+
+        // Give permissions to Incharge
+        $inchargeRole->givePermissionTo([
+            'dashboard_view',
+            'dashboard_viewMyTasks',
+        ]);
+
+        // Give permissions to Manager
+        $managerRole->givePermissionTo([
+            'dashboard_view',
+            'dashboard_viewMyTasks',
+        ]);
     }
 }

@@ -312,5 +312,6 @@ return [
         'task' => 'Task Manager',
         'workflow' => 'Workflow Manager',
         'job' => 'Job Manager',
+        'dashboard' => 'Dashboard',
     ],
 ];
