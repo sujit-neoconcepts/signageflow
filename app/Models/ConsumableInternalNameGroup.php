@@ -29,16 +29,22 @@ class ConsumableInternalNameGroup extends Model
 
     public function getUnitPriceAttribute()
     {
-        $first = \App\Models\ConsumableInternalName::where('consumable_internal_name_group_id', $this->id)->first();
+        $items = \App\Models\ConsumableInternalName::where('consumable_internal_name_group_id', $this->id)->get();
 
-        return $first ? (float) $first->unitPrice : 0.00;
+        if ($items->isEmpty()) {
+            return 0.00;
+        }
+
+        $sum = $items->sum(function ($item) {
+            return $item->unitPrice * (1 + $item->openStockMarginPercent / 100);
+        });
+
+        return (float) ($sum / $items->count());
     }
 
     public function getOpenStockMarginPercentAttribute()
     {
-        $first = \App\Models\ConsumableInternalName::where('consumable_internal_name_group_id', $this->id)->first();
-
-        return $first ? (float) $first->openStockMarginPercent : 0.00;
+        return 0.00;
     }
 
     public static function formInfo()
@@ -52,6 +58,15 @@ class ConsumableInternalNameGroup extends Model
     {
         return self::orderBy('name')->get()->map(function ($g) {
             $firstInternalName = \App\Models\ConsumableInternalName::where('consumable_internal_name_group_id', $g->id)->first();
+            $items = \App\Models\ConsumableInternalName::where('consumable_internal_name_group_id', $g->id)->get();
+            $averagePrice = 0.00;
+
+            if (! $items->isEmpty()) {
+                $sum = $items->sum(function ($item) {
+                    return $item->unitPrice * (1 + $item->openStockMarginPercent / 100);
+                });
+                $averagePrice = $sum / $items->count();
+            }
 
             return [
                 'id' => $g->id,
@@ -59,8 +74,8 @@ class ConsumableInternalNameGroup extends Model
                 'name' => $g->name, // for search mapping matching option.name or label
                 'unitName' => $firstInternalName ? $firstInternalName->unitName : '',
                 'unitAltName' => $firstInternalName ? $firstInternalName->unitAltName : '',
-                'unitPrice' => $firstInternalName ? (float) $firstInternalName->unitPrice : 0.00,
-                'openStockMarginPercent' => $firstInternalName ? (float) $firstInternalName->openStockMarginPercent : 0.00,
+                'unitPrice' => (float) $averagePrice,
+                'openStockMarginPercent' => 0.00,
             ];
         });
     }
