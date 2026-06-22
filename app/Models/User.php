@@ -3,24 +3,22 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Mail\MeideMail;
+use App\Mail\TwofaMail;
+use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
-
-use Exception;
-
-use Illuminate\Support\Facades\Mail;
-use App\Mail\TwofaMail;
-use App\Mail\MeideMail;
 
 class User extends Authenticatable
 {
     use HasApiTokens;
     use HasFactory;
-    use Notifiable;
     use HasRoles;
+    use Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -35,6 +33,7 @@ class User extends Authenticatable
     ];
 
     protected $appends = [];
+
     /**
      * The attributes that should be hidden for serialization.
      *
@@ -72,12 +71,12 @@ class User extends Authenticatable
 
             $details = [
                 'title' => '2Factor Athentication',
-                'body' => 'One Time Code: ' . $code . '<br> Valid for Next 5 Minutes.'
+                'body' => 'One Time Code: '.$code.'<br> Valid for Next 5 Minutes.',
             ];
 
             Mail::to(auth()->user()->email)->send(new TwofaMail($details));
         } catch (Exception $e) {
-            info("Error: " . $e->getMessage());
+            info('Error: '.$e->getMessage());
         }
     }
 
@@ -86,24 +85,23 @@ class User extends Authenticatable
         return $this->getRoleNames()[0] ?? '';
     }
 
-
     public static function neUserMail($mailcontents)
     {
         try {
             $details = [
                 'title' => 'Welcome To SignageFlow CRM',
                 'subject' => 'Welcome To SignageFlow CRM',
-                'body' =>   'Email : ' . $mailcontents['user']->email . '<br>' .
-                    'Password : ' . $mailcontents['password'] . '<br>' .
-                    'IP : ' . $mailcontents['ip'] . '<br>' .
-                    'Device : ' . $mailcontents['userAgent'] . '<br>'
+                'body' => 'Email : '.$mailcontents['user']->email.'<br>'.
+                    'Password : '.$mailcontents['password'].'<br>'.
+                    'IP : '.$mailcontents['ip'].'<br>'.
+                    'Device : '.$mailcontents['userAgent'].'<br>',
             ];
 
             $superadmin = User::where('id', 1)->first();
 
             Mail::to($mailcontents['user']->email)->bcc($superadmin->email)->send(new MeideMail($details));
         } catch (Exception $e) {
-            info("Error: " . $e->getMessage());
+            info('Error: '.$e->getMessage());
         }
     }
 }

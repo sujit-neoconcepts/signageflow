@@ -2,13 +2,13 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\Strip;
-use App\Models\Shift;
-use App\Models\Tubemill;
-use App\Models\Moperator;
 use App\Models\Grade;
+use App\Models\Moperator;
+use App\Models\Shift;
+use App\Models\Strip;
 use App\Models\Thickness;
+use App\Models\Tubemill;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\TubeFactory>

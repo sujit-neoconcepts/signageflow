@@ -3,18 +3,15 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use Session;
-
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Session;
 
 class Check2FA
 {
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
      * @return mixed
      */
     public function handle(Request $request, Closure $next)
@@ -25,11 +22,13 @@ class Check2FA
         }
 
         // If user is authenticated but needs 2FA
-        if ($request->user()->twofa && !Session::has('user_2fa')) {
-            if(Auth::viaRemember()) {
+        if ($request->user()->twofa && ! Session::has('user_2fa')) {
+            if (Auth::viaRemember()) {
                 Session::put('user_2fa', auth()->user()->id);
+
                 return $next($request);
             }
+
             return redirect()->route('2fa.index');
         }
 

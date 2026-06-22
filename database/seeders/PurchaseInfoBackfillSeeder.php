@@ -14,7 +14,7 @@ class PurchaseInfoBackfillSeeder extends Seeder
      */
     public function run(): void
     {
-        if (!Schema::hasTable('purchases') || !Schema::hasTable('purchases_info')) {
+        if (! Schema::hasTable('purchases') || ! Schema::hasTable('purchases_info')) {
             return;
         }
 
@@ -33,7 +33,7 @@ class PurchaseInfoBackfillSeeder extends Seeder
                 ->orderBy('id')
                 ->first();
 
-            if (!$sample) {
+            if (! $sample) {
                 continue;
             }
 

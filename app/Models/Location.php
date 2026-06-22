@@ -8,11 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class Location extends Model
 {
     use HasFactory;
+
     protected $fillable = ['name'];
 
     public static function formInfo()
     {
-        $formInfo = ['name' => ['label' => 'Location', 'vRule' => 'required|unique:locations,name',]];
+        $formInfo = ['name' => ['label' => 'Location', 'vRule' => 'required|unique:locations,name']];
+
         return $formInfo;
     }
 
@@ -23,6 +25,7 @@ class Location extends Model
         foreach ($allDatas as $allData) {
             $allopts[] = ['id' => $allData->name, 'label' => $allData->name];
         }
+
         return $allopts;
     }
 }

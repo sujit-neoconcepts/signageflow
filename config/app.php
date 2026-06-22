@@ -163,7 +163,7 @@ return [
         /*
          * Application Service Providers...
          */
-        //App\Providers\AppServiceProvider::class,
+        // App\Providers\AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
@@ -216,12 +216,12 @@ return [
         'tubemill' => 'tubemill',
         'slitter' => 'slitter',
         'polisher' => 'polisher',
-        'shift' =>  'shift',
+        'shift' => 'shift',
 
         // Production Workflow
         'coil' => 'coil',
         'slitting' => 'slitting',
-        'tubeMaking' =>  'tubeMaking',
+        'tubeMaking' => 'tubeMaking',
         'polishing' => 'polishing',
         'packing' => 'packing',
         'tubeStock' => 'tubeStock',
@@ -248,7 +248,7 @@ return [
         'sheetEnquiry' => 'sheetEnquiry',
         'coilEnquiry' => 'coilEnquiry',
         'stripEnquiry' => 'stripEnquiry',
-        'blusterEnquiry' =>  'blusterEnquiry',
+        'blusterEnquiry' => 'blusterEnquiry',
         'blackTubeEnquiry' => 'blackTubeEnquiry',
 
         // Sales Order Management
@@ -270,13 +270,12 @@ return [
         'scrapSales' => 'scrapSales',
         'shortlengthSales' => 'shortlengthSales',
 
-         // Report Management
+        // Report Management
         'reports' => 'reports',
         'stockInProgress' => 'stockInProgress',
         'dailyProductionReport' => 'dailyProductionReport',
         'rawMaterialPlanning' => 'rawMaterialPlanning',
-        'slittingplanreport'=>'slittingplanreport',
-
+        'slittingplanreport' => 'slittingplanreport',
 
         // Consumable Management
         'consumable' => 'consumable',

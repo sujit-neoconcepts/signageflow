@@ -1,35 +1,34 @@
 <?php
 
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\FrontEndController;
-use App\Http\Controllers\Admin\RoleController;
-use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\CabinetCostSheetController;
 use App\Http\Controllers\Admin\ClientController;
-use App\Http\Controllers\Admin\SettingController;
-use App\Http\Controllers\Admin\SupplierController;
-use App\Http\Controllers\Admin\SigninlogController;
-use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\ConsumableInternalNameController;
+use App\Http\Controllers\Admin\ConsumableInternalNameGroupController;
+use App\Http\Controllers\Admin\ExpcateController;
+use App\Http\Controllers\Admin\ExpenseController;
+use App\Http\Controllers\Admin\ExpuserController;
+use App\Http\Controllers\Admin\LettersCostSheetController;
+use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\Admin\LogActivityController;
 // Consumables Module Controllers
 use App\Http\Controllers\Admin\MunitController;
+use App\Http\Controllers\Admin\OpeningController;
+use App\Http\Controllers\Admin\OpenStockController;
+use App\Http\Controllers\Admin\OutwardController;
+use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\PgroupController;
-use App\Http\Controllers\Admin\LocationController;
-use App\Http\Controllers\Admin\ExpuserController;
-use App\Http\Controllers\Admin\ExpcateController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PurchaseController;
-use App\Http\Controllers\Admin\OutwardController;
-use App\Http\Controllers\Admin\OpeningController;
-use App\Http\Controllers\Admin\StocksController;
-use App\Http\Controllers\Admin\ExpenseController;
-use App\Http\Controllers\Admin\ConsumableInternalNameController;
-use App\Http\Controllers\Admin\ConsumableInternalNameGroupController;
-use App\Http\Controllers\Admin\OpenStockController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SalesOrderController;
+use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SignageCostSheetController;
-use App\Http\Controllers\Admin\CabinetCostSheetController;
-use App\Http\Controllers\Admin\LettersCostSheetController;
+use App\Http\Controllers\Admin\SigninlogController;
+use App\Http\Controllers\Admin\StocksController;
+use App\Http\Controllers\Admin\SupplierController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\FrontEndController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -51,28 +50,28 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::post('/admin/settings/change-financial-year', [SettingController::class, 'changeFinancialYear'])
         ->name('settings.change-financial-year');
 
-        // consumableInternalName Route
-        Route::get('consumableInternalName/options', [ConsumableInternalNameController::class, 'options'])->name('consumableInternalName.options');
-        Route::get('consumableInternalName-import', [ConsumableInternalNameController::class, 'importView'])->name('consumableInternalName.import');
-        Route::post('consumableInternalName-import', [ConsumableInternalNameController::class, 'import']);
-        Route::get('consumableInternalName/sync', [ConsumableInternalNameController::class, 'sync'])->name('consumableInternalName.sync');
-        Route::resource('consumableInternalName', ConsumableInternalNameController::class);
-        Route::delete('consumableInternalName-bulk-destroy', [ConsumableInternalNameController::class, 'bulkDestroy'])->name('consumableInternalName.bulkDestroy');
+    // consumableInternalName Route
+    Route::get('consumableInternalName/options', [ConsumableInternalNameController::class, 'options'])->name('consumableInternalName.options');
+    Route::get('consumableInternalName-import', [ConsumableInternalNameController::class, 'importView'])->name('consumableInternalName.import');
+    Route::post('consumableInternalName-import', [ConsumableInternalNameController::class, 'import']);
+    Route::get('consumableInternalName/sync', [ConsumableInternalNameController::class, 'sync'])->name('consumableInternalName.sync');
+    Route::resource('consumableInternalName', ConsumableInternalNameController::class);
+    Route::delete('consumableInternalName-bulk-destroy', [ConsumableInternalNameController::class, 'bulkDestroy'])->name('consumableInternalName.bulkDestroy');
 
-        // consumableInternalNameGroup Route
-        Route::get('consumableInternalNameGroup/options', [ConsumableInternalNameGroupController::class, 'options'])->name('consumableInternalNameGroup.options');
-        Route::get('consumableInternalNameGroup-import', [ConsumableInternalNameGroupController::class, 'importView'])->name('consumableInternalNameGroup.import');
-        Route::post('consumableInternalNameGroup-import', [ConsumableInternalNameGroupController::class, 'import']);
-        Route::resource('consumableInternalNameGroup', ConsumableInternalNameGroupController::class);
-        Route::delete('consumableInternalNameGroup-bulk-destroy', [ConsumableInternalNameGroupController::class, 'bulkDestroy'])->name('consumableInternalNameGroup.bulkDestroy');
-        
-        // consumableInternalNameReport Route
-        Route::get('consumableInternalNameReport', [\App\Http\Controllers\Admin\ConsumableInternalNameReportController::class, 'index'])->name('consumableInternalNameReport.index');
+    // consumableInternalNameGroup Route
+    Route::get('consumableInternalNameGroup/options', [ConsumableInternalNameGroupController::class, 'options'])->name('consumableInternalNameGroup.options');
+    Route::get('consumableInternalNameGroup-import', [ConsumableInternalNameGroupController::class, 'importView'])->name('consumableInternalNameGroup.import');
+    Route::post('consumableInternalNameGroup-import', [ConsumableInternalNameGroupController::class, 'import']);
+    Route::resource('consumableInternalNameGroup', ConsumableInternalNameGroupController::class);
+    Route::delete('consumableInternalNameGroup-bulk-destroy', [ConsumableInternalNameGroupController::class, 'bulkDestroy'])->name('consumableInternalNameGroup.bulkDestroy');
 
-        // CostSheet Compositions
-        Route::get('costSheet/{costSheet}/compositions', [\App\Http\Controllers\Admin\CostSheetCompositionController::class, 'index'])->name('costSheetCompositions.index');
-        Route::post('costSheet/{costSheet}/compositions', [\App\Http\Controllers\Admin\CostSheetCompositionController::class, 'store'])->name('costSheetCompositions.store');
-        Route::get('costSheet/options', [\App\Http\Controllers\Admin\CostSheetCompositionController::class, 'costSheetOptions'])->name('costSheetCompositions.options');
+    // consumableInternalNameReport Route
+    Route::get('consumableInternalNameReport', [\App\Http\Controllers\Admin\ConsumableInternalNameReportController::class, 'index'])->name('consumableInternalNameReport.index');
+
+    // CostSheet Compositions
+    Route::get('costSheet/{costSheet}/compositions', [\App\Http\Controllers\Admin\CostSheetCompositionController::class, 'index'])->name('costSheetCompositions.index');
+    Route::post('costSheet/{costSheet}/compositions', [\App\Http\Controllers\Admin\CostSheetCompositionController::class, 'store'])->name('costSheetCompositions.store');
+    Route::get('costSheet/options', [\App\Http\Controllers\Admin\CostSheetCompositionController::class, 'costSheetOptions'])->name('costSheetCompositions.options');
 
     Route::get('munit-import', [MunitController::class, 'importView'])->name('munit.import');
     Route::post('munit-import', [MunitController::class, 'import']);
@@ -228,4 +227,4 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
 
 Route::get('logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index']);
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

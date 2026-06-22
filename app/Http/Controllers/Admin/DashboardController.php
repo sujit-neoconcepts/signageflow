@@ -3,19 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Client;
-use App\Models\Supplier;
-use App\Models\User;
-use App\Models\LogActivity;
+use App\Models\Expense;
+use App\Models\Outward;
+use App\Models\Product;
+use App\Models\Purchase;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use App\Models\Purchase;
-use App\Models\Outward;
-use App\Models\Pgroup;
-use App\Models\Product;
-use App\Models\Expense;
 
 class DashboardController extends Controller
 {
@@ -24,7 +19,7 @@ class DashboardController extends Controller
         // Parse date range from request or use current month defaults
         $financialYearStart = Carbon::create(Carbon::now()->year, 4, 1);
         $financialYearEnd = Carbon::create(Carbon::now()->year + 1, 3, 31);
-        
+
         // If current month is before April, use previous year's financial year
         if (Carbon::now()->month < 4) {
             $financialYearStart = Carbon::create(Carbon::now()->year - 1, 4, 1);
@@ -35,11 +30,11 @@ class DashboardController extends Controller
         $defaultStartDate = Carbon::now()->startOfMonth();
         $defaultEndDate = Carbon::now()->endOfMonth();
 
-        $startDate = $request->input('start_date') 
+        $startDate = $request->input('start_date')
             ? Carbon::parse($request->input('start_date'))->startOfDay()
             : $defaultStartDate->copy();
         $endDate = $request->input('end_date')
-            ? Carbon::parse($request->input('end_date'))->endOfDay() 
+            ? Carbon::parse($request->input('end_date'))->endOfDay()
             : $defaultEndDate->copy();
 
         // Consumables Stock Overview
@@ -53,20 +48,20 @@ class DashboardController extends Controller
         // Expenses Data - filtered by date range
         $totalPurchaseValue = (float) Purchase::whereBetween('pur_date', [$startDate, $endDate])->sum('pur_amnt_total');
         $totalOutwardValue = (float) Outward::whereBetween('out_date', [$startDate, $endDate])->sum(DB::raw('out_qty * unitPrice'));
-        
+
         // Build expense query with Head Office filter for non-admin users
         $expenseQuery = Expense::whereBetween('exp_date', [$startDate, $endDate])->where('amt_type', 'Expense');
         $depositQuery = Expense::whereBetween('exp_date', [$startDate, $endDate])->where('amt_type', 'Deposit');
-        
-        if (!\Auth::user()->hasRole(['super-admin', 'admin'])) {
-            $headOfficeFilter = function($q) {
+
+        if (! \Auth::user()->hasRole(['super-admin', 'admin'])) {
+            $headOfficeFilter = function ($q) {
                 $q->whereNull('doneby')
-                  ->orWhere('doneby', 'NOT LIKE', '%Head Office%');
+                    ->orWhere('doneby', 'NOT LIKE', '%Head Office%');
             };
             $expenseQuery->where($headOfficeFilter);
             $depositQuery->where($headOfficeFilter);
         }
-        
+
         $totalExpense = (float) $expenseQuery->sum('amount');
         $totalDeposit = (float) $depositQuery->sum('amount');
 
@@ -97,12 +92,12 @@ class DashboardController extends Controller
         for ($i = 0; $i < 12; $i++) {
             $loopMonth = $trendStart->copy()->addMonths($i);
             $monthStart = $loopMonth->copy()->startOfMonth();
-            $monthEnd   = $loopMonth->copy()->endOfMonth();
+            $monthEnd = $loopMonth->copy()->endOfMonth();
 
             $monthlyTrend[] = [
-                'month'     => $loopMonth->format('M Y'),
+                'month' => $loopMonth->format('M Y'),
                 'purchases' => (float) Purchase::whereBetween('pur_date', [$monthStart, $monthEnd])->sum('pur_amnt_total'),
-                'outwards'  => (float) Outward::whereBetween('out_date', [$monthStart, $monthEnd])->sum(DB::raw('out_qty * IFNULL(unitPrice, 0)')),
+                'outwards' => (float) Outward::whereBetween('out_date', [$monthStart, $monthEnd])->sum(DB::raw('out_qty * IFNULL(unitPrice, 0)')),
                 'sales_cabinet' => (float) DB::table('sales_orders')->where('product_type', 'cabinet')->whereBetween('order_date', [$monthStart, $monthEnd])->sum('total_amount'),
                 'sales_letters' => (float) DB::table('sales_orders')->where('product_type', 'letters')->whereBetween('order_date', [$monthStart, $monthEnd])->sum('total_amount'),
                 'sales_signage' => (float) DB::table('sales_orders')->where('product_type', 'signage')->whereBetween('order_date', [$monthStart, $monthEnd])->sum('total_amount'),
@@ -144,17 +139,17 @@ class DashboardController extends Controller
         // Parse date range from request or use financial year defaults
         $financialYearStart = Carbon::create(Carbon::now()->year, 4, 1);
         $financialYearEnd = Carbon::create(Carbon::now()->year + 1, 3, 31);
-        
+
         if (Carbon::now()->month < 4) {
             $financialYearStart = Carbon::create(Carbon::now()->year - 1, 4, 1);
             $financialYearEnd = Carbon::create(Carbon::now()->year, 3, 31);
         }
 
-        $startDate = $request->input('start_date') 
+        $startDate = $request->input('start_date')
             ? Carbon::parse($request->input('start_date'))->startOfDay()
             : $financialYearStart->copy()->startOfDay();
         $endDate = $request->input('end_date')
-            ? Carbon::parse($request->input('end_date'))->endOfDay() 
+            ? Carbon::parse($request->input('end_date'))->endOfDay()
             : $financialYearEnd->copy()->endOfDay();
 
         // Purchase Expenses by Sub Group - filtered by date range
@@ -187,14 +182,14 @@ class DashboardController extends Controller
         // Expenses by Category - filtered by date range
         $expensesByCategoryQuery = Expense::whereBetween('exp_date', [$startDate, $endDate])
             ->where('amt_type', 'Expense');
-        
-        if (!\Auth::user()->hasRole(['super-admin', 'admin'])) {
-            $expensesByCategoryQuery->where(function($q) {
+
+        if (! \Auth::user()->hasRole(['super-admin', 'admin'])) {
+            $expensesByCategoryQuery->where(function ($q) {
                 $q->whereNull('doneby')
-                  ->orWhere('doneby', 'NOT LIKE', '%Head Office%');
+                    ->orWhere('doneby', 'NOT LIKE', '%Head Office%');
             });
         }
-        
+
         $expensesByCategory = $expensesByCategoryQuery
             ->select('exp_cate', DB::raw('SUM(amount) as total_value'))
             ->groupBy('exp_cate')
@@ -209,14 +204,14 @@ class DashboardController extends Controller
         // Deposits by Category - filtered by date range
         $depositsByCategoryQuery = Expense::whereBetween('exp_date', [$startDate, $endDate])
             ->where('amt_type', 'Deposit');
-        
-        if (!\Auth::user()->hasRole(['super-admin', 'admin'])) {
-            $depositsByCategoryQuery->where(function($q) {
+
+        if (! \Auth::user()->hasRole(['super-admin', 'admin'])) {
+            $depositsByCategoryQuery->where(function ($q) {
                 $q->whereNull('doneby')
-                  ->orWhere('doneby', 'NOT LIKE', '%Head Office%');
+                    ->orWhere('doneby', 'NOT LIKE', '%Head Office%');
             });
         }
-        
+
         $depositsByCategory = $depositsByCategoryQuery
             ->select('exp_cate', DB::raw('SUM(amount) as total_value'))
             ->groupBy('exp_cate')

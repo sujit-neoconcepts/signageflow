@@ -73,7 +73,7 @@ class PurchaseController extends Controller
             ->where('entry_type', 0)
             ->groupBy('purchase_info_id');
 
-        if (!(Auth::user()->can('all') || Auth::user()->can('purchase_list_for_all'))) {
+        if (! (Auth::user()->can('all') || Auth::user()->can('purchase_list_for_all'))) {
             $lineAggQuery->where('pur_incharge', Auth::user()->name);
         }
 
@@ -188,7 +188,7 @@ class PurchaseController extends Controller
             ->leftJoin('products', 'products.id', 'purchases.pur_pr_id', 'left')
             ->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left');
 
-        if (!(Auth::user()->can('all') || Auth::user()->can('purchase_list_for_all'))) {
+        if (! (Auth::user()->can('all') || Auth::user()->can('purchase_list_for_all'))) {
             $query = $query->where('pur_incharge', Auth::user()->name);
         }
 
@@ -223,8 +223,8 @@ class PurchaseController extends Controller
                 'icon' => 'M2,6H4V18H2V6M5,6H6V18H5V6M7,6H10V18H7V6M11,6H12V18H11V6M14,6H16V18H14V6M17,6H20V18H17V6M21,6H22V18H21V6Z',
                 'key' => 'id',
                 'cond' => '*',
-                'compvl' => '*'
-            ]
+                'compvl' => '*',
+            ],
         ];
 
         $this->resourceNeo['showTotal'] = true;
@@ -307,18 +307,18 @@ class PurchaseController extends Controller
         $resourceNeo['AllowDel'] = true;
         $resourceNeo['formInfo'] = Purchase::formInfo();
         $resourceNeo['formInfoMulti'] = Purchase::formInfoMulti();
-        
+
         $resourceNeo['productSubgroups'] = [
             'Capex', 'Consumable Item', 'Indirect Expense/Purchase', 'Opex',
             'Plant & Machinery Item', 'Services Purchase', 'Services Sale',
-            'Stock Item', 'Tools'
+            'Stock Item', 'Tools',
         ];
         $resourceNeo['productGroups'] = \App\Models\Pgroup::getOptionsForProduct();
-        $resourceNeo['internalNames'] = \App\Models\ConsumableInternalName::all()->map(function($cin) {
+        $resourceNeo['internalNames'] = \App\Models\ConsumableInternalName::all()->map(function ($cin) {
             return [
                 'id' => $cin->id,
                 'label' => $cin->name,
-                'data' => ['unitName' => $cin->unitName, 'unitAltName' => $cin->unitAltName]
+                'data' => ['unitName' => $cin->unitName, 'unitAltName' => $cin->unitAltName],
             ];
         });
         $resourceNeo['units'] = \App\Models\Munit::orderBy('name')->pluck('name');
@@ -344,8 +344,8 @@ class PurchaseController extends Controller
         }
 
         foreach (array_keys($formInfoMulti) as $key) {
-            $attributeNames['multi.*.' . $key] = $formInfoMulti[$key]['label'];
-            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.' . $key] = $formInfoMulti[$key]['vRule'];
+            $attributeNames['multi.*.'.$key] = $formInfoMulti[$key]['label'];
+            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.'.$key] = $formInfoMulti[$key]['vRule'];
         }
 
         $validateRule['pur_inv'] = [
@@ -382,8 +382,8 @@ class PurchaseController extends Controller
                 $lineData['purchase_info_id'] = $purchaseInfo->id;
                 $lineData['entry_type'] = 0;
 
-                if (!empty($lineData['pur_pr_detail_int']) && !empty($lineData['pur_qty_int']) && !empty($lineData['pur_rate_int'])) {
-                    $averagePriceService = new AverageUnitPriceService();
+                if (! empty($lineData['pur_pr_detail_int']) && ! empty($lineData['pur_qty_int']) && ! empty($lineData['pur_rate_int'])) {
+                    $averagePriceService = new AverageUnitPriceService;
                     $averagePriceService->calculateAndUpdateAveragePrice(
                         $lineData['pur_pr_detail_int'],
                         $lineData['pur_qty_int'],
@@ -397,9 +397,9 @@ class PurchaseController extends Controller
             $this->syncPurchaseInfoTotals($purchaseInfo->id);
         });
 
-        \ActivityLog::add(['action' => 'added', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->pur_supplier . ' - ' . $request->pur_inv]);
+        \ActivityLog::add(['action' => 'added', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->pur_supplier.' - '.$request->pur_inv]);
 
-        return redirect()->route('purchase.index')->with(['message' => $this->resourceNeo['resourceTitle'] . ' Created Successfully !!', 'msg_type' => 'info']);
+        return redirect()->route('purchase.index')->with(['message' => $this->resourceNeo['resourceTitle'].' Created Successfully !!', 'msg_type' => 'info']);
     }
 
     /**
@@ -424,7 +424,7 @@ class PurchaseController extends Controller
 
         $headerRow = $invoiceLines->first();
         $purchaseInfo = $headerRow->purchaseInfo;
-        $formdata = new \stdClass();
+        $formdata = new \stdClass;
         $formdata->id = $headerRow->id;
         $formdata->pur_date = $headerRow->pur_date;
         $formdata->received_date = $headerRow->received_date;
@@ -453,18 +453,18 @@ class PurchaseController extends Controller
         $resourceNeo['AllowDel'] = true;
         $resourceNeo['formInfo'] = Purchase::formInfo();
         $resourceNeo['formInfoMulti'] = $formInfoMulti;
-        
+
         $resourceNeo['productSubgroups'] = [
             'Capex', 'Consumable Item', 'Indirect Expense/Purchase', 'Opex',
             'Plant & Machinery Item', 'Services Purchase', 'Services Sale',
-            'Stock Item', 'Tools'
+            'Stock Item', 'Tools',
         ];
         $resourceNeo['productGroups'] = \App\Models\Pgroup::getOptionsForProduct();
-        $resourceNeo['internalNames'] = \App\Models\ConsumableInternalName::all()->map(function($cin) {
+        $resourceNeo['internalNames'] = \App\Models\ConsumableInternalName::all()->map(function ($cin) {
             return [
                 'id' => $cin->id,
                 'label' => $cin->name,
-                'data' => ['unitName' => $cin->unitName, 'unitAltName' => $cin->unitAltName]
+                'data' => ['unitName' => $cin->unitName, 'unitAltName' => $cin->unitAltName],
             ];
         });
         $resourceNeo['units'] = \App\Models\Munit::orderBy('name')->pluck('name');
@@ -496,8 +496,8 @@ class PurchaseController extends Controller
         ];
 
         foreach (array_keys($formInfoMulti) as $key) {
-            $attributeNames['multi.*.' . $key] = $formInfoMulti[$key]['label'];
-            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.' . $key] = $formInfoMulti[$key]['vRule'];
+            $attributeNames['multi.*.'.$key] = $formInfoMulti[$key]['label'];
+            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.'.$key] = $formInfoMulti[$key]['vRule'];
         }
 
         $request->validate($validateRule, [], $attributeNames);
@@ -511,7 +511,7 @@ class PurchaseController extends Controller
         ];
 
         DB::transaction(function () use ($request, $purchase, $purchaseInfo, $formInfoMulti, $headerData) {
-            if (!$purchaseInfo) {
+            if (! $purchaseInfo) {
                 $purchaseInfo = PurchaseInfo::create(array_merge($headerData, ['sum_total' => 0]));
             } else {
                 $purchaseInfo->update($headerData);
@@ -538,8 +538,8 @@ class PurchaseController extends Controller
                 $lineId = isset($ml['id']) ? (int) $ml['id'] : 0;
 
                 if ($lineId > 0 && $existingLines->has($lineId)) {
-                    if (!empty($lineData['pur_pr_detail_int']) && !empty($lineData['pur_qty_int']) && !empty($lineData['pur_rate_int'])) {
-                        $averagePriceService = new AverageUnitPriceService();
+                    if (! empty($lineData['pur_pr_detail_int']) && ! empty($lineData['pur_qty_int']) && ! empty($lineData['pur_rate_int'])) {
+                        $averagePriceService = new AverageUnitPriceService;
                         $averagePriceService->calculateAndUpdateAveragePrice(
                             $lineData['pur_pr_detail_int'],
                             $lineData['pur_qty_int'],
@@ -550,11 +550,12 @@ class PurchaseController extends Controller
 
                     $existingLines[$lineId]->update($lineData);
                     $savedIds[] = $lineId;
+
                     continue;
                 }
 
-                if (!empty($lineData['pur_pr_detail_int']) && !empty($lineData['pur_qty_int']) && !empty($lineData['pur_rate_int'])) {
-                    $averagePriceService = new AverageUnitPriceService();
+                if (! empty($lineData['pur_pr_detail_int']) && ! empty($lineData['pur_qty_int']) && ! empty($lineData['pur_rate_int'])) {
+                    $averagePriceService = new AverageUnitPriceService;
                     $averagePriceService->calculateAndUpdateAveragePrice(
                         $lineData['pur_pr_detail_int'],
                         $lineData['pur_qty_int'],
@@ -567,7 +568,7 @@ class PurchaseController extends Controller
             }
 
             $toDeleteIds = array_values(array_diff($existingLines->keys()->all(), $savedIds));
-            if (!empty($toDeleteIds)) {
+            if (! empty($toDeleteIds)) {
                 Purchase::whereIn('id', $toDeleteIds)->delete();
             }
 
@@ -578,7 +579,7 @@ class PurchaseController extends Controller
             }
         });
 
-        \ActivityLog::add(['action' => 'updated', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->pur_supplier . ' - ' . $request->pur_inv]);
+        \ActivityLog::add(['action' => 'updated', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->pur_supplier.' - '.$request->pur_inv]);
 
         return redirect()->route('purchase.index')->with(['message' => 'Purchase Updated Successfully !!', 'msg_type' => 'info']);
     }
@@ -598,7 +599,7 @@ class PurchaseController extends Controller
         $purchaseInfoId = $invoiceLines->first()->purchase_info_id;
         $lineIds = $invoiceLines->pluck('id')->all();
 
-        if (!empty($purchaseInfoId)) {
+        if (! empty($purchaseInfoId)) {
             PurchaseInfo::where('id', $purchaseInfoId)->delete();
         }
 
@@ -618,7 +619,7 @@ class PurchaseController extends Controller
         $groupMap = [];
 
         foreach ($purchases as $purchase) {
-            $groupKey = 'info:' . $purchase->purchase_info_id;
+            $groupKey = 'info:'.$purchase->purchase_info_id;
             $groupMap[$groupKey] = $purchase;
         }
 
@@ -633,7 +634,7 @@ class PurchaseController extends Controller
             $purchaseInfoId = $invoiceLines->first()->purchase_info_id;
             $lineIds = $invoiceLines->pluck('id')->all();
 
-            if (!empty($purchaseInfoId)) {
+            if (! empty($purchaseInfoId)) {
                 PurchaseInfo::where('id', $purchaseInfoId)->delete();
             }
 
@@ -669,7 +670,7 @@ class PurchaseController extends Controller
                 'pur_loc' => $purchase->pur_loc,
                 'unit' => $purchase->pur_unint_int_alt,
                 'group_name' => $productInfo->group_name,
-            ]
+            ],
         ]);
     }
 
@@ -684,7 +685,7 @@ class PurchaseController extends Controller
         $formInfoMulti = Purchase::formInfoMulti();
         $columns = [];
         foreach ($formInfo as $key => $meta) {
-            if (!($meta['hidden'] ?? false) && $key !== 'roundoff') {
+            if (! ($meta['hidden'] ?? false) && $key !== 'roundoff') {
                 $columns[] = ['key' => $key, 'label' => $meta['label'], 'align' => $meta['align'] ?? 'left'];
             }
         }
@@ -692,7 +693,7 @@ class PurchaseController extends Controller
             if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) {
                 continue;
             }
-            if (!($meta['hidden'] ?? false)) {
+            if (! ($meta['hidden'] ?? false)) {
                 $columns[] = ['key' => $key, 'label' => $meta['label'], 'align' => $meta['align'] ?? 'left'];
             }
         }
@@ -715,6 +716,7 @@ class PurchaseController extends Controller
             $item['groupinfo_name'] = $groupInfo->groupinfo_name ?? '';
             $item['groupinfo_sname'] = $groupInfo->groupinfo_sname ?? '';
             $item['barcode_link'] = route('purchase.barcode', $line->id);
+
             return $item;
         })->values();
 

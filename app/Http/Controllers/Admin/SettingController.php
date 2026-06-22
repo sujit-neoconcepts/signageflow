@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Inertia\Inertia;
+use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
+use Inertia\Inertia;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class SettingController extends Controller
 {
@@ -22,14 +22,17 @@ class SettingController extends Controller
         $this->middleware('can:setting_edit', ['only' => ['edit', 'update']]);
         $this->middleware('can:setting_delete', ['only' => ['destroy']]);
     }
+
     /**
      * Display a listing of the resource.
      */
     public function list()
     {
         $settings = Setting::orderBy('group')->get();
+
         return Inertia::render('Admin/SettingShowView', compact('settings'));
     }
+
     public function index()
     {
         $globalSearch = AllowedFilter::callback('global', function ($query, $value) {
@@ -117,8 +120,10 @@ class SettingController extends Controller
         $setting->group = $request->group;
         $setting->access_roles = $request->access_roles;
         $setting->save();
+
         return redirect()->route('setting.index')->with('message', 'Settings Updated Successfully');
     }
+
     public function bulkUpdate(Request $request)
     {
 
@@ -130,8 +135,8 @@ class SettingController extends Controller
             if ($setToBeUpdated->isDirty('value')) {
                 $setToBeUpdated->save();
                 $isDirty = true;
-                //$uname=$setToBeUpdated->label.'->'.$setToBeUpdated->value;
-                //\ActivityLog::add(['action'=>'updated','module'=>'settings','data_key'=>$uname]);
+                // $uname=$setToBeUpdated->label.'->'.$setToBeUpdated->value;
+                // \ActivityLog::add(['action'=>'updated','module'=>'settings','data_key'=>$uname]);
             }
         }
         if ($isDirty) {
@@ -145,14 +150,13 @@ class SettingController extends Controller
         return redirect()->route('setting.list')->with($res);
     }
 
-
-
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(Setting $setting)
     {
         $setting->delete();
+
         return redirect()->route('setting.index')->with('message', 'Setting Deleted !!');
     }
 
@@ -165,17 +169,18 @@ class SettingController extends Controller
             return redirect()->route('setting.index')->with('message', 'Athentication Failed!!');
         }
     }
+
     public function changeFinancialYear(Request $request)
     {
         $request->validate([
-            'year' => 'required|string|regex:/^\d{4}-\d{4}$/'
+            'year' => 'required|string|regex:/^\d{4}-\d{4}$/',
         ]);
 
         $years = explode('-', $request->year);
         session([
-            'financial_year_start' => $years[0] . '-04-01',
-            'financial_year_end' => $years[1] . '-03-31',
-            'financial_year' => $request->year
+            'financial_year_start' => $years[0].'-04-01',
+            'financial_year_end' => $years[1].'-03-31',
+            'financial_year' => $request->year,
         ]);
 
         return redirect()->back()->with('message', 'Financial year changed successfully');

@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Inertia\Inertia;
+use App\Http\Controllers\Controller;
 use App\Models\Permission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
+use Inertia\Inertia;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class PermissionController extends Controller
 {
@@ -23,6 +23,7 @@ class PermissionController extends Controller
         $this->middleware('can:permission_edit', ['only' => ['edit', 'update']]);
         $this->middleware('can:permission_delete', ['only' => ['destroy']]);
     }
+
     /**
      * Display a listing of the resource.
      *
@@ -55,7 +56,7 @@ class PermissionController extends Controller
 
         return Inertia::render('Admin/IndexView', ['resourceData' => $roles, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) {
             $table->withGlobalSearch()
-                ->column('name', 'Name', searchable: false, sortable: true,)
+                ->column('name', 'Name', searchable: false, sortable: true)
                 ->column(label: 'Actions')
                 ->perPageOptions([10, 15, 30, 50, 100, 10000]);
         });
@@ -70,13 +71,13 @@ class PermissionController extends Controller
     {
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = Permission::formInfo();
+
         return Inertia::render('Admin/AddEditView', compact('resourceNeo'));
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
@@ -102,18 +103,16 @@ class PermissionController extends Controller
         $formdata = $permission;
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = Permission::formInfo();
+
         return Inertia::render('Admin/AddEditView', compact('formdata', 'resourceNeo'));
     }
-
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-
     public function update(Request $request, Permission $permission)
     {
         $request->validate([
@@ -127,7 +126,6 @@ class PermissionController extends Controller
         return redirect()->route('permission.index')->with('message', 'Permission Updated Successfully');
     }
 
-
     /**
      * Remove the specified resource from storage.
      *
@@ -137,6 +135,7 @@ class PermissionController extends Controller
     public function destroy(Permission $permission)
     {
         $permission->delete();
+
         return redirect()->route('permission.index')->with('message', 'Permission Deleted !!');
     }
 }

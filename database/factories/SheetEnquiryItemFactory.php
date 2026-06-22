@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\SheetEnquiry;
 use App\Models\Grade;
+use App\Models\SheetEnquiry;
 use App\Models\Thickness;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\SheetEnquiryItem>
@@ -20,13 +20,13 @@ class SheetEnquiryItemFactory extends Factory
     public function definition(): array
     {
         $requiredQty = $this->faker->numberBetween(10, 100);
-                $qty = $requiredQty + $this->faker->numberBetween(-5, 5);
-                $weightPerSheet = $this->faker->randomFloat(3, 10, 100);
-                $requiredWeight = $requiredQty * $weightPerSheet;
-                $weight = $qty * $weightPerSheet;
-                $soldQty = $this->faker->numberBetween(0, $qty);
-                $soldWeight = $soldQty * $weightPerSheet;
-        
+        $qty = $requiredQty + $this->faker->numberBetween(-5, 5);
+        $weightPerSheet = $this->faker->randomFloat(3, 10, 100);
+        $requiredWeight = $requiredQty * $weightPerSheet;
+        $weight = $qty * $weightPerSheet;
+        $soldQty = $this->faker->numberBetween(0, $qty);
+        $soldWeight = $soldQty * $weightPerSheet;
+
         return [
             'sheet_enquiry_id' => SheetEnquiry::inRandomOrder()->first()?->id ?? SheetEnquiry::factory(),
             'grade' => Grade::inRandomOrder()->first()?->name ?? '304',

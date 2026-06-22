@@ -4,7 +4,6 @@ namespace App\Rules;
 
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
-
 use Illuminate\Support\Facades\Http;
 
 class Recaptcha implements ValidationRule
@@ -16,12 +15,12 @@ class Recaptcha implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        $response = Http::asForm()->post("https://www.google.com/recaptcha/api/siteverify", [
+        $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
             'secret' => config('services.recaptcha.secretkey'),
-            'response' => $value
+            'response' => $value,
         ]);
 
-        if (!($response->successful() && $response->json('success') && $response->json('score') > 0.5)) {
+        if (! ($response->successful() && $response->json('success') && $response->json('score') > 0.5)) {
             $fail('Failed captcha validation.');
         }
 

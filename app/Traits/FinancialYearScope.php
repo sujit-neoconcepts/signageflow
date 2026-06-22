@@ -8,10 +8,10 @@ trait FinancialYearScope
 {
     public function scopeInFinancialYear(Builder $query)
     {
-        //return $query;
+        // return $query;
         return $query->whereBetween($this->getDateColumn(), [
             session('financial_year_start'),
-            session('financial_year_end')
+            session('financial_year_end'),
         ]);
     }
 

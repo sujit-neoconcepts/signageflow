@@ -31,8 +31,11 @@ abstract class BaseCostSheetController extends Controller
     }
 
     abstract protected function resourceName(): string;
+
     abstract protected function resourceTitle(): string;
+
     abstract protected function permissionKey(): string;
+
     abstract protected function prodType(): string;
 
     protected function buildResourceNeo(): array
@@ -49,9 +52,9 @@ abstract class BaseCostSheetController extends Controller
         $formInfo = CostSheet::formInfo();
         $formInfoMulti = [];
 
-        $globalSearch = AllowedFilter::callback('global', function ($query, $value) use ($formInfo, $formInfoMulti) {
-            $query->where(function ($query) use ($value, $formInfo, $formInfoMulti) {
-                Collection::wrap($value)->each(function ($value) use ($query, $formInfo, $formInfoMulti) {
+        $globalSearch = AllowedFilter::callback('global', function ($query, $value) {
+            $query->where(function ($query) use ($value) {
+                Collection::wrap($value)->each(function ($value) use ($query) {
                     $query->orWhere('name', 'LIKE', "%{$value}%");
                 });
             });
@@ -66,21 +69,21 @@ abstract class BaseCostSheetController extends Controller
             ->withQueryString();
 
         $resourceNeo = $this->buildResourceNeo();
-        if (\Auth::user()->can($this->permissionKey() . '_delete')) {
+        if (\Auth::user()->can($this->permissionKey().'_delete')) {
             $resourceNeo['bulkActions'] = ['bulk_delete' => []];
         }
-        if (\Auth::user()->can($this->permissionKey() . '_export')) {
+        if (\Auth::user()->can($this->permissionKey().'_export')) {
             $resourceNeo['bulkActions']['csvExport'] = [];
         }
         $resourceNeo['extraMainLinks'] = [
             [
                 'label' => 'Import with Composition',
-                'link' => $this->resourceName() . '.importWithComposition',
+                'link' => $this->resourceName().'.importWithComposition',
                 'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z',
             ],
             [
                 'label' => 'Import',
-                'link' => $this->resourceName() . '.import',
+                'link' => $this->resourceName().'.import',
                 'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z',
             ],
         ];
@@ -148,8 +151,8 @@ abstract class BaseCostSheetController extends Controller
             'data_key' => $request->name,
         ]);
 
-        return redirect()->route($this->resourceName() . '.index')->with([
-            'message' => $this->resourceTitle() . ' Created Successfully !!',
+        return redirect()->route($this->resourceName().'.index')->with([
+            'message' => $this->resourceTitle().' Created Successfully !!',
             'msg_type' => 'info',
         ]);
     }
@@ -163,43 +166,40 @@ abstract class BaseCostSheetController extends Controller
         $prodType = $this->prodType();
 
         $validated = $request->validate([
-            'name'      => ['required', 'max:255', Rule::unique('cost_sheets', 'name')->where(fn ($q) => $q->where('prod_type', $prodType))],
+            'name' => ['required', 'max:255', Rule::unique('cost_sheets', 'name')->where(fn ($q) => $q->where('prod_type', $prodType))],
             'no_of_unit' => 'required|integer|min:1',
-            'qty_unit'  => 'required|max:100',
+            'qty_unit' => 'required|max:100',
             'alt_units' => 'nullable|max:100',
-            'rate'      => 'nullable|numeric|min:0',
+            'rate' => 'nullable|numeric|min:0',
         ]);
 
         $item = CostSheet::create([
-            'prod_type'  => $prodType,
-            'name'       => $validated['name'],
+            'prod_type' => $prodType,
+            'name' => $validated['name'],
             'no_of_unit' => $validated['no_of_unit'],
-            'qty_unit'   => $validated['qty_unit'],
-            'alt_units'  => $validated['alt_units'] ?? null,
-            'rate'       => $validated['rate'] ?? 0,
+            'qty_unit' => $validated['qty_unit'],
+            'alt_units' => $validated['alt_units'] ?? null,
+            'rate' => $validated['rate'] ?? 0,
         ]);
 
         \ActivityLog::add([
-            'action'   => 'added',
-            'module'   => $this->resourceName(),
+            'action' => 'added',
+            'module' => $this->resourceName(),
             'data_key' => $item->name,
         ]);
 
         return response()->json([
-            'id'        => $item->id,
-            'label'     => $item->name,
-            'name'      => $item->name,
+            'id' => $item->id,
+            'label' => $item->name,
+            'name' => $item->name,
             'prod_type' => $item->prod_type,
-            'qty_unit'  => $item->qty_unit,
+            'qty_unit' => $item->qty_unit,
             'alt_units' => $item->alt_units,
-            'rate'      => (float) $item->rate,
+            'rate' => (float) $item->rate,
         ], 201);
     }
 
-
-    public function show(CostSheet $costSheet)
-    {
-    }
+    public function show(CostSheet $costSheet) {}
 
     public function edit(CostSheet $costSheet)
     {
@@ -251,8 +251,8 @@ abstract class BaseCostSheetController extends Controller
             'data_key' => $request->name,
         ]);
 
-        return redirect()->route($this->resourceName() . '.index')->with([
-            'message' => $this->resourceTitle() . ' Updated Successfully !!',
+        return redirect()->route($this->resourceName().'.index')->with([
+            'message' => $this->resourceTitle().' Updated Successfully !!',
             'msg_type' => 'info',
         ]);
     }
@@ -271,7 +271,7 @@ abstract class BaseCostSheetController extends Controller
             'data_key' => $uname,
         ]);
 
-        return redirect()->back()->with('message', $this->resourceTitle() . ' Deleted !!');
+        return redirect()->back()->with('message', $this->resourceTitle().' Deleted !!');
     }
 
     public function bulkDestroy()
@@ -286,7 +286,7 @@ abstract class BaseCostSheetController extends Controller
             'data_key' => $uname,
         ]);
 
-        return redirect()->back()->with('message', 'Selected ' . $this->resourceTitle() . ' Deleted !!');
+        return redirect()->back()->with('message', 'Selected '.$this->resourceTitle().' Deleted !!');
     }
 
     public function importView()
@@ -299,7 +299,7 @@ abstract class BaseCostSheetController extends Controller
 
         $resourceNeo['extraMainLinks'] = [
             [
-                'link' => $this->resourceName() . '.index',
+                'link' => $this->resourceName().'.index',
                 'label' => 'Back to List',
                 'icon' => 'M12 2L4 5V11C4 16.55 7.84 21.74 13 23C18.16 21.74 22 16.55 22 11V5L12 2M11 18V13H8L13 8V13H16L11 18Z',
             ],
@@ -322,7 +322,7 @@ abstract class BaseCostSheetController extends Controller
         $file = $request->file('file');
         $path = $file->getRealPath();
 
-        if (!is_readable($path)) {
+        if (! is_readable($path)) {
             return redirect()->back()->with([
                 'message' => 'Import failed! Unable to read the uploaded file.',
                 'msg_type' => 'danger',
@@ -340,9 +340,9 @@ abstract class BaseCostSheetController extends Controller
         $headers = array_shift($records);
         $expectedHeaders = ['name', 'qty_unit', 'alt_units', 'rate'];
         $missingHeaders = array_diff($expectedHeaders, $headers);
-        if (!empty($missingHeaders)) {
+        if (! empty($missingHeaders)) {
             return redirect()->back()->with([
-                'message' => 'Import failed! Missing required columns: ' . implode(', ', $missingHeaders),
+                'message' => 'Import failed! Missing required columns: '.implode(', ', $missingHeaders),
                 'msg_type' => 'danger',
             ]);
         }
@@ -363,6 +363,7 @@ abstract class BaseCostSheetController extends Controller
         foreach ($records as $record) {
             if (empty(array_filter($record, fn ($val) => $val !== null && $val !== ''))) {
                 $rowNumber++;
+
                 continue;
             }
 
@@ -381,13 +382,13 @@ abstract class BaseCostSheetController extends Controller
             ]);
 
             if ($validator->fails()) {
-                $errors[] = "Row {$rowNumber}: " . implode(', ', $validator->errors()->all());
+                $errors[] = "Row {$rowNumber}: ".implode(', ', $validator->errors()->all());
             } else {
                 $rowValidated = $validator->validated();
-                if (!isset($allUnitsLookup[$rowValidated['qty_unit']])) {
+                if (! isset($allUnitsLookup[$rowValidated['qty_unit']])) {
                     $errors[] = "Row {$rowNumber}: Qty Unit does not exist in Measurement Unit master.";
                 }
-                if (!empty($rowValidated['alt_units']) && !isset($allUnitsLookup[$rowValidated['alt_units']])) {
+                if (! empty($rowValidated['alt_units']) && ! isset($allUnitsLookup[$rowValidated['alt_units']])) {
                     $errors[] = "Row {$rowNumber}: Alt Units does not exist in Measurement Unit master.";
                 }
                 $validatedData[] = $rowValidated;
@@ -396,9 +397,9 @@ abstract class BaseCostSheetController extends Controller
             $rowNumber++;
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             return redirect()->back()->with([
-                'message' => "Import failed! Please fix the following errors:\n\n" . implode("\n", $errors),
+                'message' => "Import failed! Please fix the following errors:\n\n".implode("\n", $errors),
                 'msg_type' => 'danger',
             ]);
         }
@@ -435,15 +436,15 @@ abstract class BaseCostSheetController extends Controller
                 'data_key' => count($validatedData),
             ]);
 
-            return redirect()->route($this->resourceName() . '.index')->with([
-                'message' => $this->resourceTitle() . ' import completed. Created: ' . $createdCount . ', Updated: ' . $updatedCount . '.',
+            return redirect()->route($this->resourceName().'.index')->with([
+                'message' => $this->resourceTitle().' import completed. Created: '.$createdCount.', Updated: '.$updatedCount.'.',
                 'msg_type' => 'success',
             ]);
         } catch (\Exception $e) {
             \DB::rollBack();
 
             return redirect()->back()->with([
-                'message' => 'Import failed! Error: ' . $e->getMessage(),
+                'message' => 'Import failed! Error: '.$e->getMessage(),
                 'msg_type' => 'danger',
             ]);
         }
@@ -462,7 +463,7 @@ abstract class BaseCostSheetController extends Controller
 
         $resourceNeo['extraMainLinks'] = [
             [
-                'link' => $this->resourceName() . '.index',
+                'link' => $this->resourceName().'.index',
                 'label' => 'Back to List',
                 'icon' => 'M12 2L4 5V11C4 16.55 7.84 21.74 13 23C18.16 21.74 22 16.55 22 11V5L12 2M11 18V13H8L13 8V13H16L11 18Z',
             ],
@@ -474,7 +475,7 @@ abstract class BaseCostSheetController extends Controller
             ['name' => 'Steel Frame', 'qty_unit' => $qtyUnit1, 'alt_units' => '', 'rate' => '850.00', 'comp_section' => '', 'comp_group_name' => '', 'comp_child_name' => '', 'comp_quantity' => '', 'comp_margin' => ''],
         ];
 
-        $importRoute = $this->resourceName() . '.importWithCompositionStore';
+        $importRoute = $this->resourceName().'.importWithCompositionStore';
 
         return Inertia::render('Admin/CostSheetImportWithCompositionView', compact('resourceNeo', 'sampleData', 'importRoute'));
     }
@@ -488,7 +489,7 @@ abstract class BaseCostSheetController extends Controller
         $file = $request->file('file');
         $path = $file->getRealPath();
 
-        if (!is_readable($path)) {
+        if (! is_readable($path)) {
             return redirect()->back()->with([
                 'message' => 'Import failed! Unable to read the uploaded file.',
                 'msg_type' => 'danger',
@@ -506,9 +507,9 @@ abstract class BaseCostSheetController extends Controller
         $headers = array_map('trim', array_shift($records));
         $requiredHeaders = ['name', 'qty_unit', 'rate'];
         $missingHeaders = array_diff($requiredHeaders, $headers);
-        if (!empty($missingHeaders)) {
+        if (! empty($missingHeaders)) {
             return redirect()->back()->with([
-                'message' => 'Import failed! Missing required columns: ' . implode(', ', $missingHeaders),
+                'message' => 'Import failed! Missing required columns: '.implode(', ', $missingHeaders),
                 'msg_type' => 'danger',
             ]);
         }
@@ -534,6 +535,7 @@ abstract class BaseCostSheetController extends Controller
         foreach ($records as $record) {
             if (empty(array_filter($record, fn ($val) => $val !== null && $val !== ''))) {
                 $rowNumber++;
+
                 continue;
             }
 
@@ -546,25 +548,27 @@ abstract class BaseCostSheetController extends Controller
             if (empty($data['name'])) {
                 $errors[] = "Row {$rowNumber}: Name is required.";
                 $rowNumber++;
+
                 continue;
             }
             if (empty($data['qty_unit'])) {
                 $errors[] = "Row {$rowNumber}: Qty Unit is required.";
                 $rowNumber++;
+
                 continue;
             }
-            if (!isset($allUnitsLookup[$data['qty_unit']])) {
+            if (! isset($allUnitsLookup[$data['qty_unit']])) {
                 $errors[] = "Row {$rowNumber}: Qty Unit '{$data['qty_unit']}' does not exist in Measurement Unit master.";
             }
-            if (!empty($data['alt_units']) && !isset($allUnitsLookup[$data['alt_units']])) {
+            if (! empty($data['alt_units']) && ! isset($allUnitsLookup[$data['alt_units']])) {
                 $errors[] = "Row {$rowNumber}: Alt Units '{$data['alt_units']}' does not exist in Measurement Unit master.";
             }
-            if (!is_numeric($data['rate'] ?? '') || (float) ($data['rate'] ?? 0) < 0) {
+            if (! is_numeric($data['rate'] ?? '') || (float) ($data['rate'] ?? 0) < 0) {
                 $errors[] = "Row {$rowNumber}: Rate must be a non-negative number.";
             }
 
             $name = $data['name'];
-            if (!isset($grouped[$name])) {
+            if (! isset($grouped[$name])) {
                 $grouped[$name] = [
                     'header' => [
                         'name' => $name,
@@ -579,25 +583,25 @@ abstract class BaseCostSheetController extends Controller
             // Parse composition columns (if they exist and section is filled)
             $section = trim($data['comp_section'] ?? '');
             if ($section !== '') {
-                if (!in_array($section, $validSections)) {
-                    $errors[] = "Row {$rowNumber}: comp_section '{$section}' is invalid. Must be one of: " . implode(', ', $validSections) . '.';
+                if (! in_array($section, $validSections)) {
+                    $errors[] = "Row {$rowNumber}: comp_section '{$section}' is invalid. Must be one of: ".implode(', ', $validSections).'.';
                 } else {
                     $compGroupName = trim($data['comp_group_name'] ?? '');
                     $compChildName = trim($data['comp_child_name'] ?? '');
                     $compQty = $data['comp_quantity'] ?? 0;
                     $compMargin = $data['comp_margin'] ?? 0;
 
-                    if (!is_numeric($compQty) || (float) $compQty < 0) {
+                    if (! is_numeric($compQty) || (float) $compQty < 0) {
                         $errors[] = "Row {$rowNumber}: comp_quantity must be a non-negative number.";
                     }
-                    if ($compMargin !== '' && (!is_numeric($compMargin) || (float) $compMargin < 0)) {
+                    if ($compMargin !== '' && (! is_numeric($compMargin) || (float) $compMargin < 0)) {
                         $errors[] = "Row {$rowNumber}: comp_margin must be a non-negative number.";
                     }
 
                     if ($section === 'raw_material') {
                         if (empty($compGroupName)) {
                             $errors[] = "Row {$rowNumber}: comp_group_name is required for raw_material section.";
-                        } elseif (!isset($groupLookup[$compGroupName])) {
+                        } elseif (! isset($groupLookup[$compGroupName])) {
                             $errors[] = "Row {$rowNumber}: comp_group_name '{$compGroupName}' does not exist in Internal Name Group master.";
                         }
                     } else {
@@ -620,9 +624,9 @@ abstract class BaseCostSheetController extends Controller
             $rowNumber++;
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             return redirect()->back()->with([
-                'message' => "Import failed! Please fix the following errors:\n\n" . implode("\n", $errors),
+                'message' => "Import failed! Please fix the following errors:\n\n".implode("\n", $errors),
                 'msg_type' => 'danger',
             ]);
         }
@@ -633,7 +637,7 @@ abstract class BaseCostSheetController extends Controller
         $allChildNames = [];
         foreach ($grouped as $entry) {
             foreach ($entry['compositions'] as $comp) {
-                if ($comp['section'] !== 'raw_material' && !empty($comp['comp_child_name'])) {
+                if ($comp['section'] !== 'raw_material' && ! empty($comp['comp_child_name'])) {
                     $allChildNames[] = $comp['comp_child_name'];
                 }
             }
@@ -643,13 +647,13 @@ abstract class BaseCostSheetController extends Controller
 
         // Validate child names exist
         $missingChildren = array_diff($allChildNames, array_keys($childLookup));
-        if (!empty($missingChildren)) {
+        if (! empty($missingChildren)) {
             // Check if they are being created in this same import
             $beingCreated = array_keys($grouped);
             $stillMissing = array_diff($missingChildren, $beingCreated);
-            if (!empty($stillMissing)) {
+            if (! empty($stillMissing)) {
                 return redirect()->back()->with([
-                    'message' => "Import failed! The following comp_child_name values do not exist as cost sheets and are not being created in this import:\n" . implode(', ', $stillMissing),
+                    'message' => "Import failed! The following comp_child_name values do not exist as cost sheets and are not being created in this import:\n".implode(', ', $stillMissing),
                     'msg_type' => 'danger',
                 ]);
             }
@@ -686,7 +690,7 @@ abstract class BaseCostSheetController extends Controller
                 }
 
                 // Delete existing compositions and re-create (full replace on import)
-                if (!empty($entry['compositions'])) {
+                if (! empty($entry['compositions'])) {
                     $costSheet->compositions()->delete();
 
                     foreach ($entry['compositions'] as $comp) {
@@ -728,18 +732,18 @@ abstract class BaseCostSheetController extends Controller
             \ActivityLog::add([
                 'action' => 'imported',
                 'module' => $this->resourceName(),
-                'data_key' => count($grouped) . ' items with ' . $compositionCount . ' compositions',
+                'data_key' => count($grouped).' items with '.$compositionCount.' compositions',
             ]);
 
-            return redirect()->route($this->resourceName() . '.index')->with([
-                'message' => $this->resourceTitle() . ' import completed. Created: ' . $createdCount . ', Updated: ' . $updatedCount . ', Compositions: ' . $compositionCount . '.',
+            return redirect()->route($this->resourceName().'.index')->with([
+                'message' => $this->resourceTitle().' import completed. Created: '.$createdCount.', Updated: '.$updatedCount.', Compositions: '.$compositionCount.'.',
                 'msg_type' => 'success',
             ]);
         } catch (\Exception $e) {
             \DB::rollBack();
 
             return redirect()->back()->with([
-                'message' => 'Import failed! Error: ' . $e->getMessage(),
+                'message' => 'Import failed! Error: '.$e->getMessage(),
                 'msg_type' => 'danger',
             ]);
         }

@@ -8,11 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class Munit extends Model
 {
     use HasFactory;
+
     protected $fillable = ['name'];
 
     public static function formInfo()
     {
-        $formInfo = ['name' => ['label' => 'Name', 'vRule' => 'required|unique:munits,name',]];
+        $formInfo = ['name' => ['label' => 'Name', 'vRule' => 'required|unique:munits,name']];
+
         return $formInfo;
     }
 
@@ -23,6 +25,7 @@ class Munit extends Model
         foreach ($allDatas as $allData) {
             $allopts[] = ['id' => $allData->name, 'label' => $allData->name];
         }
+
         return $allopts;
     }
 }

@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Client;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\CoilEnquiry>
@@ -18,8 +18,8 @@ class CoilEnquiryFactory extends Factory
     public function definition(): array
     {
         $enquiryDate = $this->faker->dateTimeBetween('-1 year', 'now');
-                $dispatchDate = $this->faker->dateTimeBetween($enquiryDate, '+1 month');
-        
+        $dispatchDate = $this->faker->dateTimeBetween($enquiryDate, '+1 month');
+
         return [
             'enquiry_number' => null,
             'enquiry_date' => $enquiryDate,

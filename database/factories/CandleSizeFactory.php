@@ -17,7 +17,7 @@ class CandleSizeFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => $this->faker->word() . '-' . $this->faker->randomNumber(3),
+            'name' => $this->faker->word().'-'.$this->faker->randomNumber(3),
         ];
     }
 }

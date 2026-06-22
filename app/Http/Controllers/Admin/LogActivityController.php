@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\User;
-use Inertia\Inertia;
+use App\Http\Controllers\Controller;
 use App\Models\LogActivity;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
+use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\AllowedSort;
 use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
-use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
 
 class LogActivityController extends Controller
 {
@@ -85,8 +85,9 @@ class LogActivityController extends Controller
         $Logactivity->{$request->key} = $request->value;
         $Logactivity->save();
 
-        $uname = $request->key . '->' . $request->value;
+        $uname = $request->key.'->'.$request->value;
         \ActivityLog::add(['action' => 'updated', 'module' => 'activitylog', 'data_key' => $uname]);
+
         return response()->json(['message' => 'Settings Updated Successfully.', 'msg_type' => 'success']);
     }
 
@@ -98,6 +99,7 @@ class LogActivityController extends Controller
         $uname = $logactivity->id;
         $logactivity->delete();
         \ActivityLog::add(['action' => 'deleted', 'module' => 'activitylog', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Logs Deleted !!');
     }
 
@@ -109,6 +111,7 @@ class LogActivityController extends Controller
         LogActivity::whereIn('id', request('ids'))->delete();
         $uname = (count(request('ids')) > 50) ? 'Many' : $uname = implode(',', request('ids'));
         \ActivityLog::add(['action' => 'deleted', 'module' => 'activitylog', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Selected Logs Deleted !!');
     }
 }

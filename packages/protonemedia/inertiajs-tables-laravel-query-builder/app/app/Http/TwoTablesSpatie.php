@@ -32,7 +32,7 @@ class TwoTablesSpatie
 
         return Inertia::render('TwoTables', [
             'companies' => $companies,
-            'users'     => $users,
+            'users' => $users,
         ])->table(function (InertiaTable $inertiaTable) {
             $inertiaTable
                 ->name('users')

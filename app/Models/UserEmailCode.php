@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 class UserEmailCode extends Model
 {
     use HasFactory;
-    public $table = "user_email_codes";
+
+    public $table = 'user_email_codes';
 
     protected $fillable = [
         'user_id',

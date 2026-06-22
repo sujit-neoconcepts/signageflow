@@ -8,11 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class Expcate extends Model
 {
     use HasFactory;
+
     protected $fillable = ['name'];
 
     public static function formInfo()
     {
-        $formInfo = ['name' => ['label' => 'Name', 'vRule' => 'required|unique:expcates,name',]];
+        $formInfo = ['name' => ['label' => 'Name', 'vRule' => 'required|unique:expcates,name']];
+
         return $formInfo;
     }
 
@@ -23,6 +25,7 @@ class Expcate extends Model
         foreach ($allDatas as $allData) {
             $allopts[] = ['id' => $allData->name, 'label' => $allData->name];
         }
+
         return $allopts;
     }
 }

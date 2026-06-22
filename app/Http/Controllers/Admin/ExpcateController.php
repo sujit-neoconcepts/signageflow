@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Inertia\Inertia;
+use App\Http\Controllers\Controller;
 use App\Models\Expcate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
+use Inertia\Inertia;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
-
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class ExpcateController extends Controller
 {
@@ -24,6 +23,7 @@ class ExpcateController extends Controller
         $this->middleware('can:expcate_edit', ['only' => ['edit', 'update']]);
         $this->middleware('can:expcate_delete', ['only' => ['destroy']]);
     }
+
     /**
      * Display a listing of the resource.
      */
@@ -64,13 +64,11 @@ class ExpcateController extends Controller
             [
                 'label' => 'Import',
                 'link' => 'expcate.import',
-                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z'
-            ]
+                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z',
+            ],
         ];
 
-
-        return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' =>
-        $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo, $formInfoMulti) {
+        return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo, $formInfoMulti) {
             $table->withGlobalSearch();
             $arrKey = array_diff(array_keys($formInfo), []);
             foreach ($arrKey as $key) {
@@ -92,6 +90,7 @@ class ExpcateController extends Controller
     {
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = Expcate::formInfo();
+
         return Inertia::render('Admin/AddEditView', compact('resourceNeo'));
     }
 
@@ -133,6 +132,7 @@ class ExpcateController extends Controller
         $formdata = $expcate;
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = Expcate::formInfo();
+
         return Inertia::render('Admin/AddEditView', compact('formdata', 'resourceNeo'));
     }
 
@@ -148,7 +148,7 @@ class ExpcateController extends Controller
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
         }
-        $validateRule['name'] = 'required|unique:expcates,name,' . $expcate->id;
+        $validateRule['name'] = 'required|unique:expcates,name,'.$expcate->id;
         $request->validate($validateRule, [], $attributeNames);
         foreach (array_diff(array_keys($formInfo), []) as $key) {
             $expcate->{$key} = $request->{$key};
@@ -167,6 +167,7 @@ class ExpcateController extends Controller
         $uname = $expcate->id;
         $expcate->delete();
         \ActivityLog::add(['action' => 'deleted', 'module' => 'expcate', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Expcate Deleted !!');
     }
 
@@ -178,6 +179,7 @@ class ExpcateController extends Controller
         Expcate::whereIn('id', request('ids'))->delete();
         $uname = (count(request('ids')) > 50) ? 'Many' : $uname = implode(',', request('ids'));
         \ActivityLog::add(['action' => 'deleted', 'module' => 'expcate', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Selected Expcate Deleted !!');
     }
 
@@ -190,8 +192,8 @@ class ExpcateController extends Controller
             [
                 'link' => 'expcate.index',
                 'label' => 'Back to List',
-                'icon' => 'M12 3C14.21 3 16 4.79 16 7S14.21 11 12 11 8 9.21 8 7 9.79 3 12 3M16 13.54C16 14.6 15.72 17.07 13.81 19.83L13 15L13.94 13.12C13.32 13.05 12.67 13 12 13S10.68 13.05 10.06 13.12L11 15L10.19 19.83C8.28 17.07 8 14.6 8 13.54C5.61 14.24 4 15.5 4 17V21H20V17C20 15.5 18.4 14.24 16 13.54Z'
-            ]
+                'icon' => 'M12 3C14.21 3 16 4.79 16 7S14.21 11 12 11 8 9.21 8 7 9.79 3 12 3M16 13.54C16 14.6 15.72 17.07 13.81 19.83L13 15L13.94 13.12C13.32 13.05 12.67 13 12 13S10.68 13.05 10.06 13.12L11 15L10.19 19.83C8.28 17.07 8 14.6 8 13.54C5.61 14.24 4 15.5 4 17V21H20V17C20 15.5 18.4 14.24 16 13.54Z',
+            ],
         ];
 
         $sampleData = [
@@ -212,18 +214,18 @@ class ExpcateController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:2048' // 2MB limit
+            'file' => 'required|file|mimes:csv,txt|max:2048', // 2MB limit
         ]);
 
         $file = $request->file('file');
         $path = $file->getRealPath();
 
         // Check if file is readable
-        if (!is_readable($path)) {
+        if (! is_readable($path)) {
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! Unable to read the uploaded file.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -234,7 +236,7 @@ class ExpcateController extends Controller
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! The uploaded file is empty.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -244,11 +246,11 @@ class ExpcateController extends Controller
         // Validate headers
         $expectedHeaders = ['name'];
         $missingHeaders = array_diff($expectedHeaders, $headers);
-        if (!empty($missingHeaders)) {
+        if (! empty($missingHeaders)) {
             return redirect()->back()
                 ->with([
-                    'message' => 'Import failed! Missing required columns: ' . implode(', ', $missingHeaders),
-                    'msg_type' => 'danger'
+                    'message' => 'Import failed! Missing required columns: '.implode(', ', $missingHeaders),
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -257,7 +259,7 @@ class ExpcateController extends Controller
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! No data rows found in the file.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -270,6 +272,7 @@ class ExpcateController extends Controller
             // Skip empty rows
             if (empty(array_filter($record))) {
                 $rowNumber++;
+
                 continue;
             }
 
@@ -284,7 +287,7 @@ class ExpcateController extends Controller
             ]);
 
             if ($validator->fails()) {
-                $errors[] = "Row {$rowNumber}: " . implode(', ', $validator->errors()->all());
+                $errors[] = "Row {$rowNumber}: ".implode(', ', $validator->errors()->all());
             } else {
                 $validatedData[] = $validator->validated();
             }
@@ -293,12 +296,13 @@ class ExpcateController extends Controller
         }
 
         // If there are any validation errors, redirect back with errors
-        if (!empty($errors)) {
-            $errorMessage = "Import failed! Please fix the following errors:\n\n" . implode("\n", $errors);
+        if (! empty($errors)) {
+            $errorMessage = "Import failed! Please fix the following errors:\n\n".implode("\n", $errors);
+
             return redirect()->back()
                 ->with([
                     'message' => $errorMessage,
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -315,16 +319,17 @@ class ExpcateController extends Controller
 
             return redirect()->route('expcate.index')
                 ->with([
-                    'message' => count($validatedData) . ' expcate records imported successfully!',
-                    'msg_type' => 'success'
+                    'message' => count($validatedData).' expcate records imported successfully!',
+                    'msg_type' => 'success',
                 ]);
         } catch (\Exception $e) {
             \DB::rollback();
-            \Log::error('Expcate import failed: ' . $e->getMessage());
+            \Log::error('Expcate import failed: '.$e->getMessage());
+
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! An unexpected error occurred while importing the data. Please try again.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
     }

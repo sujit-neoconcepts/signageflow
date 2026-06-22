@@ -21,13 +21,13 @@ return new class extends Migration
             $table->unsignedBigInteger('client_id')->nullable()->index();
             $table->string('product_type');
             $table->text('remark')->nullable();
-            
+
             $table->decimal('transport_charge', 15, 2)->default(0);
             $table->decimal('gst_percent', 5, 2)->default(18);
             $table->decimal('items_taxable_total', 15, 2)->default(0);
             $table->decimal('items_gst_total', 15, 2)->default(0);
             $table->decimal('total_amount', 15, 2)->default(0);
-            
+
             $table->timestamps();
 
             $table->foreign('client_id')->references('id')->on('clients')->onDelete('set null');

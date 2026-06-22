@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\Helper;
+use App\Http\Controllers\Controller;
 use App\Models\Supplier;
-use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
+use Inertia\Inertia;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
-use App\Helpers\Helper;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class SupplierController extends Controller
 {
@@ -63,14 +63,14 @@ class SupplierController extends Controller
                 [
                     'label' => 'Import',
                     'link' => 'supplier.import',
-                    'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z'
-                ]
+                    'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z',
+                ],
             ];
         }
 
         return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo) {
             $table->withGlobalSearch();
-            //$table->column('id', 'ID', sortable: true);
+            // $table->column('id', 'ID', sortable: true);
             foreach (array_keys($formInfo) as $key) {
                 $table->column($key, $formInfo[$key]['label'], searchable: true, sortable: true);
             }
@@ -87,6 +87,7 @@ class SupplierController extends Controller
     {
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = Supplier::formInfo();
+
         return Inertia::render('Admin/AddEditView', compact('resourceNeo'));
     }
 
@@ -107,10 +108,10 @@ class SupplierController extends Controller
         $request->validate($validateRule, [], $attributeNames);
 
         // Properly capitalize first character with null checking and trimming
-        if (!empty($savedArray['sp_name'])) {
+        if (! empty($savedArray['sp_name'])) {
             $savedArray['sp_name'] = Helper::ucfirstlower($savedArray['sp_name']);
         }
-        if (!empty($savedArray['sp_addr'])) {
+        if (! empty($savedArray['sp_addr'])) {
             $savedArray['sp_addr'] = Helper::ucfirstlower($savedArray['sp_addr']);
         }
 
@@ -122,7 +123,7 @@ class SupplierController extends Controller
             return response()->json(['message' => 'Created successfully', 'data' => Supplier::orderBy('sp_name')->pluck('sp_name')]);
         }
 
-        return redirect()->route('supplier.index')->with(['message' => $this->resourceNeo['resourceTitle'] . ' Created Successfully !!', 'msg_type' => 'info']);
+        return redirect()->route('supplier.index')->with(['message' => $this->resourceNeo['resourceTitle'].' Created Successfully !!', 'msg_type' => 'info']);
     }
 
     /**
@@ -133,6 +134,7 @@ class SupplierController extends Controller
         $formdata = $supplier;
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = Supplier::formInfo();
+
         return Inertia::render('Admin/AddEditView', compact('formdata', 'resourceNeo'));
     }
 
@@ -149,7 +151,7 @@ class SupplierController extends Controller
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
         }
-        $validateRule['sp_name'] = 'required|unique:suppliers,sp_name,' . $supplier->id;
+        $validateRule['sp_name'] = 'required|unique:suppliers,sp_name,'.$supplier->id;
         $request->validate($validateRule, [], $attributeNames);
         foreach (array_keys($formInfo) as $key) {
             $supplier->{$key} = $request->{$key};
@@ -159,7 +161,7 @@ class SupplierController extends Controller
 
         \ActivityLog::add(['action' => 'updated', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->{array_keys($formInfo)[0]}]);
 
-        return redirect()->route('supplier.index')->with(['message' => $this->resourceNeo['resourceTitle'] . ' Updated Successfully !!', 'msg_type' => 'info']);
+        return redirect()->route('supplier.index')->with(['message' => $this->resourceNeo['resourceTitle'].' Updated Successfully !!', 'msg_type' => 'info']);
     }
 
     /**
@@ -172,7 +174,8 @@ class SupplierController extends Controller
         $supplier->delete();
 
         \ActivityLog::add(['action' => 'deleted', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $uname]);
-        return redirect()->back()->with('message', $this->resourceNeo['resourceTitle'] . ' Deleted !!');
+
+        return redirect()->back()->with('message', $this->resourceNeo['resourceTitle'].' Deleted !!');
     }
 
     /**
@@ -183,7 +186,8 @@ class SupplierController extends Controller
         Supplier::whereIn('id', request('ids'))->delete();
         $uname = (count(request('ids')) > 50) ? 'Many' : $uname = implode(',', request('ids'));
         \ActivityLog::add(['action' => 'deleted', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $uname]);
-        return redirect()->back()->with('message', 'Selected ' . $this->resourceNeo['resourceTitle'] . ' Deleted !!');
+
+        return redirect()->back()->with('message', 'Selected '.$this->resourceNeo['resourceTitle'].' Deleted !!');
     }
 
     /**
@@ -195,8 +199,8 @@ class SupplierController extends Controller
             [
                 'link' => 'supplier.index',
                 'label' => 'Back to List',
-                'icon' => 'M11.94 3C9.75 3.03 8 4.81 8 7C7.94 8.64 7.81 10.47 7.03 11.59C9.71 13.22 12 13 12 13C12 13 14.29 13.22 16.97 11.59C16.12 10.22 15.94 8.54 16 7C16 4.79 14.21 3 12 3H11.94M8.86 13.32C6 13.93 4 15.35 4 17V21H12L9 17H6.5M12 21L13.78 13.81C13.78 13.81 13 14 12 14C11 14 10.22 13.81 10.22 13.81M12 21H20V17C20 15.35 18 13.93 15.14 13.32L17.5 17H15Z'
-            ]
+                'icon' => 'M11.94 3C9.75 3.03 8 4.81 8 7C7.94 8.64 7.81 10.47 7.03 11.59C9.71 13.22 12 13 12 13C12 13 14.29 13.22 16.97 11.59C16.12 10.22 15.94 8.54 16 7C16 4.79 14.21 3 12 3H11.94M8.86 13.32C6 13.93 4 15.35 4 17V21H12L9 17H6.5M12 21L13.78 13.81C13.78 13.81 13 14 12 14C11 14 10.22 13.81 10.22 13.81M12 21H20V17C20 15.35 18 13.93 15.14 13.32L17.5 17H15Z',
+            ],
         ];
 
         $sampleData = [
@@ -217,18 +221,18 @@ class SupplierController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:2048' // 2MB limit
+            'file' => 'required|file|mimes:csv,txt|max:2048', // 2MB limit
         ]);
 
         $file = $request->file('file');
         $path = $file->getRealPath();
 
         // Check if file is readable
-        if (!is_readable($path)) {
+        if (! is_readable($path)) {
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! Unable to read the uploaded file.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -239,7 +243,7 @@ class SupplierController extends Controller
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! The uploaded file is empty.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -252,11 +256,11 @@ class SupplierController extends Controller
 
         $missingHeaders = array_diff($expectedHeaders, $headers);
 
-        if (!empty($missingHeaders)) {
+        if (! empty($missingHeaders)) {
             return redirect()->back()
                 ->with([
-                    'message' => 'Import failed! Missing required columns: ' . implode(', ', $missingHeaders),
-                    'msg_type' => 'danger'
+                    'message' => 'Import failed! Missing required columns: '.implode(', ', $missingHeaders),
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -265,7 +269,7 @@ class SupplierController extends Controller
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! No data rows found in the file.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -279,6 +283,7 @@ class SupplierController extends Controller
             // Skip empty rows
             if (empty(array_filter($record))) {
                 $rowNumber++;
+
                 continue;
             }
 
@@ -308,7 +313,7 @@ class SupplierController extends Controller
             $validator = \Validator::make($savedArray, $validationRules, [], $attributeNames);
 
             if ($validator->fails()) {
-                $errors[] = "Row {$rowNumber}: " . implode(', ', $validator->errors()->all());
+                $errors[] = "Row {$rowNumber}: ".implode(', ', $validator->errors()->all());
             } else {
                 $validatedData[] = $savedArray;
             }
@@ -317,12 +322,13 @@ class SupplierController extends Controller
         }
 
         // If there are any validation errors, redirect back with errors
-        if (!empty($errors)) {
-            $errorMessage = "Import failed! Please fix the following errors:\n\n" . implode("\n", $errors);
+        if (! empty($errors)) {
+            $errorMessage = "Import failed! Please fix the following errors:\n\n".implode("\n", $errors);
+
             return redirect()->back()
                 ->with([
                     'message' => $errorMessage,
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -332,13 +338,13 @@ class SupplierController extends Controller
 
             foreach ($validatedData as $data) {
                 // Properly capitalize first character with null checking and trimming
-                if (!empty($data['sp_name'])) {
+                if (! empty($data['sp_name'])) {
                     $data['sp_name'] = Helper::ucfirstlower($data['sp_name']);
                 }
-                if (!empty($data['sp_name'])) {
+                if (! empty($data['sp_name'])) {
                     $data['sp_name'] = Helper::ucfirstlower($data['sp_name']);
                 }
-                if (!empty($data['sp_addr'])) {
+                if (! empty($data['sp_addr'])) {
                     $data['sp_addr'] = Helper::ucfirstlower($data['sp_addr']);
                 }
                 Supplier::create($data);
@@ -349,16 +355,17 @@ class SupplierController extends Controller
 
             return redirect()->route('supplier.index')
                 ->with([
-                    'message' => count($validatedData) . ' supplier records imported successfully!',
-                    'msg_type' => 'success'
+                    'message' => count($validatedData).' supplier records imported successfully!',
+                    'msg_type' => 'success',
                 ]);
         } catch (\Exception $e) {
             \DB::rollback();
-            \Log::error('Supplier import failed: ' . $e->getMessage());
+            \Log::error('Supplier import failed: '.$e->getMessage());
+
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! An unexpected error occurred while importing the data. Please try again.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
     }

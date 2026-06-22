@@ -173,12 +173,12 @@ class SalesOrderController extends Controller
             'sales_orders.product_type',
             'clients.cl_name as client_name'
         )
-        ->join('sales_orders', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
-        ->leftJoin('clients', 'clients.id', '=', 'sales_orders.client_id')
-        ->whereBetween('sales_orders.order_date', [
-            session('financial_year_start'),
-            session('financial_year_end')
-        ]);
+            ->join('sales_orders', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
+            ->leftJoin('clients', 'clients.id', '=', 'sales_orders.client_id')
+            ->whereBetween('sales_orders.order_date', [
+                session('financial_year_start'),
+                session('financial_year_end'),
+            ]);
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('-order_date')
@@ -307,9 +307,7 @@ class SalesOrderController extends Controller
         ]);
     }
 
-    public function show(SalesOrder $salesOrder)
-    {
-    }
+    public function show(SalesOrder $salesOrder) {}
 
     public function print(SalesOrder $salesOrder)
     {
@@ -325,7 +323,8 @@ class SalesOrderController extends Controller
         ])->setPaper('a4', 'portrait');
 
         $safeOrderNo = str_replace(['/', '\\'], '-', (string) $salesOrder->order_no);
-        return $pdf->stream('sales-order-' . $safeOrderNo . '.pdf');
+
+        return $pdf->stream('sales-order-'.$safeOrderNo.'.pdf');
     }
 
     public function create()
@@ -363,19 +362,19 @@ class SalesOrderController extends Controller
                 $lineResult = $this->buildLineRows($validated['product_type'], $items);
 
                 $order = SalesOrder::create([
-                    'order_no'      => $orderNo,
-                    'order_prefix'  => $prefix,
+                    'order_no' => $orderNo,
+                    'order_prefix' => $prefix,
                     'order_sequence' => $sequence,
-                    'order_fy'      => $fyCode,
-                    'order_date'    => $orderDate,
-                    'client_id'     => $validated['client_id'],
-                    'enquiry_id'    => $request->input('enquiry_id') ?: null,
-                    'product_type'  => $validated['product_type'],
-                    'remark'        => $validated['remark'] ?? null,
-                    'total_amount'  => 0,
+                    'order_fy' => $fyCode,
+                    'order_date' => $orderDate,
+                    'client_id' => $validated['client_id'],
+                    'enquiry_id' => $request->input('enquiry_id') ?: null,
+                    'product_type' => $validated['product_type'],
+                    'remark' => $validated['remark'] ?? null,
+                    'total_amount' => 0,
                 ]);
 
-                if (!empty($lineResult['rows'])) {
+                if (! empty($lineResult['rows'])) {
                     $order->items()->createMany($lineResult['rows']);
                 }
 
@@ -390,12 +389,12 @@ class SalesOrderController extends Controller
                 );
 
                 $order->update([
-                    'transport_charge'    => $transportCharge,
-                    'gst_percent'         => $orderGstPercent,
-                    'roundoff'            => $roundoff,
+                    'transport_charge' => $transportCharge,
+                    'gst_percent' => $orderGstPercent,
+                    'roundoff' => $roundoff,
                     'items_taxable_total' => $lineResult['items_taxable_total'],
-                    'items_gst_total'     => $lineResult['items_gst_total'],
-                    'total_amount'        => $totalAmount,
+                    'items_gst_total' => $lineResult['items_gst_total'],
+                    'total_amount' => $totalAmount,
                 ]);
 
                 // Mark linked enquiry as pushed
@@ -424,6 +423,7 @@ class SalesOrderController extends Controller
                 return redirect()->back()->withErrors(['salesOrder' => $e->getMessage()])->withInput();
             } catch (\Throwable $e) {
                 DB::rollBack();
+
                 return redirect()->back()->withErrors(['salesOrder' => $e->getMessage()])->withInput();
             }
         }
@@ -500,10 +500,10 @@ class SalesOrderController extends Controller
                 'roundoff' => $roundoff,
                 'items_taxable_total' => 0,
                 'items_gst_total' => 0,
-                'total_amount' => 0
+                'total_amount' => 0,
             ]);
 
-            if (!empty($lineResult['rows'])) {
+            if (! empty($lineResult['rows'])) {
                 $salesOrder->items()->createMany($lineResult['rows']);
             }
 
@@ -525,6 +525,7 @@ class SalesOrderController extends Controller
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
+
             return redirect()->back()->withErrors(['salesOrder' => $e->getMessage()])->withInput();
         }
 
@@ -659,7 +660,7 @@ class SalesOrderController extends Controller
 
         foreach ($items as $item) {
             $costSheet = $costSheets->get((int) $item['cost_sheet_id']);
-            if (!$costSheet) {
+            if (! $costSheet) {
                 throw new \RuntimeException('Selected cost sheet item not found.');
             }
             if ($costSheet->prod_type !== $productType) {
@@ -768,7 +769,7 @@ class SalesOrderController extends Controller
             ->max('order_sequence');
 
         $nextSequence = $maxSequence + 1;
-        $orderNo = $prefix . str_pad((string) $nextSequence, 2, '0', STR_PAD_LEFT) . '/' . $fyCode;
+        $orderNo = $prefix.str_pad((string) $nextSequence, 2, '0', STR_PAD_LEFT).'/'.$fyCode;
 
         return [$orderNo, $prefix, $nextSequence, $fyCode];
     }
@@ -789,7 +790,7 @@ class SalesOrderController extends Controller
         $startYear = ((int) $date->format('n') >= 4) ? (int) $date->format('Y') : ((int) $date->format('Y') - 1);
         $nextYear = $startYear + 1;
 
-        return substr((string) $startYear, -2) . substr((string) $nextYear, -2);
+        return substr((string) $startYear, -2).substr((string) $nextYear, -2);
     }
 
     protected function isDuplicateKeyException(QueryException $exception): bool

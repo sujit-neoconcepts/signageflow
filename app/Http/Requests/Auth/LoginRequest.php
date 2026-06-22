@@ -3,15 +3,14 @@
 namespace App\Http\Requests\Auth;
 
 use App\Models\Setting;
+use App\Models\SigninLog;
+use App\Rules\Recaptcha;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-
-use App\Rules\Recaptcha;
-use App\Models\SigninLog;
 
 class LoginRequest extends FormRequest
 {
@@ -35,12 +34,12 @@ class LoginRequest extends FormRequest
             return [
                 'email' => ['required', 'string', 'email'],
                 'password' => ['required', 'string'],
-                'captcha_token' => ['required', new Recaptcha()]
+                'captcha_token' => ['required', new Recaptcha],
             ];
         } else {
             return [
                 'email' => ['required', 'string', 'email'],
-                'password' => ['required', 'string']
+                'password' => ['required', 'string'],
             ];
         }
     }
@@ -116,6 +115,6 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->input('email')) . '|' . $this->ip());
+        return Str::transliterate(Str::lower($this->input('email')).'|'.$this->ip());
     }
 }

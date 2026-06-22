@@ -9,7 +9,7 @@ use Illuminate\Support\Carbon;
 
 class Enquiry extends Model
 {
-    use HasFactory, FinancialYearScope;
+    use FinancialYearScope, HasFactory;
 
     const DATE_COLUMN = 'enquiry_date';
 
@@ -31,6 +31,7 @@ class Enquiry extends Model
     ];
 
     const STATUS_OPEN = 'open';
+
     const STATUS_PUSHED = 'pushed_to_sales';
 
     public function client()
@@ -61,12 +62,14 @@ class Enquiry extends Model
     public function scopeOrderDateStart($query, $sd)
     {
         $start = ($sd instanceof Carbon) ? $sd : Carbon::parse($sd);
+
         return $query->where('enquiry_date', '>=', $start->startOfDay());
     }
 
     public function scopeOrderDateEnd($query, $ed)
     {
         $end = ($ed instanceof Carbon) ? $ed : Carbon::parse($ed);
+
         return $query->where('enquiry_date', '<=', $end->endOfDay());
     }
 }

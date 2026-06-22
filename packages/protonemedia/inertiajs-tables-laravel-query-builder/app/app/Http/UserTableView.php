@@ -12,7 +12,7 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class UserTableView
 {
-    public function __invoke($resource = false, $paginateMethod)
+    public function __invoke($resource, $paginateMethod)
     {
         $globalSearch = AllowedFilter::callback('global', function ($query, $value) {
             $query->where(function ($query) use ($value) {

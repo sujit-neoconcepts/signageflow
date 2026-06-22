@@ -2,24 +2,19 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Inertia\Inertia;
+use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\User;
-use App\Models\Location;
+use App\Services\AverageUnitPriceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
-use Spatie\QueryBuilder\AllowedSort;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
-use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
-use App\Helpers\ActivityLog;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use App\Services\AverageUnitPriceService;
-
+use Illuminate\Support\Facades\Validator;
+use Inertia\Inertia;
+use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class OpeningController extends Controller
 {
@@ -33,13 +28,14 @@ class OpeningController extends Controller
         $this->middleware('can:opening_edit', ['only' => ['edit', 'update']]);
         $this->middleware('can:opening_delete', ['only' => ['destroy']]);
     }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
         $formInfo = Purchase::formInfo();
-        $formInfo['pur_inv'] = ['label' => 'Comment', 'searchable' => true, 'sortable' => true, 'vRule' => 'required', 'default' => 'Opening-' . date('d-m-Y H:i:s')];
+        $formInfo['pur_inv'] = ['label' => 'Comment', 'searchable' => true, 'sortable' => true, 'vRule' => 'required', 'default' => 'Opening-'.date('d-m-Y H:i:s')];
         unset($formInfo['pur_supplier']);
         unset($formInfo['roundoff']);
         $formInfoMulti = Purchase::formInfoMulti();
@@ -53,8 +49,8 @@ class OpeningController extends Controller
         unset($formInfoMulti['pur_unit_alt']);
         unset($formInfoMulti['pur_unit_conv_rate']);
         unset($formInfoMulti['pur_rate']);
-        //unset($formInfoMulti['pur_rate_int']);
-        //unset($formInfoMulti['pur_amnt']);
+        // unset($formInfoMulti['pur_rate_int']);
+        // unset($formInfoMulti['pur_amnt']);
         unset($formInfoMulti['pur_gst_amnt']);
         unset($formInfoMulti['pur_amnt_total']);
 
@@ -65,7 +61,9 @@ class OpeningController extends Controller
                         $query->orWhere($key, 'LIKE', "%{$value}%");
                     }
                     foreach (array_keys($formInfoMulti) as $key) {
-                        if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) continue;
+                        if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) {
+                            continue;
+                        }
                         $query->orWhere($key, 'LIKE', "%{$value}%");
                     }
                 });
@@ -78,7 +76,7 @@ class OpeningController extends Controller
         }
         $query = Purchase::select('purchases.*', 'pgroups.name as groupinfo_name')->where('entry_type', 1)->leftJoin('products', 'products.id', 'purchases.pur_pr_id', 'left')->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left');
 
-        //$query->inFinancialYear();
+        // $query->inFinancialYear();
 
         if (\Auth::user()->can('all') || \Auth::user()->can('opening_list_for_all')) {
         } else {
@@ -108,8 +106,8 @@ class OpeningController extends Controller
                 'icon' => 'M2,6H4V18H2V6M5,6H6V18H5V6M7,6H10V18H7V6M11,6H12V18H11V6M14,6H16V18H14V6M17,6H20V18H17V6M21,6H22V18H21V6Z',
                 'key' => 'id',
                 'cond' => '*',
-                'compvl' => '*'
-            ]
+                'compvl' => '*',
+            ],
         ];
 
         // Add import link to extraMainLinks
@@ -117,12 +115,11 @@ class OpeningController extends Controller
             [
                 'label' => 'Import',
                 'link' => 'opening.import',
-                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z'
-            ]
+                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z',
+            ],
         ];
         $this->resourceNeo['showTotal'] = true;
         $this->resourceNeo['showall'] = true;
-
 
         return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo, $formInfoMulti) {
             $table->withGlobalSearch();
@@ -131,20 +128,22 @@ class OpeningController extends Controller
                 $table->column($key, $formInfo[$key]['label'], searchable: $formInfo[$key]['searchable'] ?? false, sortable: $formInfo[$key]['sortable'] ?? false, hidden: $formInfo[$key]['hidden'] ?? false, extra: ['type' => $formInfo[$key]['type'] ?? '', 'options' => [], 'align' => $formInfo[$key]['align'] ?? 'left', 'showTotal' => $formInfo[$key]['showTotal'] ?? false]);
             }
             foreach (array_keys($formInfoMulti) as $key) {
-                if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) continue;
+                if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) {
+                    continue;
+                }
                 $table->column($key, $formInfoMulti[$key]['label'], searchable: $formInfoMulti[$key]['searchable'] ?? false, sortable: $formInfoMulti[$key]['sortable'] ?? false, hidden: $formInfoMulti[$key]['hidden'] ?? false, extra: ['align' => $formInfoMulti[$key]['align'] ?? 'left', 'showTotal' => $formInfoMulti[$key]['showTotal'] ?? false]);
             }
 
             $fresult2 = [];
-            foreach ($formInfoMulti['pur_incharge']['options'] as  $opt) {
+            foreach ($formInfoMulti['pur_incharge']['options'] as $opt) {
                 $opt && $fresult2[$opt] = $opt;
             }
             $fresult3 = [];
-            foreach ($formInfoMulti['pur_unint_int']['options'] as  $opt) {
+            foreach ($formInfoMulti['pur_unint_int']['options'] as $opt) {
                 $opt && $fresult3[$opt] = $opt;
             }
             $fresult4 = [];
-            foreach ($formInfoMulti['pur_loc']['options'] as  $opt) {
+            foreach ($formInfoMulti['pur_loc']['options'] as $opt) {
                 $opt && $fresult4[$opt] = $opt;
             }
             $table
@@ -178,7 +177,7 @@ class OpeningController extends Controller
         $resourceNeo['AllowDel'] = true;
         $resourceNeo['formInfo'] = Purchase::formInfo();
         unset($resourceNeo['formInfo']['received_date']);
-        $resourceNeo['formInfo']['pur_inv'] = ['label' => 'Comment', 'searchable' => true, 'sortable' => true, 'vRule' => 'required', 'default' => 'Opening-' . date('d-m-Y H:i:s')];
+        $resourceNeo['formInfo']['pur_inv'] = ['label' => 'Comment', 'searchable' => true, 'sortable' => true, 'vRule' => 'required', 'default' => 'Opening-'.date('d-m-Y H:i:s')];
         unset($resourceNeo['formInfo']['pur_supplier']);
         unset($resourceNeo['formInfo']['roundoff']);
 
@@ -195,8 +194,8 @@ class OpeningController extends Controller
         unset($resourceNeo['formInfoMulti']['pur_unit_alt']);
         unset($resourceNeo['formInfoMulti']['pur_unit_conv_rate']);
         unset($resourceNeo['formInfoMulti']['pur_rate']);
-        //unset($resourceNeo['formInfoMulti']['pur_rate_int']);
-        //unset($resourceNeo['formInfoMulti']['pur_amnt']);
+        // unset($resourceNeo['formInfoMulti']['pur_rate_int']);
+        // unset($resourceNeo['formInfoMulti']['pur_amnt']);
         unset($resourceNeo['formInfoMulti']['pur_gst_amnt']);
         unset($resourceNeo['formInfoMulti']['pur_amnt_total']);
         unset($resourceNeo['formInfoMulti']['last_rate']);
@@ -224,13 +223,12 @@ class OpeningController extends Controller
             $savedArray[$key] = $request->{$key};
         }
         foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate', 'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty']) as $key) {
-            $attributeNames['multi.*.' . $key] = $formInfoMulti[$key]['label'];
-            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.' . $key] = $formInfoMulti[$key]['vRule'];
+            $attributeNames['multi.*.'.$key] = $formInfoMulti[$key]['label'];
+            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.'.$key] = $formInfoMulti[$key]['vRule'];
         }
 
         $request->validate($validateRule, [], $attributeNames);
-        $savedArray['pur_date'] = $savedArray['received_date']= date('Y-m-d', strtotime($request->pur_date));
-
+        $savedArray['pur_date'] = $savedArray['received_date'] = date('Y-m-d', strtotime($request->pur_date));
 
         foreach ($request->multi as $ml) {
             foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate', 'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty']) as $key) {
@@ -241,8 +239,8 @@ class OpeningController extends Controller
             $savedArray['entry_type'] = 1;
 
             // Update average unit price BEFORE saving to avoid double-counting
-            if (!empty($savedArray['pur_pr_detail_int']) && !empty($savedArray['pur_qty_int']) && !empty($savedArray['pur_rate_int'])) {
-                $averagePriceService = new AverageUnitPriceService();
+            if (! empty($savedArray['pur_pr_detail_int']) && ! empty($savedArray['pur_qty_int']) && ! empty($savedArray['pur_rate_int'])) {
+                $averagePriceService = new AverageUnitPriceService;
                 $averagePriceService->calculateAndUpdateAveragePrice(
                     $savedArray['pur_pr_detail_int'],
                     $savedArray['pur_qty_int'],
@@ -255,9 +253,8 @@ class OpeningController extends Controller
 
         \ActivityLog::add(['action' => 'added', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->{array_keys($formInfo)[1]}]);
 
-        return redirect()->route('opening.index')->with(['message' => $this->resourceNeo['resourceTitle'] . ' Created Successfully !!', 'msg_type' => 'info']);
+        return redirect()->route('opening.index')->with(['message' => $this->resourceNeo['resourceTitle'].' Created Successfully !!', 'msg_type' => 'info']);
     }
-
 
     /**
      * Show the form for editing the specified resource.
@@ -277,14 +274,14 @@ class OpeningController extends Controller
         unset($formInfoMulti['pur_unit_alt']);
         unset($formInfoMulti['pur_unit_conv_rate']);
         unset($formInfoMulti['pur_rate']);
-        //unset($formInfoMulti['pur_rate_int']);
-        //unset($formInfoMulti['pur_amnt']);
+        // unset($formInfoMulti['pur_rate_int']);
+        // unset($formInfoMulti['pur_amnt']);
         unset($formInfoMulti['pur_gst_amnt']);
         unset($formInfoMulti['pur_amnt_total']);
         unset($formInfoMulti['last_rate']);
         unset($formInfoMulti['unit_rate']);
         unset($formInfoMulti['available_qty']);
-        
+
         foreach (array_keys($formInfoMulti) as $key) {
             $temp[$key] = $purchase->{$key};
         }
@@ -305,9 +302,9 @@ class OpeningController extends Controller
             'options' => Product::getAllOptionInternal(),
             'vRule' => 'required',
             'colspan' => 3,
-            'disabled'=>true
+            'disabled' => true,
         ];
-        $resourceNeo['formInfo']['pur_inv'] = ['label' => 'Comment', 'searchable' => true, 'sortable' => true, 'vRule' => 'required', 'default' => 'Opening-' . date('d-m-Y H:i:s')];
+        $resourceNeo['formInfo']['pur_inv'] = ['label' => 'Comment', 'searchable' => true, 'sortable' => true, 'vRule' => 'required', 'default' => 'Opening-'.date('d-m-Y H:i:s')];
         unset($resourceNeo['formInfo']['pur_supplier']);
         unset($resourceNeo['formInfo']['roundoff']);
 
@@ -329,8 +326,8 @@ class OpeningController extends Controller
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
         }
         foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate',  'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty']) as $key) {
-            $attributeNames['multi.*.' . $key] = $formInfoMulti[$key]['label'];
-            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.' . $key] = $formInfoMulti[$key]['vRule'];
+            $attributeNames['multi.*.'.$key] = $formInfoMulti[$key]['label'];
+            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.'.$key] = $formInfoMulti[$key]['vRule'];
         }
         $request->validate($validateRule, [], $attributeNames);
         foreach (array_diff(array_keys($formInfo), ['pur_supplier', 'roundoff']) as $key) {
@@ -345,10 +342,9 @@ class OpeningController extends Controller
             $purchase->pur_pr_id = isset($ml['pur_pr_detail_int']['id']) ? $ml['pur_pr_detail_int']['id'] : null;
         }
 
-
         // Update average unit price BEFORE saving (service needs OLD values from database)
-        if (!empty($purchase->pur_pr_detail_int) && !empty($purchase->pur_qty_int) && !empty($purchase->pur_rate_int)) {
-            $averagePriceService = new AverageUnitPriceService();
+        if (! empty($purchase->pur_pr_detail_int) && ! empty($purchase->pur_qty_int) && ! empty($purchase->pur_rate_int)) {
+            $averagePriceService = new AverageUnitPriceService;
             $averagePriceService->calculateAndUpdateAveragePrice(
                 $purchase->pur_pr_detail_int,
                 $purchase->pur_qty_int,
@@ -373,6 +369,7 @@ class OpeningController extends Controller
         $uname = $purchase->id;
         $purchase->delete();
         \ActivityLog::add(['action' => 'deleted', 'module' => 'purchase', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Purchase Deleted !!');
     }
 
@@ -384,6 +381,7 @@ class OpeningController extends Controller
         Purchase::whereIn('id', request('ids'))->delete();
         $uname = (count(request('ids')) > 50) ? 'Many' : $uname = implode(',', request('ids'));
         \ActivityLog::add(['action' => 'deleted', 'module' => 'purchase', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Selected Purchase Deleted !!');
     }
 
@@ -396,8 +394,8 @@ class OpeningController extends Controller
             [
                 'link' => 'opening.index',
                 'label' => 'Back to List',
-                'icon' => 'M11 9H13V6H16V4H13V1H11V4H8V6H11M7 18C5.9 18 5 18.9 5 20S5.9 22 7 22 9 21.1 9 20 8.1 18 7 18M17 18C15.9 18 15 18.9 15 20S15.9 22 17 22 19 21.1 19 20 18.1 18 17 18M7.2 14.8V14.7L8.1 13H15.5C16.2 13 16.9 12.6 17.2 12L21.1 5L19.4 4L15.5 11H8.5L4.3 2H1V4H3L6.6 11.6L5.2 14C5.1 14.3 5 14.6 5 15C5 16.1 5.9 17 7 17H19V15H7.4C7.3 15 7.2 14.9 7.2 14.8Z'
-            ]
+                'icon' => 'M11 9H13V6H16V4H13V1H11V4H8V6H11M7 18C5.9 18 5 18.9 5 20S5.9 22 7 22 9 21.1 9 20 8.1 18 7 18M17 18C15.9 18 15 18.9 15 20S15.9 22 17 22 19 21.1 19 20 18.1 18 17 18M7.2 14.8V14.7L8.1 13H15.5C16.2 13 16.9 12.6 17.2 12L21.1 5L19.4 4L15.5 11H8.5L4.3 2H1V4H3L6.6 11.6L5.2 14C5.1 14.3 5 14.6 5 15C5 16.1 5.9 17 7 17H19V15H7.4C7.3 15 7.2 14.9 7.2 14.8Z',
+            ],
         ];
 
         $sampleData = [
@@ -412,7 +410,7 @@ class OpeningController extends Controller
                 'pur_qty_int_alt' => '10',
                 'pur_unint_int_alt' => 'Rolls',
                 'pur_rate_int' => '50',
-                'remark' => 'Initial Stock'
+                'remark' => 'Initial Stock',
             ],
         ];
 
@@ -427,18 +425,18 @@ class OpeningController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:2048' // 2MB limit
+            'file' => 'required|file|mimes:csv,txt|max:2048', // 2MB limit
         ]);
 
         $file = $request->file('file');
         $path = $file->getRealPath();
 
         // Check if file is readable
-        if (!is_readable($path)) {
+        if (! is_readable($path)) {
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! Unable to read the uploaded file.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -449,7 +447,7 @@ class OpeningController extends Controller
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! The uploaded file is empty.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -459,11 +457,11 @@ class OpeningController extends Controller
         // Validate headers
         $expectedHeaders = ['pur_date', 'pur_inv', 'pur_incharge', 'pur_loc', 'pur_pr_detail_int', 'pur_qty_int', 'pur_unint_int', 'pur_qty_int_alt', 'pur_unint_int_alt', 'pur_rate_int', 'remark'];
         $missingHeaders = array_diff($expectedHeaders, $headers);
-        if (!empty($missingHeaders)) {
+        if (! empty($missingHeaders)) {
             return redirect()->back()
                 ->with([
-                    'message' => 'Import failed! Missing required columns: ' . implode(', ', $missingHeaders),
-                    'msg_type' => 'danger'
+                    'message' => 'Import failed! Missing required columns: '.implode(', ', $missingHeaders),
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -472,7 +470,7 @@ class OpeningController extends Controller
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! No data rows found in the file.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -485,6 +483,7 @@ class OpeningController extends Controller
             // Skip empty rows
             if (empty(array_filter($record))) {
                 $rowNumber++;
+
                 continue;
             }
 
@@ -495,7 +494,7 @@ class OpeningController extends Controller
                 $data['pur_date'] = date('Y-m-d');
             }
             if (empty($data['pur_inv'])) {
-                $data['pur_inv'] = 'OPNINV-' . date('YmdHis') . '-' . $rowNumber;
+                $data['pur_inv'] = 'OPNINV-'.date('YmdHis').'-'.$rowNumber;
             }
 
             // Create validator with same rules as store function
@@ -506,8 +505,8 @@ class OpeningController extends Controller
                     'required',
                     function ($attribute, $value, $fail) {
                         $user = User::where('name', $value)->first();
-                        if (!$user || !$user->hasRole('supervisor')) {
-                            $fail('The ' . $attribute . ' must be a valid supervisor.');
+                        if (! $user || ! $user->hasRole('supervisor')) {
+                            $fail('The '.$attribute.' must be a valid supervisor.');
                         }
                     },
                 ],
@@ -537,13 +536,13 @@ class OpeningController extends Controller
 
             // Add custom validation for units matching the product
             $validator->after(function ($validator) use ($data) {
-                if (!empty($data['pur_pr_detail_int'])) {
+                if (! empty($data['pur_pr_detail_int'])) {
                     $product = Product::where('pr_detail_int', $data['pur_pr_detail_int'])->first();
                     if ($product) {
                         if (isset($data['pur_unint_int']) && $data['pur_unint_int'] !== $product->pr_int_unit) {
                             $validator->errors()->add('pur_unint_int', "As per Product Master Internal Unit must be '{$product->pr_int_unit}' for this product.");
                         }
-                        if (isset($data['pur_unint_int_alt']) && !empty($data['pur_unint_int_alt']) && $data['pur_unint_int_alt'] !== $product->pr_int_unit_alt) {
+                        if (isset($data['pur_unint_int_alt']) && ! empty($data['pur_unint_int_alt']) && $data['pur_unint_int_alt'] !== $product->pr_int_unit_alt) {
                             $validator->errors()->add('pur_unint_int_alt', "As per Product Master Internal Unit Alt must be '{$product->pr_int_unit_alt}' for this product.");
                         }
                     }
@@ -551,26 +550,26 @@ class OpeningController extends Controller
             });
 
             if ($validator->fails()) {
-                $errors[] = "Row {$rowNumber}: " . implode(', ', $validator->errors()->all());
+                $errors[] = "Row {$rowNumber}: ".implode(', ', $validator->errors()->all());
             } else {
                 // Get validated data
                 $validatedRecord = $validator->validated();
-                
+
                 // Get Product ID
                 $product = Product::where('pr_detail_int', $validatedRecord['pur_pr_detail_int'])->first();
                 if ($product) {
                     $validatedRecord['pur_pr_id'] = $product->id;
-                    
+
                     // Calculate amount
                     $validatedRecord['pur_amnt'] = $validatedRecord['pur_qty_int'] * $validatedRecord['pur_rate_int'];
-                    
+
                     // Set entry type for opening stock
                     $validatedRecord['entry_type'] = 1;
-                    
+
                     // Format date
                     $validatedRecord['pur_date'] = $validatedRecord['received_date'] = date('Y-m-d', strtotime($validatedRecord['pur_date']));
                 }
-                
+
                 $validatedData[] = $validatedRecord;
             }
 
@@ -578,12 +577,13 @@ class OpeningController extends Controller
         }
 
         // If there are any validation errors, redirect back with errors
-        if (!empty($errors)) {
-            $errorMessage = "Import failed! Please fix the following errors:\n\n" . implode("\n", $errors);
+        if (! empty($errors)) {
+            $errorMessage = "Import failed! Please fix the following errors:\n\n".implode("\n", $errors);
+
             return redirect()->back()
                 ->with([
                     'message' => $errorMessage,
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -593,8 +593,8 @@ class OpeningController extends Controller
 
             foreach ($validatedData as $data) {
                 // Update average unit price BEFORE saving to avoid double-counting
-                if (!empty($data['pur_pr_detail_int']) && !empty($data['pur_qty_int']) && !empty($data['pur_rate_int'])) {
-                    $averagePriceService = new AverageUnitPriceService();
+                if (! empty($data['pur_pr_detail_int']) && ! empty($data['pur_qty_int']) && ! empty($data['pur_rate_int'])) {
+                    $averagePriceService = new AverageUnitPriceService;
                     $averagePriceService->calculateAndUpdateAveragePrice(
                         $data['pur_pr_detail_int'],
                         $data['pur_qty_int'],
@@ -610,16 +610,17 @@ class OpeningController extends Controller
 
             return redirect()->route('opening.index')
                 ->with([
-                    'message' => count($validatedData) . ' opening stock records imported successfully!',
-                    'msg_type' => 'success'
+                    'message' => count($validatedData).' opening stock records imported successfully!',
+                    'msg_type' => 'success',
                 ]);
         } catch (\Exception $e) {
             \DB::rollback();
-            \Log::error('Opening stock import failed: ' . $e->getMessage());
+            \Log::error('Opening stock import failed: '.$e->getMessage());
+
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! An unexpected error occurred while importing the data. Please try again.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
     }

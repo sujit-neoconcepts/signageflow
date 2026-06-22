@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Inertia\Inertia;
+use App\Http\Controllers\Controller;
 use App\Models\Expuser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
+use Inertia\Inertia;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
-
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class ExpuserController extends Controller
 {
@@ -24,6 +23,7 @@ class ExpuserController extends Controller
         $this->middleware('can:expuser_edit', ['only' => ['edit', 'update']]);
         $this->middleware('can:expuser_delete', ['only' => ['destroy']]);
     }
+
     /**
      * Display a listing of the resource.
      */
@@ -59,18 +59,16 @@ class ExpuserController extends Controller
             $this->resourceNeo['bulkActions']['csvExport'] = [];
         }
 
-
         // Add import link to extraMainLinks
         $this->resourceNeo['extraMainLinks'] = [
             [
                 'label' => 'Import',
                 'link' => 'expuser.import',
-                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z'
-            ]
+                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z',
+            ],
         ];
 
-        return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' =>
-        $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo, $formInfoMulti) {
+        return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo, $formInfoMulti) {
             $table->withGlobalSearch();
             $arrKey = array_diff(array_keys($formInfo), []);
             foreach ($arrKey as $key) {
@@ -92,6 +90,7 @@ class ExpuserController extends Controller
     {
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = Expuser::formInfo();
+
         return Inertia::render('Admin/AddEditView', compact('resourceNeo'));
     }
 
@@ -133,6 +132,7 @@ class ExpuserController extends Controller
         $formdata = $expuser;
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = Expuser::formInfo();
+
         return Inertia::render('Admin/AddEditView', compact('formdata', 'resourceNeo'));
     }
 
@@ -148,7 +148,7 @@ class ExpuserController extends Controller
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
         }
-        $validateRule['name'] = 'required|unique:expusers,name,' . $expuser->id;
+        $validateRule['name'] = 'required|unique:expusers,name,'.$expuser->id;
         $request->validate($validateRule, [], $attributeNames);
         foreach (array_diff(array_keys($formInfo), []) as $key) {
             $expuser->{$key} = $request->{$key};
@@ -167,6 +167,7 @@ class ExpuserController extends Controller
         $uname = $expuser->id;
         $expuser->delete();
         \ActivityLog::add(['action' => 'deleted', 'module' => 'expuser', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Expuser Deleted !!');
     }
 
@@ -178,8 +179,10 @@ class ExpuserController extends Controller
         Expuser::whereIn('id', request('ids'))->delete();
         $uname = (count(request('ids')) > 50) ? 'Many' : $uname = implode(',', request('ids'));
         \ActivityLog::add(['action' => 'deleted', 'module' => 'expuser', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Selected Expuser Deleted !!');
     }
+
     /**
      * Show the import view.
      */
@@ -189,8 +192,8 @@ class ExpuserController extends Controller
             [
                 'link' => 'expuser.index',
                 'label' => 'Back to List',
-                'icon' => 'M12 3C14.21 3 16 4.79 16 7S14.21 11 12 11 8 9.21 8 7 9.79 3 12 3M16 13.54C16 14.6 15.72 17.07 13.81 19.83L13 15L13.94 13.12C13.32 13.05 12.67 13 12 13S10.68 13.05 10.06 13.12L11 15L10.19 19.83C8.28 17.07 8 14.6 8 13.54C5.61 14.24 4 15.5 4 17V21H20V17C20 15.5 18.4 14.24 16 13.54Z'
-            ]
+                'icon' => 'M12 3C14.21 3 16 4.79 16 7S14.21 11 12 11 8 9.21 8 7 9.79 3 12 3M16 13.54C16 14.6 15.72 17.07 13.81 19.83L13 15L13.94 13.12C13.32 13.05 12.67 13 12 13S10.68 13.05 10.06 13.12L11 15L10.19 19.83C8.28 17.07 8 14.6 8 13.54C5.61 14.24 4 15.5 4 17V21H20V17C20 15.5 18.4 14.24 16 13.54Z',
+            ],
         ];
 
         $sampleData = [
@@ -211,18 +214,18 @@ class ExpuserController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:2048' // 2MB limit
+            'file' => 'required|file|mimes:csv,txt|max:2048', // 2MB limit
         ]);
 
         $file = $request->file('file');
         $path = $file->getRealPath();
 
         // Check if file is readable
-        if (!is_readable($path)) {
+        if (! is_readable($path)) {
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! Unable to read the uploaded file.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -233,7 +236,7 @@ class ExpuserController extends Controller
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! The uploaded file is empty.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -243,11 +246,11 @@ class ExpuserController extends Controller
         // Validate headers
         $expectedHeaders = ['name'];
         $missingHeaders = array_diff($expectedHeaders, $headers);
-        if (!empty($missingHeaders)) {
+        if (! empty($missingHeaders)) {
             return redirect()->back()
                 ->with([
-                    'message' => 'Import failed! Missing required columns: ' . implode(', ', $missingHeaders),
-                    'msg_type' => 'danger'
+                    'message' => 'Import failed! Missing required columns: '.implode(', ', $missingHeaders),
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -256,7 +259,7 @@ class ExpuserController extends Controller
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! No data rows found in the file.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -269,6 +272,7 @@ class ExpuserController extends Controller
             // Skip empty rows
             if (empty(array_filter($record))) {
                 $rowNumber++;
+
                 continue;
             }
 
@@ -283,7 +287,7 @@ class ExpuserController extends Controller
             ]);
 
             if ($validator->fails()) {
-                $errors[] = "Row {$rowNumber}: " . implode(', ', $validator->errors()->all());
+                $errors[] = "Row {$rowNumber}: ".implode(', ', $validator->errors()->all());
             } else {
                 $validatedData[] = $validator->validated();
             }
@@ -292,12 +296,13 @@ class ExpuserController extends Controller
         }
 
         // If there are any validation errors, redirect back with errors
-        if (!empty($errors)) {
-            $errorMessage = "Import failed! Please fix the following errors:\n\n" . implode("\n", $errors);
+        if (! empty($errors)) {
+            $errorMessage = "Import failed! Please fix the following errors:\n\n".implode("\n", $errors);
+
             return redirect()->back()
                 ->with([
                     'message' => $errorMessage,
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
 
@@ -314,16 +319,17 @@ class ExpuserController extends Controller
 
             return redirect()->route('expuser.index')
                 ->with([
-                    'message' => count($validatedData) . ' expuser records imported successfully!',
-                    'msg_type' => 'success'
+                    'message' => count($validatedData).' expuser records imported successfully!',
+                    'msg_type' => 'success',
                 ]);
         } catch (\Exception $e) {
             \DB::rollback();
-            \Log::error('Expuser import failed: ' . $e->getMessage());
+            \Log::error('Expuser import failed: '.$e->getMessage());
+
             return redirect()->back()
                 ->with([
                     'message' => 'Import failed! An unexpected error occurred while importing the data. Please try again.',
-                    'msg_type' => 'danger'
+                    'msg_type' => 'danger',
                 ]);
         }
     }

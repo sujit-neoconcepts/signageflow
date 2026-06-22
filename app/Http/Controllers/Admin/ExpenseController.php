@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Inertia\Inertia;
+use App\Http\Controllers\Controller;
 use App\Models\Expense;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
-use Spatie\QueryBuilder\AllowedSort;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
+use Inertia\Inertia;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class ExpenseController extends Controller
 {
@@ -23,6 +22,7 @@ class ExpenseController extends Controller
         $this->middleware('can:expense_edit', ['only' => ['edit', 'update']]);
         $this->middleware('can:expense_delete', ['only' => ['destroy']]);
     }
+
     /**
      * Display a listing of the resource.
      */
@@ -48,11 +48,11 @@ class ExpenseController extends Controller
             $filter_array[] = AllowedFilter::exact($fvalue);
         }
         $inc_f = request()->query('filter');
-        $query_dep_before = Expense::where('amt_type', 'Deposit');//->inFinancialYear();
-        $query_exp_before = Expense::where('amt_type', 'Expense');//->inFinancialYear();
+        $query_dep_before = Expense::where('amt_type', 'Deposit'); // ->inFinancialYear();
+        $query_exp_before = Expense::where('amt_type', 'Expense'); // ->inFinancialYear();
 
-        $query_dep_after = Expense::where('amt_type', 'Deposit');//->inFinancialYear();
-        $query_exp_after = Expense::where('amt_type', 'Expense');//->inFinancialYear();
+        $query_dep_after = Expense::where('amt_type', 'Deposit'); // ->inFinancialYear();
+        $query_exp_after = Expense::where('amt_type', 'Expense'); // ->inFinancialYear();
 
         if (\Auth::user()->can('all') || \Auth::user()->can('expense_list_for_all')) {
             if (isset($inc_f['incharge'])) {
@@ -71,17 +71,17 @@ class ExpenseController extends Controller
         }
 
         // Exclude records where 'doneby' contains 'Head Office' for non-admin users
-            if (!\Auth::user()->hasRole(['super-admin', 'admin'])) {
-                $headOfficeFilter = function($q) {
-                    $q->whereNull('doneby')
-                      ->orWhere('doneby', 'NOT LIKE', '%Head Office%');
-                };
-                
-                $query_dep_before->where($headOfficeFilter);
-                $query_exp_before->where($headOfficeFilter);
-                $query_dep_after->where($headOfficeFilter);
-                $query_exp_after->where($headOfficeFilter);
-            }
+        if (! \Auth::user()->hasRole(['super-admin', 'admin'])) {
+            $headOfficeFilter = function ($q) {
+                $q->whereNull('doneby')
+                    ->orWhere('doneby', 'NOT LIKE', '%Head Office%');
+            };
+
+            $query_dep_before->where($headOfficeFilter);
+            $query_exp_before->where($headOfficeFilter);
+            $query_dep_after->where($headOfficeFilter);
+            $query_exp_after->where($headOfficeFilter);
+        }
 
         // Apply exp_cate filter if present
         if (isset($inc_f['exp_cate'])) {
@@ -99,10 +99,9 @@ class ExpenseController extends Controller
             $query_dep_after->expDateStart($inc_f['exp_date_start'])->expDateEnd($inc_f['exp_date_end']);
             $query_exp_after->expDateStart($inc_f['exp_date_start'])->expDateEnd($inc_f['exp_date_end']);
 
-
             $this->resourceNeo['date_staring'] = $inc_f['exp_date_start'];
             $this->resourceNeo['date_closing'] = $inc_f['exp_date_end'];
-            $this->resourceNeo['date_dur'] = 'From: ' . $inc_f['exp_date_start'] . " To: " . $inc_f['exp_date_end'];
+            $this->resourceNeo['date_dur'] = 'From: '.$inc_f['exp_date_start'].' To: '.$inc_f['exp_date_end'];
         } else {
             $query_dep_before->expDatebefore(date('Y-m-d'));
             $query_exp_before->expDatebefore(date('Y-m-d'));
@@ -127,26 +126,24 @@ class ExpenseController extends Controller
         $closing = $opening + $depo_dur - $exp_dur;
         $this->resourceNeo['closing'] = number_format($closing, 2);
 
-
         $query = Expense::select('expenses.*')
             ->selectRaw('IF(amt_type="Expense", amount*-1,amount) as amount')
             ->selectRaw('IF(amt_type="Expense", amount, 0) as expense_amount')
             ->selectRaw('IF(amt_type="Deposit", amount, 0) as deposit_amount');
-
 
         if (\Auth::user()->can('all') || \Auth::user()->can('expense_list_for_all')) {
         } else {
             $query = $query->where('incharge', \Auth::user()->name);
         }
 
-        if (!\Auth::user()->hasRole(['super-admin', 'admin'])) {
-            $query = $query->where(function($q) {
+        if (! \Auth::user()->hasRole(['super-admin', 'admin'])) {
+            $query = $query->where(function ($q) {
                 $q->whereNull('doneby')
-                  ->orWhere('doneby', 'NOT LIKE', '%Head Office%');
+                    ->orWhere('doneby', 'NOT LIKE', '%Head Office%');
             });
         }
 
-        //$query->inFinancialYear();
+        // $query->inFinancialYear();
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('-exp_date')
@@ -177,26 +174,24 @@ class ExpenseController extends Controller
             foreach (array_keys($formInfoMulti) as $key) {
                 $table->column($key, $formInfoMulti[$key]['label'], searchable: $formInfoMulti[$key]['searchable'] ?? false, sortable: $formInfoMulti[$key]['sortable'] ?? false, hidden: $formInfoMulti[$key]['hidden'] ?? false, extra: ['align' => $formInfoMulti[$key]['align'] ?? 'left', 'showTotal' => $formInfoMulti[$key]['showTotal'] ?? false]);
             }
-            
-
 
             $fresult2 = [];
-            foreach ($formInfo['incharge']['options'] as  $opt) {
+            foreach ($formInfo['incharge']['options'] as $opt) {
                 $opt && $fresult2[$opt] = $opt;
             }
-            
+
             // Prepare Type filter options
             $typeOptions = [
                 'Expense' => 'Expense',
-                'Deposit' => 'Deposit'
+                'Deposit' => 'Deposit',
             ];
-            
+
             // Prepare Expense Category filter options
             $expCateOptions = [];
             foreach ($formInfoMulti['exp_cate']['options'] as $opt) {
                 $opt && $expCateOptions[$opt] = $opt;
             }
-            
+
             $table
                 ->column(label: 'Actions')
                 ->dateFilter(key: 'exp_date_start', label: 'Date From')
@@ -223,11 +218,12 @@ class ExpenseController extends Controller
         $resourceNeo['AllowMore'] = true;
         $resourceNeo['AllowDel'] = true;
         $resourceNeo['formInfo'] = Expense::formInfo();
-        if (!(\Auth::user()->can('all') || \Auth::user()->can('expense_add_for_all'))) {
+        if (! (\Auth::user()->can('all') || \Auth::user()->can('expense_add_for_all'))) {
             $resourceNeo['formInfo']['incharge']['type'] = null;
             $resourceNeo['formInfo']['incharge']['default'] = \Auth::user()->name;
         }
         $resourceNeo['formInfoMulti'] = Expense::formInfoMulti();
+
         return Inertia::render('Admin/ExpenseAddEditView', compact('resourceNeo'));
     }
 
@@ -242,7 +238,7 @@ class ExpenseController extends Controller
         $validateRule = [];
         $savedArray = [];
 
-        if (strtotime($request->exp_date) < strtotime('-2 days') && !(\Auth::user()->can('expense_back_date_entry'))) {
+        if (strtotime($request->exp_date) < strtotime('-2 days') && ! (\Auth::user()->can('expense_back_date_entry'))) {
             return redirect()->back()->withErrors(['exp_date' => 'The Expanse Date cannot be older than 2 days.']);
         }
 
@@ -252,13 +248,12 @@ class ExpenseController extends Controller
             $savedArray[$key] = $request->{$key};
         }
         foreach (array_keys($formInfoMulti) as $key) {
-            $attributeNames['multi.*.' . $key] = $formInfoMulti[$key]['label'];
-            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.' . $key] = $formInfoMulti[$key]['vRule'];
+            $attributeNames['multi.*.'.$key] = $formInfoMulti[$key]['label'];
+            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.'.$key] = $formInfoMulti[$key]['vRule'];
         }
 
         $request->validate($validateRule, [], $attributeNames);
         $savedArray['exp_date'] = date('Y-m-d', strtotime($request->exp_date));
-
 
         foreach ($request->multi as $ml) {
             $temp = [];
@@ -276,7 +271,7 @@ class ExpenseController extends Controller
 
         \ActivityLog::add(['action' => 'added', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->{array_keys($formInfo)[1]}]);
 
-        return redirect()->route('expense.index')->with(['message' => $this->resourceNeo['resourceTitle'] . ' Created Successfully !!', 'msg_type' => 'info']);
+        return redirect()->route('expense.index')->with(['message' => $this->resourceNeo['resourceTitle'].' Created Successfully !!', 'msg_type' => 'info']);
     }
 
     /**
@@ -314,6 +309,7 @@ class ExpenseController extends Controller
         $resourceNeo['AllowDel'] = false;
         $resourceNeo['formInfo'] = Expense::formInfo();
         $resourceNeo['formInfoMulti'] = $formInfoMulti;
+
         return Inertia::render('Admin/ExpenseAddEditView', compact('formdata', 'resourceNeo'));
     }
 
@@ -331,8 +327,8 @@ class ExpenseController extends Controller
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
         }
         foreach (array_keys($formInfoMulti) as $key) {
-            $attributeNames['multi.*.' . $key] = $formInfoMulti[$key]['label'];
-            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.' . $key] = $formInfoMulti[$key]['vRule'];
+            $attributeNames['multi.*.'.$key] = $formInfoMulti[$key]['label'];
+            isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.'.$key] = $formInfoMulti[$key]['vRule'];
         }
         $request->validate($validateRule, [], $attributeNames);
         foreach (array_diff(array_keys($formInfo), []) as $key) {
@@ -353,7 +349,6 @@ class ExpenseController extends Controller
                 implode(',', $temp);
         }
 
-
         $expense->save();
 
         \ActivityLog::add(['action' => 'updated', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->{array_keys($formInfo)[1]}]);
@@ -369,6 +364,7 @@ class ExpenseController extends Controller
         $uname = $expense->id;
         $expense->delete();
         \ActivityLog::add(['action' => 'deleted', 'module' => 'expense', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Expense Deleted !!');
     }
 
@@ -380,6 +376,7 @@ class ExpenseController extends Controller
         Expense::whereIn('id', request('ids'))->delete();
         $uname = (count(request('ids')) > 50) ? 'Many' : $uname = implode(',', request('ids'));
         \ActivityLog::add(['action' => 'deleted', 'module' => 'expense', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Selected Expense Deleted !!');
     }
 }

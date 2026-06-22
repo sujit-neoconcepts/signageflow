@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\Controllers;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use App\Models\Consumable;
 use App\Models\ConsumableTransaction;
 use App\Models\Tubing;
-use App\Models\Consumable;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class ProductionConsumableCostControllerTest extends TestCase
 {

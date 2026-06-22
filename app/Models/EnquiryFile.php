@@ -27,6 +27,6 @@ class EnquiryFile extends Model
      */
     public function storagePath(): string
     {
-        return 'enquiry_files/' . $this->enquiry_id . '/' . $this->stored_name;
+        return 'enquiry_files/'.$this->enquiry_id.'/'.$this->stored_name;
     }
 }

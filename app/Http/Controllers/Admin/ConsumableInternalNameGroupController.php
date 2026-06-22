@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Inertia\Inertia;
+use App\Helpers\ActivityLog;
+use App\Http\Controllers\Controller;
 use App\Models\ConsumableInternalNameGroup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use App\Http\Controllers\Controller;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
-use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use App\Helpers\ActivityLog;
+use Inertia\Inertia;
+use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class ConsumableInternalNameGroupController extends Controller
 {
@@ -21,7 +21,7 @@ class ConsumableInternalNameGroupController extends Controller
         'resourceName' => 'consumableInternalNameGroup',
         'resourceTitle' => 'Internal name Group',
         'iconPath' => 'M1,1V5H2V19H1V23H5V22H19V23H23V19H22V5H23V1H19V2H5V1M5,4H19V5H20V19H19V20H5V19H4V5H5M6,6V14H9V18H18V9H14V6M8,8H12V12H8M14,11H16V16H11V14H14',
-        'actions' => ['c', 'r', 'u', 'd']
+        'actions' => ['c', 'r', 'u', 'd'],
     ];
 
     public function __construct()
@@ -39,9 +39,9 @@ class ConsumableInternalNameGroupController extends Controller
     {
         $formInfo = ConsumableInternalNameGroup::formInfo();
         $formInfoMulti = [];
-        $globalSearch = AllowedFilter::callback('global', function ($query, $value) use ($formInfo, $formInfoMulti) {
-            $query->where(function ($query) use ($value, $formInfo, $formInfoMulti) {
-                Collection::wrap($value)->each(function ($value) use ($query, $formInfo, $formInfoMulti) {
+        $globalSearch = AllowedFilter::callback('global', function ($query, $value) use ($formInfo) {
+            $query->where(function ($query) use ($value, $formInfo) {
+                Collection::wrap($value)->each(function ($value) use ($query, $formInfo) {
                     foreach (array_keys($formInfo) as $key) {
                         $query->orWhere($key, 'LIKE', "%{$value}%");
                     }
@@ -69,8 +69,8 @@ class ConsumableInternalNameGroupController extends Controller
             [
                 'label' => 'Import',
                 'link' => 'consumableInternalNameGroup.import',
-                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z'
-            ]
+                'icon' => 'M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z',
+            ],
         ];
 
         return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo) {
@@ -89,6 +89,7 @@ class ConsumableInternalNameGroupController extends Controller
     {
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = ConsumableInternalNameGroup::formInfo();
+
         return Inertia::render('Admin/AddEditView', compact('resourceNeo'));
     }
 
@@ -114,7 +115,7 @@ class ConsumableInternalNameGroupController extends Controller
         if ($request->wantsJson()) {
             return response()->json([
                 'message' => 'Created successfully',
-                'data' => ConsumableInternalNameGroup::getAllOption()
+                'data' => ConsumableInternalNameGroup::getAllOption(),
             ]);
         }
 
@@ -129,6 +130,7 @@ class ConsumableInternalNameGroupController extends Controller
         $formdata = $consumableInternalNameGroup;
         $resourceNeo = $this->resourceNeo;
         $resourceNeo['formInfo'] = ConsumableInternalNameGroup::formInfo();
+
         return Inertia::render('Admin/AddEditView', compact('formdata', 'resourceNeo'));
     }
 
@@ -144,7 +146,7 @@ class ConsumableInternalNameGroupController extends Controller
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
         }
-        $validateRule['name'] = 'required|unique:consumable_internal_name_groups,name,' . $consumableInternalNameGroup->id;
+        $validateRule['name'] = 'required|unique:consumable_internal_name_groups,name,'.$consumableInternalNameGroup->id;
         $request->validate($validateRule, [], $attributeNames);
         foreach (array_keys($formInfo) as $key) {
             $consumableInternalNameGroup->{$key} = $request->{$key};
@@ -165,6 +167,7 @@ class ConsumableInternalNameGroupController extends Controller
         $uname = $consumableInternalNameGroup->name;
         $consumableInternalNameGroup->delete();
         ActivityLog::add(['action' => 'deleted', 'module' => 'consumableInternalNameGroup', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Internal name Group Deleted !!');
     }
 
@@ -176,6 +179,7 @@ class ConsumableInternalNameGroupController extends Controller
         ConsumableInternalNameGroup::whereIn('id', request('ids'))->delete();
         $uname = (count(request('ids')) > 50) ? 'Many' : implode(',', request('ids'));
         ActivityLog::add(['action' => 'deleted', 'module' => 'consumableInternalNameGroup', 'data_key' => $uname]);
+
         return redirect()->back()->with('message', 'Selected Internal name Groups Deleted !!');
     }
 
@@ -188,8 +192,8 @@ class ConsumableInternalNameGroupController extends Controller
             [
                 'link' => 'consumableInternalNameGroup.index',
                 'label' => 'Back to List',
-                'icon' => 'M1,1V5H2V19H1V23H5V22H19V23H23V19H22V5H23V1H19V2H5V1M5,4H19V5H20V19H19V20H5V19H4V5H5M6,6V14H9V18H18V9H14V6M8,8H12V12H8M14,11H16V16H11V14H14'
-            ]
+                'icon' => 'M1,1V5H2V19H1V23H5V22H19V23H23V19H22V5H23V1H19V2H5V1M5,4H19V5H20V19H19V20H5V19H4V5H5M6,6V14H9V18H18V9H14V6M8,8H12V12H8M14,11H16V16H11V14H14',
+            ],
         ];
 
         $sampleData = [
@@ -209,13 +213,13 @@ class ConsumableInternalNameGroupController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:2048' // 2MB limit
+            'file' => 'required|file|mimes:csv,txt|max:2048', // 2MB limit
         ]);
 
         $file = $request->file('file');
         $path = $file->getRealPath();
 
-        if (!is_readable($path)) {
+        if (! is_readable($path)) {
             return redirect()->back()->with(['message' => 'Import failed! Unable to read file.', 'msg_type' => 'danger']);
         }
 
@@ -227,8 +231,8 @@ class ConsumableInternalNameGroupController extends Controller
         $headers = array_shift($records);
         $expectedHeaders = ['name'];
         $missingHeaders = array_diff($expectedHeaders, $headers);
-        if (!empty($missingHeaders)) {
-            return redirect()->back()->with(['message' => 'Import failed! Missing columns: ' . implode(', ', $missingHeaders), 'msg_type' => 'danger']);
+        if (! empty($missingHeaders)) {
+            return redirect()->back()->with(['message' => 'Import failed! Missing columns: '.implode(', ', $missingHeaders), 'msg_type' => 'danger']);
         }
 
         $validatedData = [];
@@ -238,6 +242,7 @@ class ConsumableInternalNameGroupController extends Controller
         foreach ($records as $record) {
             if (empty(array_filter($record))) {
                 $rowNumber++;
+
                 continue;
             }
 
@@ -248,14 +253,14 @@ class ConsumableInternalNameGroupController extends Controller
             ]);
 
             if ($validator->fails()) {
-                $errors[] = "Row {$rowNumber}: " . implode(', ', $validator->errors()->all());
+                $errors[] = "Row {$rowNumber}: ".implode(', ', $validator->errors()->all());
             } else {
                 $validatedData[] = $validator->validated();
             }
             $rowNumber++;
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             return redirect()->back()->with(['message' => implode("\n", $errors), 'msg_type' => 'danger']);
         }
 
@@ -266,10 +271,12 @@ class ConsumableInternalNameGroupController extends Controller
             }
             DB::commit();
             ActivityLog::add(['action' => 'imported', 'module' => 'consumableInternalNameGroup', 'data_key' => count($validatedData)]);
-            return redirect()->route('consumableInternalNameGroup.index')->with(['message' => count($validatedData) . ' records imported!', 'msg_type' => 'success']);
+
+            return redirect()->route('consumableInternalNameGroup.index')->with(['message' => count($validatedData).' records imported!', 'msg_type' => 'success']);
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with(['message' => 'Import failed: ' . $e->getMessage(), 'msg_type' => 'danger']);
+
+            return redirect()->back()->with(['message' => 'Import failed: '.$e->getMessage(), 'msg_type' => 'danger']);
         }
     }
 

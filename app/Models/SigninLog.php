@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
+use App\Mail\SigninMail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Mail\SigninMail;
-use App\Models\User;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Mail;
 
 class SigninLog extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'email',
         'ip',
@@ -31,10 +31,10 @@ class SigninLog extends Model
         try {
             $details = [
                 'title' => 'Signin attempt Mail',
-                'body' =>   'Email : ' . $mailcontents['email'] . '<br>' .
-                    'IP : ' . $mailcontents['ip'] . '<br>' .
-                    'Status : ' . $mailcontents['msg'] . '<br>' .
-                    'Device : ' . $mailcontents['userAgent'] . '<br>'
+                'body' => 'Email : '.$mailcontents['email'].'<br>'.
+                    'IP : '.$mailcontents['ip'].'<br>'.
+                    'Status : '.$mailcontents['msg'].'<br>'.
+                    'Device : '.$mailcontents['userAgent'].'<br>',
             ];
 
             $superadmin = User::where('id', 1)->first();
@@ -42,21 +42,24 @@ class SigninLog extends Model
             if ($superadmin) {
                 Mail::to($superadmin->email)->send(new SigninMail($details));
             } else {
-                info("Error: Super admin user with ID 1 not found. Cannot send sign-in log email.");
+                info('Error: Super admin user with ID 1 not found. Cannot send sign-in log email.');
             }
         } catch (Exception $e) {
-            info("Error: " . $e->getMessage());
+            info('Error: '.$e->getMessage());
         }
     }
 
     public function scopeSignedinStartDate($query, $sd)
     {
         $start = ($sd instanceof Carbon) ? $sd : Carbon::parse($sd);
+
         return $query->where('created_at', '>=', $start->startOfDay());
     }
+
     public function scopeSignedinEndDate($query, $ed)
     {
-        $end   = ($ed instanceof Carbon) ? $ed : Carbon::parse($ed);
+        $end = ($ed instanceof Carbon) ? $ed : Carbon::parse($ed);
+
         return $query->where('created_at', '<=', $end->endOfDay());
     }
 }

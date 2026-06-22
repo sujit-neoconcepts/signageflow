@@ -16,10 +16,10 @@ class ConsumableInternalName extends Model
     public static function formInfo()
     {
         $allunits = \App\Models\Munit::select('name')->orderBy('name')->get()->pluck('name');
-        
+
         $allgroups = [];
         try {
-            $allgroups = \App\Models\ConsumableInternalNameGroup::orderBy('name')->get()->map(function($g) {
+            $allgroups = \App\Models\ConsumableInternalNameGroup::orderBy('name')->get()->map(function ($g) {
                 return ['id' => $g->id, 'label' => $g->name];
             })->toArray();
         } catch (\Exception $e) {
@@ -37,7 +37,7 @@ class ConsumableInternalName extends Model
                 'sortable' => true,
                 'addAndRefresh' => true,
             ],
-            'unitPrice' => ['label' => 'Unit Price', 'vRule' => 'required|numeric', 'sortable' => true],
+            'unitPrice' => ['label' => 'Unit Price', 'vRule' => 'required|numeric', 'sortable' => true, 'align' => 'right', 'showTotal' => true],
             'unitName' => ['label' => 'Unit Name', 'vRule' => 'required', 'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => $allunits],
             'unitAltName' => ['label' => 'Unit Alt Name', 'vRule' => 'nullable', 'sortable' => true, 'type' => 'select', 'optionType' => 'array', 'options' => $allunits],
             'openStockUnit' => [
