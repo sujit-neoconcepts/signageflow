@@ -61,7 +61,10 @@ abstract class BaseCostSheetController extends Controller
         });
 
         $perPage = request()->query('perPage') ?? 10;
-        $resourceData = QueryBuilder::for(CostSheet::where('prod_type', $this->prodType()))
+        $query = CostSheet::where('prod_type', $this->prodType())
+            ->with(['compositions.group.items', 'compositions.childCostSheet']);
+
+        $resourceData = QueryBuilder::for($query)
             ->defaultSort('name')
             ->allowedSorts(array_merge(array_keys($formInfo), array_keys($formInfoMulti)))
             ->allowedFilters([$globalSearch])

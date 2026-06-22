@@ -50,7 +50,11 @@ class ConsumableInternalNameReportController extends Controller
                         if ($key === 'unitPriceWithMargin' || $key === 'unitPrice') {
                             continue;
                         }
-                        $query->orWhere($key, 'LIKE', "%{$value}%");
+                        if ($key === 'consumable_internal_name_group_id') {
+                            $query->orWhere('consumable_internal_name_groups.name', 'LIKE', "%{$value}%");
+                        } else {
+                            $query->orWhere('consumable_internal_names.'.$key, 'LIKE', "%{$value}%");
+                        }
                     }
                 });
             });
@@ -58,12 +62,32 @@ class ConsumableInternalNameReportController extends Controller
 
         $perPage = request()->query('perPage') ?? 10;
 
-        $query = ConsumableInternalName::select('*', DB::raw('CAST((unitPrice + (unitPrice * openStockMarginPercent / 100)) AS DECIMAL(15,2)) as unitPriceWithMargin'));
+        $query = ConsumableInternalName::query()
+            ->select('consumable_internal_names.*', 'consumable_internal_name_groups.name as group_name', DB::raw('CAST((unitPrice + (unitPrice * openStockMarginPercent / 100)) AS DECIMAL(15,2)) as unitPriceWithMargin'))
+            ->leftJoin('consumable_internal_name_groups', 'consumable_internal_name_groups.id', '=', 'consumable_internal_names.consumable_internal_name_group_id');
+
+        $allowedSorts = [];
+        foreach (array_keys($formInfo) as $key) {
+            if ($key === 'name') {
+                $allowedSorts[] = \Spatie\QueryBuilder\AllowedSort::field('name', 'consumable_internal_names.name');
+            } elseif ($key === 'consumable_internal_name_group_id') {
+                $allowedSorts[] = \Spatie\QueryBuilder\AllowedSort::field('consumable_internal_name_group_id', 'consumable_internal_name_groups.name');
+            } else {
+                $allowedSorts[] = $key;
+            }
+        }
+        $allowedSorts[] = 'group_name';
+        $allowedSorts[] = 'unitPriceWithMargin';
+
+        $allowedFilters = array_merge(
+            array_diff(array_keys($formInfo), ['consumable_internal_name_group_id']),
+            [AllowedFilter::exact('consumable_internal_name_group_id'), $globalSearch]
+        );
 
         $resourceData = QueryBuilder::for($query)
-            ->defaultSort('name')
-            ->allowedSorts(array_merge(array_keys($formInfo), ['unitPriceWithMargin']))
-            ->allowedFilters(array_merge(array_keys($formInfo), [$globalSearch]))
+            ->defaultSort('consumable_internal_names.name')
+            ->allowedSorts($allowedSorts)
+            ->allowedFilters($allowedFilters)
             ->paginate($perPage)
             ->withQueryString();
 
@@ -81,7 +105,9 @@ class ConsumableInternalNameReportController extends Controller
 
         return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($formInfo) {
             $table->withGlobalSearch();
-            foreach (array_keys($formInfo) as $key) {
+            
+            $arrKey = array_diff(array_keys($formInfo), ['consumable_internal_name_group_id']);
+            foreach ($arrKey as $key) {
                 if (isset($formInfo[$key]['hidden']) && $formInfo[$key]['hidden']) {
                     continue;
                 }
@@ -94,6 +120,17 @@ class ConsumableInternalNameReportController extends Controller
                     extra: ['align' => $formInfo[$key]['align'] ?? 'left']
                 );
             }
+            $table->column('group_name', 'Internal name Group', sortable: true);
+
+            $allgroups = [];
+            try {
+                $allgroups = \App\Models\ConsumableInternalNameGroup::orderBy('name')->pluck('name', 'id')->toArray();
+            } catch (\Exception $e) {
+            }
+            if (! empty($allgroups)) {
+                $table->selectFilter('consumable_internal_name_group_id', $allgroups, label: 'Internal name Group', noFilterOption: true, noFilterOptionLabel: 'All');
+            }
+
             $table->perPageOptions([10, 15, 30, 50, 100]);
         });
     }

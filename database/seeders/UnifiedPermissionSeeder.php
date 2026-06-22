@@ -36,6 +36,7 @@ class UnifiedPermissionSeeder extends Seeder
         'consumableInternalName' => ['list', 'create', 'edit', 'delete', 'export', 'import'],
         'consumableInternalNameGroup' => ['list', 'create', 'edit', 'delete', 'export', 'import'],
         'consumableInternalNameReport' => ['list'],
+        'consumableInternalNameGroupReport' => ['list'],
 
         // Consumables Operational Modules
         'product' => ['list', 'create', 'edit', 'delete', 'export', 'import'],

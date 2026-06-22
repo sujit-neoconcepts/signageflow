@@ -14,10 +14,16 @@ class CostSheetCompositionController extends Controller
     {
         $compositions = $costSheet->compositions()
             ->with([
-                'group:id,name',
+                'group.items',
                 'childCostSheet:id,name,qty_unit,alt_units,rate,no_of_unit,prod_type',
             ])
             ->get();
+
+        $compositions->each(function ($composition) {
+            if ($composition->group) {
+                $composition->group->append(['unitName', 'unitAltName', 'unitPrice', 'openStockMarginPercent']);
+            }
+        });
 
         return response()->json($compositions);
     }
@@ -61,13 +67,21 @@ class CostSheetCompositionController extends Controller
         // Update parent total cost (calculated dynamically now)
         // $costSheet->update(['total_cost' => $data['total_cost']]);
 
+        $compositions = $costSheet->compositions()
+            ->with([
+                'group.items',
+                'childCostSheet:id,name,qty_unit,alt_units,rate,no_of_unit,prod_type',
+            ])->get();
+
+        $compositions->each(function ($composition) {
+            if ($composition->group) {
+                $composition->group->append(['unitName', 'unitAltName', 'unitPrice', 'openStockMarginPercent']);
+            }
+        });
+
         return response()->json([
             'message' => 'Compositions saved successfully.',
-            'compositions' => $costSheet->compositions()
-                ->with([
-                    'group:id,name',
-                    'childCostSheet:id,name,qty_unit,alt_units,rate,no_of_unit,prod_type',
-                ])->get(),
+            'compositions' => $compositions,
         ]);
     }
 
@@ -79,7 +93,7 @@ class CostSheetCompositionController extends Controller
         $prodType = $request->query('prod_type');
         $query = CostSheet::select('id', 'name', 'qty_unit', 'alt_units', 'rate', 'no_of_unit', 'prod_type')
             ->with([
-                'compositions.group:id,name',
+                'compositions.group.items',
                 'compositions.childCostSheet:id,name,qty_unit,alt_units,rate,no_of_unit,prod_type',
             ])
             ->orderBy('name');

@@ -11,25 +11,28 @@ class ConsumableInternalNameGroup extends Model
 
     protected $fillable = ['name'];
 
-    protected $appends = ['unitName', 'unitAltName', 'unitPrice', 'openStockMarginPercent'];
+    public function items()
+    {
+        return $this->hasMany(ConsumableInternalName::class, 'consumable_internal_name_group_id');
+    }
 
     public function getUnitNameAttribute()
     {
-        $first = \App\Models\ConsumableInternalName::where('consumable_internal_name_group_id', $this->id)->first();
+        $first = $this->items->first();
 
         return $first ? $first->unitName : '';
     }
 
     public function getUnitAltNameAttribute()
     {
-        $first = \App\Models\ConsumableInternalName::where('consumable_internal_name_group_id', $this->id)->first();
+        $first = $this->items->first();
 
         return $first ? $first->unitAltName : '';
     }
 
     public function getUnitPriceAttribute()
     {
-        $items = \App\Models\ConsumableInternalName::where('consumable_internal_name_group_id', $this->id)->get();
+        $items = $this->items;
 
         if ($items->isEmpty()) {
             return 0.00;
@@ -44,7 +47,9 @@ class ConsumableInternalNameGroup extends Model
 
     public function getOpenStockMarginPercentAttribute()
     {
-        return 0.00;
+        $first = $this->items->first();
+
+        return $first ? (float) $first->openStockMarginPercent : 0.00;
     }
 
     public static function formInfo()
@@ -75,7 +80,7 @@ class ConsumableInternalNameGroup extends Model
                 'unitName' => $firstInternalName ? $firstInternalName->unitName : '',
                 'unitAltName' => $firstInternalName ? $firstInternalName->unitAltName : '',
                 'unitPrice' => (float) $averagePrice,
-                'openStockMarginPercent' => 0.00,
+                'openStockMarginPercent' => $firstInternalName ? (float) $firstInternalName->openStockMarginPercent : 0.00,
             ];
         });
     }

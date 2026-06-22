@@ -298,6 +298,7 @@ return [
         'consumableInternalName' => 'Consumable Internal Name',
         'consumableInternalNameGroup' => 'Internal name Group',
         'consumableInternalNameReport' => 'Product Internal Price',
+        'consumableInternalNameGroupReport' => 'Product Internal Group Price',
 
         // Consumables Operational Modules
         'product' => 'Product',

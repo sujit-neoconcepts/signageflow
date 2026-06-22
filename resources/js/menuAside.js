@@ -242,6 +242,12 @@ export default [
                 icon: mdiFormatListBulletedType,
                 resource: "consumableInternalNameReport",
             },
+            {
+                route: "consumableInternalNameGroupReport.index",
+                label: "Product Internal Name Group Report",
+                icon: mdiFormatListBulletedType,
+                resource: "consumableInternalNameGroupReport",
+            },
         ],
     },
 ];

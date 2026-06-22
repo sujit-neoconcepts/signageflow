@@ -67,6 +67,7 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
 
     // consumableInternalNameReport Route
     Route::get('consumableInternalNameReport', [\App\Http\Controllers\Admin\ConsumableInternalNameReportController::class, 'index'])->name('consumableInternalNameReport.index');
+    Route::get('consumableInternalNameGroupReport', [\App\Http\Controllers\Admin\ConsumableInternalNameGroupReportController::class, 'index'])->name('consumableInternalNameGroupReport.index');
 
     // CostSheet Compositions
     Route::get('costSheet/{costSheet}/compositions', [\App\Http\Controllers\Admin\CostSheetCompositionController::class, 'index'])->name('costSheetCompositions.index');
