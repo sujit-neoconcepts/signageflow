@@ -13,7 +13,12 @@ const props = defineProps({
 });
 
 
-const filteredMenu = computed(() => props.menu.filter(i => !i.resource || can(i.resource + '_list')))
+const filteredMenu = computed(() => props.menu.filter(i => {
+  if (i.permission) {
+    return can(i.permission);
+  }
+  return !i.resource || can(i.resource + '_list');
+}))
 
 const emit = defineEmits(["menu-click", "dropdown-active"]);
 

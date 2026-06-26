@@ -21,6 +21,10 @@ import {
     mdiCartPlus,
     mdiCartArrowUp,
     mdiInvoiceList,
+    mdiClipboardCheckOutline,
+    mdiCalendarCheck,
+    mdiSitemap,
+    mdiBriefcase,
 } from "@mdi/js";
 
 export default [
@@ -247,6 +251,37 @@ export default [
                 label: "Product Internal Name Group Report",
                 icon: mdiFormatListBulletedType,
                 resource: "consumableInternalNameGroupReport",
+            },
+        ],
+    },
+    {
+        label: "Tasks Manager",
+        icon: mdiClipboardCheckOutline,
+        menu: [
+            {
+                route: "workflow.index",
+                label: "Workflows",
+                icon: mdiSitemap,
+                resource: "workflow",
+            },
+            {
+                route: "job.index",
+                label: "Jobs",
+                icon: mdiBriefcase,
+                resource: "job",
+            },
+            {
+                route: "task.index",
+                label: "Tasks",
+                icon: mdiClipboardCheckOutline,
+                resource: "task",
+            },
+            {
+                route: "task.myTasks",
+                label: "My Tasks",
+                icon: mdiCalendarCheck,
+                resource: "task",
+                permission: "task_MyTasksList",
             },
         ],
     },

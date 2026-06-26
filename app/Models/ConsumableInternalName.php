@@ -26,6 +26,15 @@ class ConsumableInternalName extends Model
             // Guard against table-not-found during migrations/seeding
         }
 
+        $allgroups = [];
+        try {
+            $allgroups = \App\Models\ConsumableInternalNameGroup::orderBy('name')->get()->map(function ($g) {
+                return ['id' => $g->id, 'label' => $g->name];
+            })->toArray();
+        } catch (\Exception $e) {
+            // Guard against table-not-found during migrations/seeding
+        }
+
         return [
             'name' => ['label' => 'Name', 'vRule' => 'required|unique:consumable_internal_names,name', 'searchable' => true, 'sortable' => true],
             'consumable_internal_name_group_id' => [

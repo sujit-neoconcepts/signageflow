@@ -310,6 +310,9 @@ return [
         'signageCostSheet' => 'Signage Cost Sheet',
         'cabinetCostSheet' => 'Cabinet Cost Sheet',
         'lettersCostSheet' => 'Letters Cost Sheet',
-
+        'task' => 'Task Manager',
+        'workflow' => 'Workflow Manager',
+        'job' => 'Job Manager',
+        'dashboard' => 'Dashboard',
     ],
 ];

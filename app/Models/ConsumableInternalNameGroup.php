@@ -11,6 +11,8 @@ class ConsumableInternalNameGroup extends Model
 
     protected $fillable = ['name'];
 
+    protected $appends = ['unitName', 'unitAltName', 'unitPrice', 'openStockMarginPercent'];
+
     public function items()
     {
         return $this->hasMany(ConsumableInternalName::class, 'consumable_internal_name_group_id');

@@ -28,6 +28,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',
         'twofa',
         'password',
     ];
@@ -82,7 +83,12 @@ class User extends Authenticatable
 
     public function getRoleNameAttribute()
     {
-        return $this->getRoleNames()[0] ?? '';
+        return $this->getRoleNames()->implode(', ');
+    }
+
+    public function getIsSuperAdminAttribute()
+    {
+        return $this->hasRole(env('APP_SUPER_ADMIN', 'super-admin'));
     }
 
     public static function neUserMail($mailcontents)
@@ -103,5 +109,23 @@ class User extends Authenticatable
         } catch (Exception $e) {
             info('Error: '.$e->getMessage());
         }
+    }
+
+    public function tasksCreated()
+    {
+        return $this->hasMany(Task::class, 'creator_id');
+    }
+
+    public function tasksAssigned()
+    {
+        return $this->belongsToMany(Task::class, 'task_assignees', 'user_id', 'task_id')
+            ->withPivot('status', 'feedback', 'completed_at')
+            ->withTimestamps();
+    }
+
+    public function tasksViewing()
+    {
+        return $this->belongsToMany(Task::class, 'task_viewers', 'user_id', 'task_id')
+            ->withTimestamps();
     }
 }

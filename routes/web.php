@@ -10,8 +10,8 @@ use App\Http\Controllers\Admin\ExpuserController;
 use App\Http\Controllers\Admin\LettersCostSheetController;
 use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\Admin\LogActivityController;
-// Consumables Module Controllers
 use App\Http\Controllers\Admin\MunitController;
+// Consumables Module Controllers
 use App\Http\Controllers\Admin\OpeningController;
 use App\Http\Controllers\Admin\OpenStockController;
 use App\Http\Controllers\Admin\OutwardController;
@@ -68,7 +68,6 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     // consumableInternalNameReport Route
     Route::get('consumableInternalNameReport', [\App\Http\Controllers\Admin\ConsumableInternalNameReportController::class, 'index'])->name('consumableInternalNameReport.index');
     Route::get('consumableInternalNameGroupReport', [\App\Http\Controllers\Admin\ConsumableInternalNameGroupReportController::class, 'index'])->name('consumableInternalNameGroupReport.index');
-
     // CostSheet Compositions
     Route::get('costSheet/{costSheet}/compositions', [\App\Http\Controllers\Admin\CostSheetCompositionController::class, 'index'])->name('costSheetCompositions.index');
     Route::post('costSheet/{costSheet}/compositions', [\App\Http\Controllers\Admin\CostSheetCompositionController::class, 'store'])->name('costSheetCompositions.store');
@@ -224,6 +223,31 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::delete('signinLog-bulk-destroy', [SigninlogController::class, 'bulkDestroy'])->name('signinLog.bulkDestroy');
     Route::get('/profile', [UserController::class, 'profile'])->name('profile.profile');
     Route::put('/update-profile', [UserController::class, 'updateProfile'])->name('profile.updateProfile');
+
+    // Workflows
+    Route::get('workflow/{workflow}/stages-json', [\App\Http\Controllers\Admin\WorkflowController::class, 'getStagesJson'])->name('workflow.stagesJson');
+    Route::delete('workflow-bulk-destroy', [\App\Http\Controllers\Admin\WorkflowController::class, 'bulkDestroy'])->name('workflow.bulkDestroy');
+    Route::resource('workflow', \App\Http\Controllers\Admin\WorkflowController::class);
+
+    // Jobs
+    Route::post('job-upload-temp', [\App\Http\Controllers\Admin\JobController::class, 'uploadTempFiles'])->name('job.uploadTempFiles');
+    Route::get('job/{job}/recalculate-status', [\App\Http\Controllers\Admin\JobController::class, 'recalculateStatus'])->name('job.recalculateStatus');
+    Route::delete('job-file/{jobFile}', [\App\Http\Controllers\Admin\JobController::class, 'deleteFile'])->name('job.file.destroy');
+    Route::get('job-file/{jobFile}/download', [\App\Http\Controllers\Admin\JobController::class, 'downloadFile'])->name('job.file.download');
+    Route::resource('job', \App\Http\Controllers\Admin\JobController::class);
+
+    // Task Manager
+    Route::get('task/my-tasks', [\App\Http\Controllers\Admin\TaskController::class, 'myTasks'])->name('task.myTasks');
+    Route::post('task/{task}/update-status', [\App\Http\Controllers\Admin\TaskController::class, 'updateAssigneeStatus'])->name('task.updateAssigneeStatus');
+    Route::post('task/{task}/add-comment', [\App\Http\Controllers\Admin\TaskController::class, 'addComment'])->name('task.addComment');
+    Route::post('task/{task}/update-task-status', [\App\Http\Controllers\Admin\TaskController::class, 'updateTaskStatus'])->name('task.updateTaskStatus');
+    Route::post('task-upload-temp', [\App\Http\Controllers\Admin\TaskController::class, 'uploadTempFiles'])->name('task.uploadTempFiles');
+    Route::delete('task-file/{taskFile}', [\App\Http\Controllers\Admin\TaskController::class, 'deleteFile'])->name('task.file.destroy');
+    Route::get('task-file/{taskFile}/download', [\App\Http\Controllers\Admin\TaskController::class, 'downloadFile'])->name('task.file.download');
+    Route::get('task-comment-file/{commentFile}/download', [\App\Http\Controllers\Admin\TaskController::class, 'downloadCommentFile'])->name('task.commentFile.download');
+    Route::delete('task-bulk-destroy', [\App\Http\Controllers\Admin\TaskController::class, 'bulkDestroy'])->name('task.bulkDestroy');
+    Route::get('task/{task}/json-details', [\App\Http\Controllers\Admin\TaskController::class, 'jsonDetails'])->name('task.jsonDetails');
+    Route::resource('task', \App\Http\Controllers\Admin\TaskController::class);
 });
 
 Route::get('logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index']);

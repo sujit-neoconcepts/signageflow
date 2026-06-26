@@ -99,17 +99,17 @@ function handleBlur(event) {
             <CardBox has-table>
                 <Table :resource="users" :resourceNeo="resourceNeo">
                     <template #cell(actions)="{ item: user }">
-                        <Link :href="route('user.edit', user.id)" class="-mb-3 mr-2" v-if="user.role_name != 'super-admin' && (actions.indexOf('u') !== -1) &&
+                        <Link :href="route('user.edit', user.id)" class="-mb-3 mr-2" v-if="!user.is_super_admin && (actions.indexOf('u') !== -1) &&
                             can('user_edit')">
                         <BaseButton color="info" :icon="mdiFileEdit" small />
                         </Link>
-                        <Link :href="route('user.permissions', user.id)" class="-mb-3 mr-2" v-if="user.role_name != 'super-admin' && (actions.indexOf('u') !== -1) &&
+                        <Link :href="route('user.permissions', user.id)" class="-mb-3 mr-2" v-if="!user.is_super_admin && (actions.indexOf('u') !== -1) &&
                             can('user_edit')">
                         <BaseButton color="info" :icon="mdiSecurity" small />
                         </Link>
                         <BaseButton color="danger" :icon="mdiTrashCan" small
                             @click="delselect = user.id; isModalDangerActive = true"
-                            v-if="user.role_name != 'super-admin' && (actions.indexOf('d') !== -1) && can('user_delete')" />
+                            v-if="!user.is_super_admin && (actions.indexOf('d') !== -1) && can('user_delete')" />
                     </template>
                 </Table>
             </CardBox>
