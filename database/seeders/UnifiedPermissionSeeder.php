@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -53,6 +54,7 @@ class UnifiedPermissionSeeder extends Seeder
         'enquiry' => ['list', 'create', 'edit', 'delete', 'export'],
         'workflow' => ['list', 'create', 'edit', 'delete', 'view'],
         'job' => ['list', 'create', 'edit', 'delete', 'view'],
+        'task' => ['list', 'create', 'edit', 'delete', 'view', 'MyTasksList'],
         'dashboard' => ['view', 'viewStockMetrics', 'viewPurchaseMetrics', 'viewExpenseMetrics', 'viewOutwardMetrics', 'viewJobMetrics', 'viewTaskMetrics', 'viewMyTasks'],
     ];
 
@@ -91,6 +93,11 @@ class UnifiedPermissionSeeder extends Seeder
             'dashboard_viewJobMetrics',
             'dashboard_viewTaskMetrics',
             'dashboard_viewMyTasks',
+
+            // Task, Workflow, Job permissions
+            'task_list', 'task_create', 'task_edit', 'task_delete', 'task_view', 'task_MyTasksList',
+            'workflow_list', 'workflow_create', 'workflow_edit', 'workflow_delete', 'workflow_view',
+            'job_list', 'job_create', 'job_edit', 'job_delete', 'job_view',
         ]);
 
         // Give permissions to Supervisor
@@ -106,6 +113,9 @@ class UnifiedPermissionSeeder extends Seeder
         $executiveRole->givePermissionTo([
             'dashboard_view',
             'dashboard_viewMyTasks',
+            'task_MyTasksList',
+            'workflow_view',
+            'job_view',
         ]);
 
         // Give permissions to Incharge
@@ -118,6 +128,42 @@ class UnifiedPermissionSeeder extends Seeder
         $managerRole->givePermissionTo([
             'dashboard_view',
             'dashboard_viewMyTasks',
+
+            // Task, Workflow, Job permissions
+            'task_list', 'task_create', 'task_edit', 'task_delete', 'task_view', 'task_MyTasksList',
+            'workflow_list', 'workflow_create', 'workflow_edit', 'workflow_delete', 'workflow_view',
+            'job_list', 'job_create', 'job_edit', 'job_delete', 'job_view',
         ]);
+
+        // Create default manager and executive users if they don't exist
+        $managerUser = User::firstOrCreate(
+            ['email' => 'manager@manager.com'],
+            [
+                'name' => 'Manager User',
+                'phone' => '1234567890',
+                'password' => 'manager',
+            ]
+        );
+        $managerUser->assignRole($managerRole);
+
+        $executiveUser = User::firstOrCreate(
+            ['email' => 'executive@executive.com'],
+            [
+                'name' => 'Executive User 1',
+                'phone' => '1234567891',
+                'password' => 'executive',
+            ]
+        );
+        $executiveUser->assignRole($executiveRole);
+
+        $executiveUser2 = User::firstOrCreate(
+            ['email' => 'executive2@executive.com'],
+            [
+                'name' => 'Executive User 2',
+                'phone' => '1234567892',
+                'password' => 'executive',
+            ]
+        );
+        $executiveUser2->assignRole($executiveRole);
     }
 }
