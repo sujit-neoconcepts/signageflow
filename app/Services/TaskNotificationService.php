@@ -15,10 +15,11 @@ class TaskNotificationService
      */
     public static function notifyNewTask(Task $task)
     {
-        $task->load(['creator', 'assignees', 'viewers']);
+        $task->load(['creator', 'assignees', 'viewers', 'job']);
         $channels = $task->notify_channels ?? ['email'];
 
         $title = "New Task Assigned: {$task->title}";
+        $taskDetail = self::getDetailedTaskString($task);
 
         // Notify Assignees
         foreach ($task->assignees as $assignee) {
@@ -30,7 +31,13 @@ class TaskNotificationService
                     '<strong>Due Date:</strong> '.$task->due_date->format('d-m-Y H:i').'<br><br>'.
                     "Please log in to the portal and check your 'My Tasks' section to accept and work on the task.<br>";
 
-            self::send($assignee, $title, $body, $channels);
+            self::send($assignee, $title, $body, $channels, [
+                'name' => config('services.whatsapp.templates.notification', 'task_notification'),
+                'parameters' => [
+                    $assignee->name,
+                    $taskDetail,
+                ],
+            ]);
         }
 
         // Notify Loop Users (Viewers)
@@ -43,7 +50,13 @@ class TaskNotificationService
                     '<strong>Due Date:</strong> '.$task->due_date->format('d-m-Y H:i').'<br><br>'.
                     'This is a view-only notification for your reference.<br>';
 
-            self::send($viewer, "Loop Notification: {$task->title}", $body, $channels);
+            self::send($viewer, "Loop Notification: {$task->title}", $body, $channels, [
+                'name' => config('services.whatsapp.templates.loop', 'task_loop_notification'),
+                'parameters' => [
+                    $viewer->name,
+                    $taskDetail,
+                ],
+            ]);
         }
     }
 
@@ -52,6 +65,7 @@ class TaskNotificationService
      */
     public static function notifyReminder(Task $task, User $assignee)
     {
+        $task->load(['job']);
         $channels = $task->notify_channels ?? ['email'];
         $title = "Reminder: Task Due Soon - {$task->title}";
         $body = "Hello {$assignee->name},<br><br>".
@@ -60,7 +74,15 @@ class TaskNotificationService
                 '<strong>Due Date:</strong> '.$task->due_date->format('d-m-Y H:i').'<br><br>'.
                 'Please submit your progress or mark the task as completed.';
 
-        self::send($assignee, $title, $body, $channels);
+        $taskDetail = self::getDetailedTaskString($task);
+
+        self::send($assignee, $title, $body, $channels, [
+            'name' => config('services.whatsapp.templates.reminder', 'task_reminder'),
+            'parameters' => [
+                $assignee->name,
+                $taskDetail,
+            ],
+        ]);
     }
 
     /**
@@ -68,7 +90,7 @@ class TaskNotificationService
      */
     public static function notifyStatusUpdate(Task $task, User $assignee, string $newStatus, ?string $comment = null)
     {
-        $task->load('creator');
+        $task->load(['creator', 'job']);
         $channels = $task->notify_channels ?? ['email'];
 
         $title = "Task Update: {$assignee->name} marked task as ".ucfirst($newStatus);
@@ -80,7 +102,21 @@ class TaskNotificationService
                 '<strong>Updated At:</strong> '.now()->format('d-m-Y H:i').'<br><br>'.
                 'Please review the task in the Task Manager.';
 
-        self::send($task->creator, $title, $body, $channels);
+        $taskDetail = self::getDetailedTaskString($task);
+        $statusStr = ucfirst($newStatus);
+        if (! empty($comment)) {
+            $statusStr .= " (Comment: {$comment})";
+        }
+
+        self::send($task->creator, $title, $body, $channels, [
+            'name' => config('services.whatsapp.templates.status_update', 'task_status_update'),
+            'parameters' => [
+                $task->creator->name,
+                $taskDetail,
+                $statusStr,
+                $assignee->name,
+            ],
+        ]);
     }
 
     /**
@@ -88,10 +124,11 @@ class TaskNotificationService
      */
     public static function notifyTaskStart(Task $task)
     {
-        $task->load(['creator', 'assignees']);
+        $task->load(['creator', 'assignees', 'job']);
         $channels = $task->notify_channels ?? ['email'];
 
         $title = "Task Started: {$task->title}";
+        $taskDetail = self::getDetailedTaskString($task);
 
         foreach ($task->assignees as $assignee) {
             $body = "Hello {$assignee->name},<br><br>".
@@ -103,14 +140,47 @@ class TaskNotificationService
                     '<strong>Due Date:</strong> '.$task->due_date->format('d-m-Y H:i').'<br><br>'.
                     'Please log in to the portal, accept, and start working on the task.<br>';
 
-            self::send($assignee, $title, $body, $channels);
+            self::send($assignee, $title, $body, $channels, [
+                'name' => config('services.whatsapp.templates.notification', 'task_notification'),
+                'parameters' => [
+                    $assignee->name,
+                    $taskDetail,
+                ],
+            ]);
         }
+    }
+
+    /**
+     * Build detailed task details string (task name, job name, description, start time).
+     */
+    private static function getDetailedTaskString(Task $task): string
+    {
+        $taskDetail = $task->title;
+
+        if ($task->job) {
+            $taskDetail .= " (Job: {$task->job->title})";
+        }
+
+        if (! empty($task->description)) {
+            $desc = strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $task->description));
+            $desc = trim(preg_replace('/\s+/', ' ', $desc));
+            if (mb_strlen($desc) > 150) {
+                $desc = mb_substr($desc, 0, 147).'...';
+            }
+            $taskDetail .= "\nDesc: {$desc}";
+        }
+
+        if ($task->start_date) {
+            $taskDetail .= "\nStart: ".$task->start_date->format('d-m-Y H:i');
+        }
+
+        return $taskDetail;
     }
 
     /**
      * Internal sender router.
      */
-    private static function send(User $user, string $subject, string $body, array $channels)
+    private static function send(User $user, string $subject, string $body, array $channels, ?array $whatsappTemplate = null)
     {
         // 1. Email Notification
         if (in_array('email', $channels) && ! empty($user->email)) {
@@ -140,14 +210,40 @@ class TaskNotificationService
                         $phone = '91'.$phone;
                     }
 
-                    $plainBody = strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $body));
-                    $messageText = "*{$subject}*\n\n{$plainBody}";
-
                     $apiUrl = "https://graph.facebook.com/v19.0/{$phoneId}/messages";
 
-                    // Send payload using official WhatsApp Business API format
-                    $response = \Illuminate\Support\Facades\Http::withToken($accessToken)
-                        ->post($apiUrl, [
+                    if ($whatsappTemplate) {
+                        $payload = [
+                            'messaging_product' => 'whatsapp',
+                            'recipient_type' => 'individual',
+                            'to' => $phone,
+                            'type' => 'template',
+                            'template' => [
+                                'name' => $whatsappTemplate['name'],
+                                'language' => [
+                                    'code' => $whatsappTemplate['lang'] ?? 'en',
+                                ],
+                            ],
+                        ];
+
+                        if (! empty($whatsappTemplate['parameters'])) {
+                            $payload['template']['components'] = [
+                                [
+                                    'type' => 'body',
+                                    'parameters' => array_map(function ($param) {
+                                        return [
+                                            'type' => 'text',
+                                            'text' => (string) $param,
+                                        ];
+                                    }, $whatsappTemplate['parameters']),
+                                ],
+                            ];
+                        }
+                    } else {
+                        $plainBody = strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $body));
+                        $messageText = "*{$subject}*\n\n{$plainBody}";
+
+                        $payload = [
                             'messaging_product' => 'whatsapp',
                             'recipient_type' => 'individual',
                             'to' => $phone,
@@ -156,7 +252,12 @@ class TaskNotificationService
                                 'preview_url' => false,
                                 'body' => $messageText,
                             ],
-                        ]);
+                        ];
+                    }
+
+                    // Send payload using official WhatsApp Business API format
+                    $response = \Illuminate\Support\Facades\Http::withToken($accessToken)
+                        ->post($apiUrl, $payload);
 
                     if ($response->successful()) {
                         Log::info("WhatsApp notification sent to {$phone} (User: {$user->name}) successfully via WhatsApp Business Cloud API.");

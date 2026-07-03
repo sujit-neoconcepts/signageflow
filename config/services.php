@@ -43,5 +43,11 @@ return [
     'whatsapp' => [
         'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
         'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
+        'templates' => [
+            'notification' => env('WHATSAPP_TEMPLATE_NOTIFICATION', 'task_notification'),
+            'reminder' => env('WHATSAPP_TEMPLATE_REMINDER', 'task_reminder'),
+            'status_update' => env('WHATSAPP_TEMPLATE_STATUS_UPDATE', 'task_status_update'),
+            'loop' => env('WHATSAPP_TEMPLATE_LOOP', 'task_loop_notification'),
+        ],
     ],
 ];
