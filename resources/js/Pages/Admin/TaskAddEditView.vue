@@ -55,7 +55,7 @@ const form = useForm({
     priority: "medium",
     assignees: [],
     loop_users: [],
-    notify_channels: ["email"],
+    notify_channels: ["whatsapp", "mobile"],
     reminder_before_due: 60,
     is_recurring: false,
     recurrence_type: "",
@@ -100,7 +100,7 @@ onBeforeMount(() => {
         form.recurrence_type = props.formdata.recurrence_type ?? "";
         form.recurrence_config = props.formdata.recurrence_config ?? { days: [] };
         form.recurrence_end_date = props.formdata.recurrence_end_date_formatted ?? "";
-        form.notify_channels = props.formdata.notify_channels ?? ["email"];
+        form.notify_channels = props.formdata.notify_channels ?? ["whatsapp", "mobile"];
 
         selectedAssignees.value = props.formdata.assignees ?? [];
         selectedLoopUsers.value = props.formdata.viewers ?? [];

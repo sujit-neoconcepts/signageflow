@@ -117,7 +117,7 @@ watch(selectedWorkflow, async (newVal) => {
             start_date: "",
             end_date: "",
             start_on_previous_complete: false,
-            notify_channels: ["email"],
+            notify_channels: ["whatsapp", "mobile"],
         }));
     } catch (err) {
         console.error("Failed to fetch stages:", err);
@@ -222,7 +222,7 @@ const addStageAt = (index) => {
         start_date: "",
         end_date: "",
         start_on_previous_complete: false,
-        notify_channels: ["email"],
+        notify_channels: ["whatsapp", "mobile"],
     });
 };
 
