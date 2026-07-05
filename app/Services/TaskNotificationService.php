@@ -155,26 +155,43 @@ class TaskNotificationService
      */
     private static function getDetailedTaskString(Task $task): string
     {
-        $taskDetail = $task->title;
+        $parts = [];
+        $parts[] = $task->title;
 
         if ($task->job) {
-            $taskDetail .= " (Job: {$task->job->title})";
+            $parts[] = "Job: {$task->job->title}";
         }
 
         if (! empty($task->description)) {
-            $desc = strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $task->description));
+            $desc = strip_tags(str_replace(['<br>', '<br/>', '<br />'], ' ', $task->description));
             $desc = trim(preg_replace('/\s+/', ' ', $desc));
-            if (mb_strlen($desc) > 150) {
-                $desc = mb_substr($desc, 0, 147).'...';
+            if (mb_strlen($desc) > 80) {
+                $desc = mb_substr($desc, 0, 77).'...';
             }
-            $taskDetail .= "\nDesc: {$desc}";
+            $parts[] = "Desc: {$desc}";
         }
 
         if ($task->start_date) {
-            $taskDetail .= "\nStart: ".$task->start_date->format('d-m-Y H:i');
+            $parts[] = 'Start: '.$task->start_date->format('d-m-Y H:i');
         }
 
-        return $taskDetail;
+        return implode(' | ', $parts);
+    }
+
+    /**
+     * Sanitize a parameter value to comply with Meta's strict template parameter constraints:
+     * - No newlines (\n, \r)
+     * - No tabs (\t)
+     * - No more than 4 consecutive spaces
+     */
+    private static function sanitizeParamValue(string $value): string
+    {
+        // Replace newlines and tabs with spaces
+        $value = str_replace(["\r", "\n", "\t"], ' ', $value);
+        // Replace 2 or more consecutive spaces with a single space
+        $value = preg_replace('/\s{2,}/', ' ', $value);
+
+        return trim($value);
     }
 
     /**
@@ -233,7 +250,7 @@ class TaskNotificationService
                                     'parameters' => array_map(function ($param) {
                                         return [
                                             'type' => 'text',
-                                            'text' => (string) $param,
+                                            'text' => self::sanitizeParamValue((string) $param),
                                         ];
                                     }, $whatsappTemplate['parameters']),
                                 ],

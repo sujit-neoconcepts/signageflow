@@ -420,7 +420,7 @@ class JobController extends Controller
                         'notify_channels' => $stageData['notify_channels'] ?? ['email'],
                     ];
 
-                    if (!empty($stageData['id'])) {
+                    if (! empty($stageData['id'])) {
                         // Update existing task
                         $task = Task::findOrFail($stageData['id']);
                         $task->update($taskData);
@@ -434,7 +434,7 @@ class JobController extends Controller
                             'job_id' => $job->id,
                             'reminder_before_due' => 60,
                         ]));
-                        
+
                         // Notify assignees
                         TaskNotificationService::notifyNewTask($task);
                     }
@@ -454,7 +454,7 @@ class JobController extends Controller
 
                 // Delete tasks that were removed
                 $tasksToDelete = array_diff($existingTaskIds, $submittedTaskIds);
-                if (!empty($tasksToDelete)) {
+                if (! empty($tasksToDelete)) {
                     Task::whereIn('id', $tasksToDelete)->delete();
                 }
             }
@@ -496,16 +496,34 @@ class JobController extends Controller
 
     public function destroy(Job $job)
     {
-        // Unlink tasks but don't delete them
-        Task::where('job_id', $job->id)->update(['job_id' => null, 'job_stage_sort_order' => null]);
+        $job->load('tasks.files', 'tasks.comments.files');
 
-        // Delete job files from storage
-        foreach ($job->files as $file) {
-            Storage::disk('local')->delete($file->file_path);
-        }
+        DB::transaction(function () use ($job) {
+            foreach ($job->tasks as $task) {
+                // Delete task files from storage
+                foreach ($task->files as $file) {
+                    Storage::disk('local')->delete($file->file_path);
+                }
+
+                // Delete task comment files from storage
+                foreach ($task->comments as $comment) {
+                    foreach ($comment->files as $cf) {
+                        Storage::disk('local')->delete($cf->file_path);
+                    }
+                }
+
+                $task->delete();
+            }
+
+            // Delete job files from storage
+            foreach ($job->files as $file) {
+                Storage::disk('local')->delete($file->file_path);
+            }
+
+            $job->delete();
+        });
 
         $title = $job->title;
-        $job->delete();
 
         \ActivityLog::add([
             'action' => 'deleted',
