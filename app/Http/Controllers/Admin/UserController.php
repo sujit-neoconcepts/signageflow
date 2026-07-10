@@ -24,7 +24,7 @@ class UserController extends Controller
     public function __construct()
     {
         $this->middleware('can:user_list', ['only' => ['index', 'show']]);
-        $this->middleware('can:user_create', ['only' => ['create', 'store']]);
+        $this->middleware('can:user_create', ['only' => ['create', 'store', 'storeExecutive']]);
         $this->middleware('can:user_edit', ['only' => ['edit', 'update']]);
         $this->middleware('can:user_delete', ['only' => ['destroy']]);
     }
@@ -437,6 +437,80 @@ class UserController extends Controller
             $this->destroy($user);
         } else {
             return redirect()->route('user.index')->with(['message' => 'Athentication Failed!!', 'msg_type' => 'danger']);
+        }
+    }
+
+    public function getExecutiveOptions()
+    {
+        return response()->json(
+            User::role('executive')
+                ->select('id', 'name as label', 'email')
+                ->orderBy('name')
+                ->get()
+        );
+    }
+
+    public function storeExecutive(Request $request)
+    {
+        if (! Auth::user()->can('user_create')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|unique:users,email',
+            'phone' => 'nullable|string|max:20',
+            'password' => 'required|string|min:8',
+        ]);
+
+        \DB::beginTransaction();
+        try {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'password' => $request->password,
+                'twofa' => false,
+            ]);
+
+            $executiveRole = Role::firstOrCreate(['name' => 'executive']);
+            $user->assignRole($executiveRole);
+
+            \DB::commit();
+
+            $uname = $user->name.'-executive';
+            \ActivityLog::add(['action' => 'created', 'module' => 'user', 'data_key' => $uname]);
+
+            try {
+                User::neUserMail([
+                    'password' => $request->password,
+                    'ip' => $request->ip(),
+                    'user' => $user,
+                    'userAgent' => $request->userAgent(),
+                ]);
+            } catch (\Exception $mailEx) {
+                // Ignore mail sending errors during dynamic creation
+                info('Dynamic user creation mail failed: '.$mailEx->getMessage());
+            }
+
+            $executives = User::role('executive')
+                ->select('id', 'name as label', 'email')
+                ->orderBy('name')
+                ->get();
+
+            return response()->json([
+                'message' => 'Executive created successfully',
+                'user' => [
+                    'id' => $user->id,
+                    'label' => $user->name,
+                    'email' => $user->email,
+                ],
+                'executives' => $executives,
+            ]);
+        } catch (\Exception $e) {
+            \DB::rollBack();
+
+            return response()->json(['message' => 'Failed to create user: '.$e->getMessage()], 500);
         }
     }
 }

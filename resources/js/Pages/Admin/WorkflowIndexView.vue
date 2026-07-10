@@ -7,6 +7,7 @@ import {
     mdiFileEdit,
     mdiTrashCan,
     mdiRefresh,
+    mdiContentCopy,
 } from "@mdi/js";
 import SectionMain from "@/components/SectionMain.vue";
 import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
@@ -48,6 +49,12 @@ const deleteRecord = () => {
             },
         });
     }
+};
+
+const cloneRecord = (id) => {
+    router.post(route("workflow.clone", id), {}, {
+        preserveScroll: true,
+    });
 };
 
 onMounted(() => {
@@ -178,6 +185,20 @@ const actionClasses = {
                                         title="Edit"
                                     />
                                 </Link>
+                                <button
+                                    v-if="can('workflow_create')"
+                                    :class="[actionClasses.button, 'p-2']"
+                                    @click="cloneRecord(dItem.id)"
+                                >
+                                    <BaseButton
+                                        :class="[actionClasses.button, 'w-auto']"
+                                        color="success"
+                                        :icon="mdiContentCopy"
+                                        small
+                                        label="Clone"
+                                        title="Clone"
+                                    />
+                                </button>
                                 <button
                                     v-if="can('workflow_delete')"
                                     :class="[actionClasses.button, 'p-2']"

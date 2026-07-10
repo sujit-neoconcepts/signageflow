@@ -26,7 +26,7 @@ class WorkflowController extends Controller
     public function __construct()
     {
         $this->middleware('can:workflow_list', ['only' => ['index']]);
-        $this->middleware('can:workflow_create', ['only' => ['create', 'store']]);
+        $this->middleware('can:workflow_create', ['only' => ['create', 'store', 'clone']]);
         $this->middleware('can:workflow_edit', ['only' => ['edit', 'update']]);
         $this->middleware('can:workflow_delete', ['only' => ['destroy', 'bulkDestroy']]);
         $this->middleware('can:workflow_view', ['only' => ['show', 'getStagesJson']]);
@@ -255,6 +255,57 @@ class WorkflowController extends Controller
         ]);
 
         return redirect()->route('workflow.index')->with(['message' => 'Selected Workflows Deleted Successfully', 'msg_type' => 'success']);
+    }
+
+    public function clone(Workflow $workflow)
+    {
+        DB::beginTransaction();
+        try {
+            // Find a unique name
+            $baseName = $workflow->name.' (Copy)';
+            $name = $baseName;
+            $counter = 1;
+            while (Workflow::where('name', $name)->exists()) {
+                $name = $baseName.' '.$counter;
+                $counter++;
+            }
+
+            $newWorkflow = Workflow::create([
+                'name' => $name,
+                'description' => $workflow->description,
+                'is_active' => $workflow->is_active,
+                'created_by' => Auth::id(),
+            ]);
+
+            // Clone stages
+            $workflow->load('stages.defaultExecutives');
+            foreach ($workflow->stages as $stage) {
+                $newStage = $newWorkflow->stages()->create([
+                    'name' => $stage->name,
+                    'description' => $stage->description,
+                    'sort_order' => $stage->sort_order,
+                    'default_estimated_hours' => $stage->default_estimated_hours,
+                ]);
+
+                if ($stage->defaultExecutives->isNotEmpty()) {
+                    $newStage->defaultExecutives()->attach($stage->defaultExecutives->pluck('id')->all());
+                }
+            }
+
+            DB::commit();
+
+            \ActivityLog::add([
+                'action' => 'cloned',
+                'module' => 'workflow',
+                'data_key' => $newWorkflow->name,
+            ]);
+
+            return redirect()->route('workflow.index')->with(['message' => 'Workflow Cloned Successfully', 'msg_type' => 'success']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return redirect()->back()->with(['message' => 'Failed to clone workflow: '.$e->getMessage(), 'msg_type' => 'danger']);
+        }
     }
 
     /**

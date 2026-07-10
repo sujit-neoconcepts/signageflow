@@ -15,10 +15,13 @@ import BaseIcon from "@/components/BaseIcon.vue";
 import CardBox from "@/components/CardBox.vue";
 import FormField from "@/components/FormField.vue";
 import FormControl from "@/components/FormControl.vue";
+import CardBoxModal from "@/components/CardBoxModal.vue";
 import NotificationBar from "@/components/NotificationBar.vue";
 import Multiselect from "vue-multiselect";
 import "../../../css/vue-multiselect.css";
-import { computed, onBeforeMount, ref } from "vue";
+import { computed, onBeforeMount, ref, reactive } from "vue";
+import axios from "axios";
+import { can } from "@/utils/permissions";
 
 const message = computed(() => usePage().props.flash.message);
 const msg_type = computed(() => usePage().props.flash.msg_type ?? "warning");
@@ -43,7 +46,10 @@ const form = useForm({
     ],
 });
 
+const executivesList = ref([]);
+
 onBeforeMount(() => {
+    executivesList.value = [...props.executives];
     if (props.formdata && props.formdata.id) {
         form.name = props.formdata.name ?? "";
         form.description = props.formdata.description ?? "";
@@ -93,6 +99,55 @@ const moveStageDown = (idx) => {
         form.stages[idx] = form.stages[idx + 1];
         form.stages[idx + 1] = temp;
         form.stages = [...form.stages];
+    }
+};
+
+const activeStageIdx = ref(null);
+const isExecutiveModalActive = ref(false);
+const executiveForm = reactive({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+});
+
+const addExecutive = (idx, fkey) => {
+    activeStageIdx.value = idx;
+    executiveForm.name = "";
+    executiveForm.email = "";
+    executiveForm.phone = "";
+    executiveForm.password = "";
+    isExecutiveModalActive.value = true;
+};
+
+const refreshExecutives = async () => {
+    try {
+        const response = await axios.get(route("user.executiveOptions"));
+        executivesList.value = response.data;
+    } catch (e) {
+        alert("Error refreshing Executives: " + (e.response?.data?.message || e.message));
+    }
+};
+
+const submitExecutive = async () => {
+    try {
+        const response = await axios.post(route("user.storeExecutive"), executiveForm, {
+            headers: { 'Accept': 'application/json' }
+        });
+        
+        executivesList.value = response.data.executives;
+        
+        if (activeStageIdx.value !== null && form.stages[activeStageIdx.value]) {
+            const newUser = response.data.user;
+            if (!form.stages[activeStageIdx.value].executives) {
+                form.stages[activeStageIdx.value].executives = [];
+            }
+            form.stages[activeStageIdx.value].executives.push(newUser);
+        }
+        
+        isExecutiveModalActive.value = false;
+    } catch (e) {
+        alert("Error creating Executive: " + (e.response?.data?.message || e.message));
     }
 };
 
@@ -233,7 +288,14 @@ const submitform = () => {
                                         <FormControl v-model="stage.default_estimated_hours" type="number" step="0.5" min="0" placeholder="0" />
                                     </FormField>
 
-                                    <FormField label="Default Executives">
+                                    <FormField
+                                        label="Default Executives"
+                                        :addAndRefresh="can('user_create')"
+                                        :addFunction="addExecutive"
+                                        :refreshFunction="refreshExecutives"
+                                        :pkey="idx"
+                                        fkey="executives"
+                                    >
                                         <Multiselect
                                             v-model="stage.executives"
                                             placeholder="Select default assignees"
@@ -241,7 +303,7 @@ const submitform = () => {
                                             label="label"
                                             :multiple="true"
                                             :close-on-select="false"
-                                            :options="props.executives"
+                                            :options="executivesList"
                                             class="mt-1"
                                         />
                                     </FormField>
@@ -264,5 +326,27 @@ const submitform = () => {
                 </div>
             </form>
         </SectionMain>
+
+        <CardBoxModal
+            v-model="isExecutiveModalActive"
+            title="Add Executive"
+            hasCancel
+            @confirm="submitExecutive"
+        >
+            <div class="space-y-4">
+                <FormField label="Executive Name">
+                    <FormControl v-model="executiveForm.name" placeholder="Enter Full Name" required />
+                </FormField>
+                <FormField label="Email Address">
+                    <FormControl v-model="executiveForm.email" type="email" placeholder="Enter Email Address" required />
+                </FormField>
+                <FormField label="Phone Number">
+                    <FormControl v-model="executiveForm.phone" placeholder="Enter Phone Number" />
+                </FormField>
+                <FormField label="Password">
+                    <FormControl v-model="executiveForm.password" type="password" placeholder="Enter Password (Min. 8 characters)" required />
+                </FormField>
+            </div>
+        </CardBoxModal>
     </LayoutAuthenticated>
 </template>

@@ -206,6 +206,8 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::delete('userauthdestroy', [UserController::class, 'authDestroy'])->name('user.authDestroy');
     Route::get('user/{user}/permissions', [UserController::class, 'permissions'])->name('user.permissions');
     Route::put('/user-permissions-update', [UserController::class, 'permissionsUpdate'])->name('user.permissionsUpdate');
+    Route::get('user-executive-options', [\App\Http\Controllers\Admin\UserController::class, 'getExecutiveOptions'])->name('user.executiveOptions');
+    Route::post('user-store-executive', [\App\Http\Controllers\Admin\UserController::class, 'storeExecutive'])->name('user.storeExecutive');
 
     Route::resource('role', RoleController::class);
     Route::resource('permission', PermissionController::class);
@@ -227,6 +229,7 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     // Workflows
     Route::get('workflow/{workflow}/stages-json', [\App\Http\Controllers\Admin\WorkflowController::class, 'getStagesJson'])->name('workflow.stagesJson');
     Route::delete('workflow-bulk-destroy', [\App\Http\Controllers\Admin\WorkflowController::class, 'bulkDestroy'])->name('workflow.bulkDestroy');
+    Route::post('workflow/{workflow}/clone', [\App\Http\Controllers\Admin\WorkflowController::class, 'clone'])->name('workflow.clone');
     Route::resource('workflow', \App\Http\Controllers\Admin\WorkflowController::class);
 
     // Jobs
