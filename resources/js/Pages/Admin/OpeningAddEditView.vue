@@ -146,6 +146,19 @@ const fetchProd = (index) => {
             form["multi"][index].pur_pr_detail_int.data.last_rate ?? 0;
         form["multi"][index].unit_rate =
             form["multi"][index].pur_pr_detail_int.data.unit_rate ?? 0;
+
+        if (form["multi"][index].pur_pr_detail_int.data.internal_name_group) {
+            form["multi"][index].pur_internal_name_group =
+                form["multi"][index].pur_pr_detail_int.data.internal_name_group;
+        }
+        if (form["multi"][index].pur_pr_detail_int.data.last_incharge) {
+            form["multi"][index].pur_incharge =
+                form["multi"][index].pur_pr_detail_int.data.last_incharge;
+        }
+        if (form["multi"][index].pur_pr_detail_int.data.last_location) {
+            form["multi"][index].pur_loc =
+                form["multi"][index].pur_pr_detail_int.data.last_location;
+        }
     }
 };
 </script>

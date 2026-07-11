@@ -154,7 +154,7 @@ class Product extends Model
 
     public static function getAllOptionInternal()
     {
-        $alldatas = ConsumableInternalName::select('*')->orderBy('name')->get();
+        $alldatas = ConsumableInternalName::with('group')->orderBy('name')->get();
         $names = $alldatas->pluck('name')->toArray();
 
         // Efficiently fetch stock and rates in bulk for internal names
@@ -188,6 +188,18 @@ class Product extends Model
             ->groupBy('pr_detail_int')
             ->get()->pluck('min_id', 'pr_detail_int');
 
+        // Fetch last purchase incharge and location by Internal Name
+        $lastPurchases = \DB::table('purchases')
+            ->whereIn('pur_pr_detail_int', $names)
+            ->select('pur_incharge', 'pur_loc', 'pur_pr_detail_int')
+            ->whereIn('id', function ($query) {
+                $query->selectRaw('MAX(id)')
+                    ->from('purchases')
+                    ->groupBy('pur_pr_detail_int');
+            })
+            ->get()
+            ->keyBy('pur_pr_detail_int');
+
         $allOpt = [];
         foreach ($alldatas as $alldata) {
             $in = $purSub[$alldata->name] ?? 0;
@@ -196,6 +208,11 @@ class Product extends Model
             $alldata->available_qty = $in - $out;
             $alldata->last_rate = $lastRates[$alldata->name] ?? 0;
             $alldata->unit_rate = $alldata->unitPrice ?? 0;
+
+            $lastPurchase = $lastPurchases[$alldata->name] ?? null;
+            $alldata->last_incharge = $lastPurchase ? $lastPurchase->pur_incharge : '';
+            $alldata->last_location = $lastPurchase ? $lastPurchase->pur_loc : '';
+            $alldata->internal_name_group = $alldata->group ? $alldata->group->name : '';
 
             $allOpt[] = ['id' => $minIds[$alldata->name] ?? null, 'label' => $alldata->name, 'data' => $alldata];
         }

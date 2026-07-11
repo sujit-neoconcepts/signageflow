@@ -39,6 +39,7 @@ class OpeningController extends Controller
         unset($formInfo['pur_supplier']);
         unset($formInfo['roundoff']);
         $formInfoMulti = Purchase::formInfoMulti();
+        $formInfoMulti['pur_internal_name_group']['sortable'] = true;
 
         unset($formInfoMulti['pur_pr_detail']);
         unset($formInfo['received_date']);
@@ -64,6 +65,10 @@ class OpeningController extends Controller
                         if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) {
                             continue;
                         }
+                        if ($key === 'pur_internal_name_group') {
+                            $query->orWhere('cing.name', 'LIKE', "%{$value}%");
+                            continue;
+                        }
                         $query->orWhere($key, 'LIKE', "%{$value}%");
                     }
                 });
@@ -72,9 +77,18 @@ class OpeningController extends Controller
         $perPage = request()->query('perPage') ?? 10;
         $filter_array = [];
         foreach (array_merge(array_diff(array_keys($formInfo), []), array_keys($formInfoMulti)) as $fvalue) {
-            $filter_array[] = AllowedFilter::exact($fvalue);
+            if ($fvalue === 'pur_internal_name_group') {
+                $filter_array[] = AllowedFilter::exact('pur_internal_name_group', 'cing.name');
+            } else {
+                $filter_array[] = AllowedFilter::exact($fvalue);
+            }
         }
-        $query = Purchase::select('purchases.*', 'pgroups.name as groupinfo_name')->where('entry_type', 1)->leftJoin('products', 'products.id', 'purchases.pur_pr_id', 'left')->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left');
+        $query = Purchase::select('purchases.*', 'pgroups.name as groupinfo_name', 'cing.name as pur_internal_name_group')
+            ->where('entry_type', 1)
+            ->leftJoin('products', 'products.id', 'purchases.pur_pr_id', 'left')
+            ->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left')
+            ->leftJoin('consumable_internal_names as cin', 'cin.name', '=', 'purchases.pur_pr_detail_int')
+            ->leftJoin('consumable_internal_name_groups as cing', 'cing.id', '=', 'cin.consumable_internal_name_group_id');
 
         // $query->inFinancialYear();
 
@@ -83,9 +97,17 @@ class OpeningController extends Controller
             $query = $query->where('pur_incharge', \Auth::user()->name);
         }
 
+        $allowedSorts = array_merge(
+            array_diff(array_keys($formInfo), []),
+            array_diff(array_keys($formInfoMulti), ['pur_internal_name_group']),
+            [
+                \Spatie\QueryBuilder\AllowedSort::field('pur_internal_name_group', 'cing.name')
+            ]
+        );
+
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('-pur_date')
-            ->allowedSorts(array_merge(array_diff(array_keys($formInfo), []), array_keys($formInfoMulti), []))
+            ->allowedSorts($allowedSorts)
             ->allowedFilters(array_merge($filter_array, [AllowedFilter::scope('pur_date_start'), AllowedFilter::scope('pur_date_end'), $globalSearch]))
             ->paginate($perPage)
             ->withQueryString();
