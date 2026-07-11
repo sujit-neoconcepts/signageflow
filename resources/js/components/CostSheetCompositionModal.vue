@@ -25,6 +25,7 @@ const isOpen = computed({
 // ─── Section definitions ────────────────────────────────────────────────────
 const SECTIONS = [
     { key: "raw_material", label: "Raw Materials",   color: "blue"   },
+    { key: "custom_cost",  label: "Custom Cost",     color: "red"    },
     { key: "signage",      label: "Signage",          color: "purple" },
     { key: "cabinet",      label: "Cabinet",          color: "orange" },
     { key: "letters",      label: "Letters",          color: "green"  },
@@ -33,6 +34,7 @@ const SECTIONS = [
 // ─── State ──────────────────────────────────────────────────────────────────
 const rows = ref({
     raw_material: [],
+    custom_cost:  [],
     signage:      [],
     cabinet:      [],
     letters:      [],
@@ -47,6 +49,7 @@ const costSheetOptions  = ref({      // for signage / cabinet / letters
 
 const expandedSections = ref({
     raw_material: true,
+    custom_cost:  false,
     signage:      false,
     cabinet:      false,
     letters:      false,
@@ -132,6 +135,18 @@ const fetchCompositions = async () => {
                     quantity:                           c.quantity,
                     margin:                             c.margin || 0,
                 });
+            } else if (section === "custom_cost") {
+                rows.value.custom_cost.push({
+                    id:                                 c.id,
+                    selectedItem:                       null,
+                    consumable_internal_name_group_id:  null,
+                    child_cost_sheet_id:                null,
+                    custom_name:                        c.custom_name || "",
+                    unit:                               null,
+                    unitPrice:                          Number(c.custom_unit_price || 0),
+                    quantity:                           c.quantity || 1,
+                    margin:                             c.margin || 0,
+                });
             } else {
                 const child = childCostSheet;
                 rows.value[section]?.push({
@@ -177,9 +192,10 @@ const addRow = (section) => {
         selectedItem:                       null,
         consumable_internal_name_group_id:  null,
         child_cost_sheet_id:                null,
-        unit:                               "",
+        custom_name:                        section === "custom_cost" ? "" : null,
+        unit:                               section === "custom_cost" ? null : "",
         unitPrice:                          0,
-        quantity:                           0,
+        quantity:                           section === "custom_cost" ? 1 : 0,
         margin:                             0,
     });
 };
@@ -224,13 +240,16 @@ const saveCompositions = async () => {
     for (const s of SECTIONS) {
         for (const row of rows.value[s.key]) {
             if (s.key === "raw_material" && !row.consumable_internal_name_group_id) continue;
-            if (s.key !== "raw_material" && !row.child_cost_sheet_id) continue;
+            if (s.key === "custom_cost" && !row.custom_name) continue;
+            if (s.key !== "raw_material" && s.key !== "custom_cost" && !row.child_cost_sheet_id) continue;
             allRows.push({
                 id:                                 row.id,
                 section:                            s.key,
                 consumable_internal_name_group_id:  row.consumable_internal_name_group_id ?? null,
                 child_cost_sheet_id:                row.child_cost_sheet_id ?? null,
-                unit:                               row.unit,
+                custom_name:                        s.key === "custom_cost" ? row.custom_name : null,
+                custom_unit_price:                  s.key === "custom_cost" ? row.unitPrice : null,
+                unit:                               s.key === "custom_cost" ? null : row.unit,
                 quantity:                           row.quantity,
                 margin:                             row.margin,
             });
@@ -260,6 +279,7 @@ const rowWithMarg = (row) => rowTotal(row) * (1 + (Number(row.margin) || 0) / 10
 
 const sectionColorClasses = {
     blue:   { header: "bg-blue-600 text-white",   badge: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"   },
+    red:    { header: "bg-rose-600 text-white",   badge: "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200"   },
     purple: { header: "bg-purple-600 text-white",  badge: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" },
     orange: { header: "bg-orange-500 text-white",  badge: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
     green:  { header: "bg-emerald-600 text-white", badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200" },
@@ -410,6 +430,14 @@ const getCostSheetUnitPrice = (item) => {
                                     </VueMultiselect>
                                 </td>
 
+                                <!-- ── Custom Cost selector ── -->
+                                <td v-else-if="sec.key === 'custom_cost'" class="px-3 py-1.5">
+                                    <input type="text"
+                                        class="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-xs"
+                                        placeholder="Enter custom cost name…"
+                                        v-model="row.custom_name" />
+                                </td>
+
                                 <!-- ── Cost-Sheet selector ── -->
                                 <td v-else class="px-3 py-1.5">
                                     <VueMultiselect
@@ -439,14 +467,21 @@ const getCostSheetUnitPrice = (item) => {
 
                                 <!-- Unit -->
                                 <td class="px-3 py-1.5">
-                                    <input type="text" readonly
+                                    <input v-if="sec.key !== 'custom_cost'" type="text" readonly
                                         class="w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded text-center text-xs"
                                         v-model="row.unit" />
                                 </td>
 
                                 <!-- Unit Price -->
                                 <td class="px-3 py-1.5 text-right font-semibold text-gray-700 dark:text-gray-300 text-xs">
-                                    {{ fmt(row.unitPrice) }}
+                                    <template v-if="sec.key === 'custom_cost'">
+                                        <input type="number" min="0" step="0.01"
+                                            class="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-right text-xs"
+                                            v-model="row.unitPrice" />
+                                    </template>
+                                    <template v-else>
+                                        {{ fmt(row.unitPrice) }}
+                                    </template>
                                 </td>
 
                                 <!-- Quantity -->

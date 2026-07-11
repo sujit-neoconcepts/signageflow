@@ -11,6 +11,8 @@ class CostSheetComposition extends Model
         'section',
         'consumable_internal_name_group_id',
         'child_cost_sheet_id',
+        'custom_name',
+        'custom_unit_price',
         'unit',
         'quantity',
         'margin',

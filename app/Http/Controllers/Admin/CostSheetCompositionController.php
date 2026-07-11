@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class CostSheetCompositionController extends Controller
 {
-    private array $validSections = ['raw_material', 'signage', 'cabinet', 'letters'];
+    private array $validSections = ['raw_material', 'signage', 'cabinet', 'letters', 'custom_cost'];
 
     public function index(CostSheet $costSheet)
     {
@@ -34,9 +34,11 @@ class CostSheetCompositionController extends Controller
             'compositions' => 'array',
             'total_cost' => 'nullable|numeric|min:0',
             'compositions.*.id' => 'nullable|integer',
-            'compositions.*.section' => 'required|in:raw_material,signage,cabinet,letters',
+            'compositions.*.section' => 'required|in:raw_material,signage,cabinet,letters,custom_cost',
             'compositions.*.consumable_internal_name_group_id' => 'nullable|exists:consumable_internal_name_groups,id',
             'compositions.*.child_cost_sheet_id' => 'nullable|exists:cost_sheets,id',
+            'compositions.*.custom_name' => 'nullable|string|max:255',
+            'compositions.*.custom_unit_price' => 'nullable|numeric|min:0',
             'compositions.*.quantity' => 'required|numeric|min:0',
             'compositions.*.margin' => 'nullable|numeric|min:0',
             'compositions.*.unit' => 'nullable|string',
@@ -49,6 +51,8 @@ class CostSheetCompositionController extends Controller
                 'section' => $compData['section'],
                 'consumable_internal_name_group_id' => $compData['consumable_internal_name_group_id'] ?? null,
                 'child_cost_sheet_id' => $compData['child_cost_sheet_id'] ?? null,
+                'custom_name' => $compData['custom_name'] ?? null,
+                'custom_unit_price' => $compData['custom_unit_price'] ?? null,
                 'quantity' => $compData['quantity'],
                 'margin' => $compData['margin'] ?? 0.00,
                 'unit' => $compData['unit'] ?? null,
