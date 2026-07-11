@@ -43,7 +43,8 @@ class UserController extends Controller
                 Collection::wrap($value)->each(function ($value) use ($query) {
                     $query
                         ->orWhere('users.name', 'LIKE', "%{$value}%")
-                        ->orWhere('email', 'LIKE', "%{$value}%");
+                        ->orWhere('email', 'LIKE', "%{$value}%")
+                        ->orWhere('phone', 'LIKE', "%{$value}%");
 
                 });
             });
@@ -52,8 +53,8 @@ class UserController extends Controller
         $users = QueryBuilder::for($query)
             ->with('roles')
             ->defaultSort('name')
-            ->allowedSorts(['name', 'email'])
-            ->allowedFilters(['name', 'email', $globalSearch])
+            ->allowedSorts(['name', 'email', 'phone'])
+            ->allowedFilters(['name', 'email', 'phone', $globalSearch])
             ->paginate($perPage)
             ->withQueryString();
 
@@ -72,6 +73,7 @@ class UserController extends Controller
             $table->withGlobalSearch()
                 ->column('name', 'Name', searchable: true, sortable: true)
                 ->column('email', 'Email', searchable: true, sortable: true)
+                ->column('phone', 'Phone', searchable: true, sortable: true)
                 ->column('role_name', 'Role', searchable: false, sortable: false)
 
                 ->column(label: 'Actions')
