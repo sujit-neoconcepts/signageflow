@@ -171,11 +171,13 @@ class ConsumableInternalNameController extends Controller
         ActivityLog::add(['action' => 'added', 'module' => $this->resourceNeo['resourceName'], 'data_key' => $request->name]);
 
         if ($request->wantsJson()) {
+            $groupName = $internalName->group ? $internalName->group->name : '';
+            $labelText = $groupName ? "{$internalName->name} [{$groupName}]" : $internalName->name;
             return response()->json([
                 'message' => 'Created successfully',
                 'data' => [
-                    'id' => $internalName->id, // or mapped id dynamically
-                    'label' => $internalName->name,
+                    'id' => $internalName->id,
+                    'label' => $labelText,
                     'data' => [
                         'unitName' => $internalName->unitName,
                         'unitAltName' => $internalName->unitAltName,
@@ -448,7 +450,21 @@ class ConsumableInternalNameController extends Controller
 
     public function options()
     {
-        $options = ConsumableInternalName::select('id', 'name', 'unitName', 'unitAltName', 'unitPrice', 'openStockMarginPercent')->orderBy('name')->get();
+        $options = ConsumableInternalName::with('group')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($item) {
+                $groupName = $item->group ? $item->group->name : '';
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'label' => $groupName ? "{$item->name} [{$groupName}]" : $item->name,
+                    'unitName' => $item->unitName,
+                    'unitAltName' => $item->unitAltName,
+                    'unitPrice' => $item->unitPrice,
+                    'openStockMarginPercent' => $item->openStockMarginPercent,
+                ];
+            });
 
         return response()->json($options);
     }

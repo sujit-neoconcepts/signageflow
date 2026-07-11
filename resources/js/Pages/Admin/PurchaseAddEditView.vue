@@ -73,6 +73,7 @@ const delMulti = (el) => {
 };
 
 onBeforeMount(() => {
+    fetchInternalNameGroups();
     for (const key in props.resourceNeo.formInfo) {
         form[key] =
             props.formdata[key] ??
@@ -292,9 +293,20 @@ const submitProductGroup = async () => {
     }
 };
 
+const internalNameGroups = ref([]);
+const fetchInternalNameGroups = async () => {
+    try {
+        const response = await axios.get(route("consumableInternalNameGroup.options"));
+        internalNameGroups.value = response.data;
+    } catch (e) {
+        console.error("Error fetching internal name groups:", e);
+    }
+};
+
 const isInternalNameModalActive = ref(false);
 const internalNameForm = reactive({
     name: '',
+    consumable_internal_name_group_id: null,
     unitPrice: 0,
     unitName: '',
     unitAltName: '',
@@ -304,6 +316,7 @@ const internalNameForm = reactive({
 
 const addInternalName = () => {
     internalNameForm.name = '';
+    internalNameForm.consumable_internal_name_group_id = null;
     internalNameForm.unitPrice = 0;
     internalNameForm.unitName = '';
     internalNameForm.unitAltName = '';
@@ -317,7 +330,7 @@ const refreshInternalName = async () => {
         const response = await axios.get(route("consumableInternalName.options"));
         props.resourceNeo.internalNames = response.data.map(cin => ({
             id: cin.id,
-            label: cin.name,
+            label: cin.label || cin.name,
             data: { unitName: cin.unitName, unitAltName: cin.unitAltName }
         }));
     } catch (e) {
@@ -460,6 +473,8 @@ const fetchProd = (index) => {
     if (form["multi"][index].pur_pr_detail.data) {
         form["multi"][index].pur_pr_detail_int =
             form["multi"][index].pur_pr_detail.data.pr_detail_int;
+        form["multi"][index].pur_internal_name_group =
+            form["multi"][index].pur_pr_detail.data.internal_name_group;
         form["multi"][index].pur_pr_hsn =
             form["multi"][index].pur_pr_detail.data.pr_hsn;
         form["multi"][index].pur_unit =
@@ -772,6 +787,14 @@ const fetchProd = (index) => {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Internal Name">
                 <FormControl v-model="internalNameForm.name" placeholder="Enter Internal Name" />
+            </FormField>
+            <FormField label="Internal name Group">
+                <select v-model="internalNameForm.consumable_internal_name_group_id" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
+                    <option :value="null">Select Internal name Group</option>
+                    <option v-for="group in internalNameGroups" :key="group.id" :value="group.id">
+                        {{ group.name }}
+                    </option>
+                </select>
             </FormField>
             <FormField label="Unit Price">
                 <FormControl v-model="internalNameForm.unitPrice" type="number" placeholder="Enter Unit Price" />

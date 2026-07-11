@@ -40,7 +40,18 @@ const form = useForm(() => {
     return clone(props.resourceNeo.formInfo);
 });
 
+const internalNameGroups = ref([]);
+const fetchInternalNameGroups = async () => {
+    try {
+        const response = await axios.get(route("consumableInternalNameGroup.options"));
+        internalNameGroups.value = response.data;
+    } catch (e) {
+        console.error("Error fetching internal name groups:", e);
+    }
+};
+
 onBeforeMount(() => {
+    fetchInternalNameGroups();
     for (const key in props.resourceNeo.formInfo) {
         form[key] =
             props.formdata[key] ??
@@ -99,7 +110,7 @@ const isPgroupModalActive = ref(false);
 const pgroupForm = reactive({ name: '', sgroup: '' });
 
 const isInternalNameModalActive = ref(false);
-const internalNameForm = reactive({ name: '', unitPrice: 0, unitName: '', unitAltName: '', openStockUnit: 0, openStockMarginPercent: 0 });
+const internalNameForm = reactive({ name: '', consumable_internal_name_group_id: null, unitPrice: 0, unitName: '', unitAltName: '', openStockUnit: 0, openStockMarginPercent: 0 });
 
 const addFunction = (pkey, fkey) => {
     if (fkey === 'groupinfo') {
@@ -108,6 +119,7 @@ const addFunction = (pkey, fkey) => {
         isPgroupModalActive.value = true;
     } else if (fkey === 'pr_detail_int') {
         internalNameForm.name = '';
+        internalNameForm.consumable_internal_name_group_id = null;
         internalNameForm.unitPrice = 0;
         internalNameForm.unitName = '';
         internalNameForm.unitAltName = '';
@@ -250,6 +262,14 @@ const submitInternalName = async () => {
             <CardBoxModal v-model="isInternalNameModalActive" title="Add Internal Name" hasCancel @confirm="submitInternalName">
                 <FormField label="Name">
                     <FormControl v-model="internalNameForm.name" placeholder="Enter Internal Name" />
+                </FormField>
+                <FormField label="Internal name Group">
+                    <select v-model="internalNameForm.consumable_internal_name_group_id" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
+                        <option :value="null">Select Internal name Group</option>
+                        <option v-for="group in internalNameGroups" :key="group.id" :value="group.id">
+                            {{ group.name }}
+                        </option>
+                    </select>
                 </FormField>
                 <FormField label="Unit Price">
                     <FormControl v-model="internalNameForm.unitPrice" type="number" />

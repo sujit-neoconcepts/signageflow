@@ -41,13 +41,14 @@ class ProductController extends Controller
                     /*foreach (array_merge(array_keys($formInfo), array_keys($formInfoMulti)) as $key) {
                         $query->orWhere($key, 'LIKE', "%{$value}%");
                     }*/
+                    $query->orWhere('pr_detail', 'LIKE', "%{$value}%");
                     $query->orWhere('pr_detail_int', 'LIKE', "%{$value}%");
                     $query->orWhere('pgroups.name', 'LIKE', "%{$value}%");
                     // $query->orWhere('pgroups.sgroup', 'LIKE', "%{$value}%");
                 });
             });
         });
-        $query = Product::select('products.*', 'pgroups.name as groupinfo_name', 'pgroups.sgroup as groupinfo_sname', 'cin.id as cin_id', 'cin.unitName as cin_unitName', 'cin.unitAltName as cin_unitAltName')
+        $query = Product::select('products.*', 'pgroups.name as groupinfo_name', 'pgroups.sgroup as groupinfo_sname', 'cin.id as cin_id', 'cin.unitName as cin_unitName', 'cin.unitAltName as cin_unitAltName', 'cing.name as internal_name_group')
             ->selectRaw("(CASE 
                 WHEN products.pr_detail_int IS NULL OR products.pr_detail_int = '' THEN 0
                 WHEN cin.id IS NULL THEN 0
@@ -56,11 +57,12 @@ class ProductController extends Controller
                 ELSE 1
             END) as validation_status_raw")
             ->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left')
-            ->leftJoin('consumable_internal_names as cin', 'cin.name', '=', 'products.pr_detail_int');
+            ->leftJoin('consumable_internal_names as cin', 'cin.name', '=', 'products.pr_detail_int')
+            ->leftJoin('consumable_internal_name_groups as cing', 'cing.id', '=', 'cin.consumable_internal_name_group_id');
         $perPage = request()->query('perPage') ?? 10;
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('pr_detail')
-            ->allowedSorts(array_merge(array_keys($formInfo), array_keys($formInfoMulti), ['groupinfo_name', 'groupinfo_sname', AllowedSort::field('validation', 'validation_status_raw')]))
+            ->allowedSorts(array_merge(array_keys($formInfo), array_keys($formInfoMulti), ['groupinfo_name', 'groupinfo_sname', 'internal_name_group', AllowedSort::field('validation', 'validation_status_raw')]))
             ->allowedFilters(array_merge(
                 array_diff(array_merge(array_keys($formInfo), array_keys($formInfoMulti)), ['groupinfo']),
                 [AllowedFilter::exact('groupinfo'), AllowedFilter::exact('groupinfo_sname', 'pgroups.sgroup'), $globalSearch]
@@ -113,6 +115,9 @@ class ProductController extends Controller
             $table->column('groupinfo_name', 'Product Group', searchable: false, sortable: true);
             foreach ($arrKey as $key) {
                 $table->column($key, $formInfo[$key]['label'], searchable: $formInfo[$key]['searchable'] ?? false, sortable: $formInfo[$key]['sortable'] ?? false, hidden: $formInfo[$key]['hidden'] ?? false, extra: ['type' => $formInfo[$key]['type'] ?? '', 'options' => [], 'align' => $formInfo[$key]['align'] ?? 'left']);
+                if ($key === 'pr_detail_int') {
+                    $table->column('internal_name_group', 'Internal Name Group', searchable: false, sortable: true);
+                }
             }
             foreach (array_keys($formInfoMulti) as $key) {
                 $table->column($key, $formInfoMulti[$key]['label'], searchable: $formInfoMulti[$key]['searchable'] ?? false, sortable: $formInfoMulti[$key]['sortable'] ?? false, hidden: $formInfoMulti[$key]['hidden'] ?? false, extra: ['align' => $formInfoMulti[$key]['align'] ?? 'left']);
@@ -183,7 +188,11 @@ class ProductController extends Controller
             $savedArray[$key] = is_string($val) ? trim($val) : $val;
         }
         $savedArray['groupinfo'] = $request->groupinfo ? $request->groupinfo['id'] : null;
-        $savedArray['pr_detail_int'] = $request->pr_detail_int ? trim($request->pr_detail_int['label']) : null;
+        $prDetailInt = $request->pr_detail_int ? trim($request->pr_detail_int['label']) : null;
+        if ($prDetailInt && str_contains($prDetailInt, '[')) {
+            $prDetailInt = trim(explode('[', $prDetailInt)[0]);
+        }
+        $savedArray['pr_detail_int'] = $prDetailInt;
         $request->validate($validateRule, [], $attributeNames);
         Product::create($savedArray);
 
@@ -216,11 +225,13 @@ class ProductController extends Controller
 
         // Format pr_detail_int for dropdown
         if ($product->pr_detail_int) {
-            $consumableName = \App\Models\ConsumableInternalName::where('name', $product->pr_detail_int)->first();
+            $consumableName = \App\Models\ConsumableInternalName::with('group')->where('name', $product->pr_detail_int)->first();
             if ($consumableName) {
+                $groupName = $consumableName->group ? $consumableName->group->name : '';
+                $labelText = $groupName ? "{$consumableName->name} [{$groupName}]" : $consumableName->name;
                 $formdata->pr_detail_int = [
                     'id' => $consumableName->id,
-                    'label' => $consumableName->name,
+                    'label' => $labelText,
                     'data' => [
                         'unitName' => $consumableName->unitName,
                         'unitAltName' => $consumableName->unitAltName,
@@ -254,7 +265,11 @@ class ProductController extends Controller
             $product->{$key} = is_string($val) ? trim($val) : $val;
         }
         $product->groupinfo = $request->groupinfo ? $request->groupinfo['id'] : null;
-        $product->pr_detail_int = $request->pr_detail_int ? trim($request->pr_detail_int['label']) : null;
+        $prDetailInt = $request->pr_detail_int ? trim($request->pr_detail_int['label']) : null;
+        if ($prDetailInt && str_contains($prDetailInt, '[')) {
+            $prDetailInt = trim(explode('[', $prDetailInt)[0]);
+        }
+        $product->pr_detail_int = $prDetailInt;
         $product->save();
 
         Purchase::where('pur_pr_id', $product->id)->update(['pur_pr_detail_int' => $product->pr_detail_int]);

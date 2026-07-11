@@ -78,6 +78,7 @@ class Purchase extends Model
                 'autoFill' => [
                     'pur_pr_hsn' => 'data.pr_hsn',
                     'pur_pr_detail_int' => 'data.pr_detail_int',
+                    'pur_internal_name_group' => 'data.internal_name_group',
                     'pur_unit' => 'data.pr_pur_unit',
                     'pur_unit_alt' => 'data.pr_pur_unit_alt',
                     'pur_unint_int' => 'data.pr_int_unit',
@@ -97,6 +98,8 @@ class Purchase extends Model
             'available_qty' => ['label' => 'Available Qty', 'readonly' => true, 'align' => 'right', 'color' => 'bg-yellow-100/50 dark:bg-yellow-900/40 text-blue-600 dark:text-blue-400 font-bold'],
 
             'pur_pr_detail_int' => ['label' => 'Internal Name', 'searchable' => true, 'sortable' => true, 'vRule' => 'required', 'readonly' => true, 'colspan' => 2],
+
+            'pur_internal_name_group' => ['label' => 'Internal Name Group', 'readonly' => true, 'colspan' => 2],
 
             'pur_incharge' => ['label' => 'Incharge',  'sortable' => true, 'vRule' => 'required', 'type' => 'select', 'optionType' => 'array', 'options' => User::role('supervisor')->select('name')->orderBy('name')->get()->pluck('name')],
 

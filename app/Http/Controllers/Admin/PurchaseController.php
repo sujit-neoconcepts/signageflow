@@ -168,7 +168,7 @@ class PurchaseController extends Controller
                         $query->orWhere($key, 'LIKE', "%{$value}%");
                     }
                     foreach (array_keys($formInfoMulti) as $key) {
-                        if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) {
+                        if (in_array($key, ['last_rate', 'unit_rate', 'available_qty', 'pur_internal_name_group'])) {
                             continue;
                         }
                         $query->orWhere($key, 'LIKE', "%{$value}%");
@@ -179,14 +179,16 @@ class PurchaseController extends Controller
 
         $perPage = request()->query('perPage') ?? 10;
         $filterArray = [];
-        foreach (array_merge(array_diff(array_keys($formInfo), ['roundoff']), array_keys($formInfoMulti)) as $fvalue) {
+        foreach (array_merge(array_diff(array_keys($formInfo), ['roundoff']), array_diff(array_keys($formInfoMulti), ['pur_internal_name_group'])) as $fvalue) {
             $filterArray[] = AllowedFilter::exact($fvalue);
         }
 
-        $query = Purchase::select('purchases.*', 'pgroups.name as groupinfo_name', 'pgroups.sgroup as groupinfo_sname')
+        $query = Purchase::select('purchases.*', 'pgroups.name as groupinfo_name', 'pgroups.sgroup as groupinfo_sname', 'cing.name as internal_name_group')
             ->where('entry_type', 0)
             ->leftJoin('products', 'products.id', 'purchases.pur_pr_id', 'left')
-            ->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left');
+            ->leftJoin('pgroups', 'pgroups.id', 'products.groupinfo', 'left')
+            ->leftJoin('consumable_internal_names as cin', 'cin.name', '=', 'purchases.pur_pr_detail_int')
+            ->leftJoin('consumable_internal_name_groups as cing', 'cing.id', '=', 'cin.consumable_internal_name_group_id');
 
         if (! (Auth::user()->can('all') || Auth::user()->can('purchase_list_for_all'))) {
             $query = $query->where('pur_incharge', Auth::user()->name);
@@ -194,7 +196,7 @@ class PurchaseController extends Controller
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('-pur_date')
-            ->allowedSorts(array_merge(array_diff(array_keys($formInfo), ['roundoff']), array_keys($formInfoMulti), []))
+            ->allowedSorts(array_merge(array_diff(array_keys($formInfo), ['roundoff']), array_keys($formInfoMulti), ['internal_name_group']))
             ->allowedFilters(array_merge($filterArray, [AllowedFilter::scope('pur_date_start'), AllowedFilter::scope('pur_date_end'), AllowedFilter::scope('received_date_start'), AllowedFilter::scope('received_date_end'), AllowedFilter::exact('groupinfo_sname', 'pgroups.sgroup'), $globalSearch]))
             ->paginate($perPage)
             ->withQueryString();
@@ -239,10 +241,13 @@ class PurchaseController extends Controller
             }
 
             foreach (array_keys($formInfoMulti) as $key) {
-                if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) {
+                if (in_array($key, ['last_rate', 'unit_rate', 'available_qty', 'pur_internal_name_group'])) {
                     continue;
                 }
                 $table->column($key, $formInfoMulti[$key]['label'], searchable: $formInfoMulti[$key]['searchable'] ?? false, sortable: $formInfoMulti[$key]['sortable'] ?? false, hidden: $formInfoMulti[$key]['hidden'] ?? false, extra: ['align' => $formInfoMulti[$key]['align'] ?? 'left', 'showTotal' => $formInfoMulti[$key]['showTotal'] ?? false]);
+                if ($key === 'pur_pr_detail_int') {
+                    $table->column('internal_name_group', 'Internal Name Group', searchable: false, sortable: true);
+                }
             }
 
             $fresult = [];
@@ -314,10 +319,12 @@ class PurchaseController extends Controller
             'Stock Item', 'Tools',
         ];
         $resourceNeo['productGroups'] = \App\Models\Pgroup::getOptionsForProduct();
-        $resourceNeo['internalNames'] = \App\Models\ConsumableInternalName::all()->map(function ($cin) {
+        $resourceNeo['internalNames'] = \App\Models\ConsumableInternalName::with('group')->get()->map(function ($cin) {
+            $groupName = $cin->group ? $cin->group->name : '';
+            $labelText = $groupName ? "{$cin->name} [{$groupName}]" : $cin->name;
             return [
                 'id' => $cin->id,
-                'label' => $cin->name,
+                'label' => $labelText,
                 'data' => ['unitName' => $cin->unitName, 'unitAltName' => $cin->unitAltName],
             ];
         });
@@ -371,7 +378,7 @@ class PurchaseController extends Controller
             foreach ($request->multi as $ml) {
                 $lineData = $savedArray;
                 foreach (array_keys($formInfoMulti) as $key) {
-                    if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) {
+                    if (in_array($key, ['last_rate', 'unit_rate', 'available_qty', 'pur_internal_name_group'])) {
                         continue;
                     }
                     $lineData[$key] = $ml[$key];
@@ -416,7 +423,11 @@ class PurchaseController extends Controller
     public function edit(Purchase $purchase)
     {
         $invoiceQuery = $this->getInvoiceLinesQuery($purchase);
-        $invoiceLines = $invoiceQuery->orderBy('id')->get();
+        $invoiceLines = $invoiceQuery->select('purchases.*', 'cing.name as pur_internal_name_group')
+            ->leftJoin('consumable_internal_names as cin', 'cin.name', '=', 'purchases.pur_pr_detail_int')
+            ->leftJoin('consumable_internal_name_groups as cing', 'cing.id', '=', 'cin.consumable_internal_name_group_id')
+            ->orderBy('purchases.id')
+            ->get();
 
         if ($invoiceLines->isEmpty()) {
             return redirect()->route('purchase.index')->with(['message' => 'Purchase not found for the selected invoice.', 'msg_type' => 'danger']);
@@ -460,10 +471,12 @@ class PurchaseController extends Controller
             'Stock Item', 'Tools',
         ];
         $resourceNeo['productGroups'] = \App\Models\Pgroup::getOptionsForProduct();
-        $resourceNeo['internalNames'] = \App\Models\ConsumableInternalName::all()->map(function ($cin) {
+        $resourceNeo['internalNames'] = \App\Models\ConsumableInternalName::with('group')->get()->map(function ($cin) {
+            $groupName = $cin->group ? $cin->group->name : '';
+            $labelText = $groupName ? "{$cin->name} [{$groupName}]" : $cin->name;
             return [
                 'id' => $cin->id,
-                'label' => $cin->name,
+                'label' => $labelText,
                 'data' => ['unitName' => $cin->unitName, 'unitAltName' => $cin->unitAltName],
             ];
         });
@@ -525,7 +538,7 @@ class PurchaseController extends Controller
                 $lineData = $headerData;
 
                 foreach (array_keys($formInfoMulti) as $key) {
-                    if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) {
+                    if (in_array($key, ['last_rate', 'unit_rate', 'available_qty', 'pur_internal_name_group'])) {
                         continue;
                     }
                     $lineData[$key] = $ml[$key];
@@ -676,7 +689,12 @@ class PurchaseController extends Controller
 
     public function detailView(Purchase $purchase)
     {
-        $invoiceLines = $this->getInvoiceLinesQuery($purchase)->orderBy('id')->get();
+        $invoiceLines = $this->getInvoiceLinesQuery($purchase)
+            ->select('purchases.*', 'cing.name as pur_internal_name_group')
+            ->leftJoin('consumable_internal_names as cin', 'cin.name', '=', 'purchases.pur_pr_detail_int')
+            ->leftJoin('consumable_internal_name_groups as cing', 'cing.id', '=', 'cin.consumable_internal_name_group_id')
+            ->orderBy('purchases.id')
+            ->get();
         if ($invoiceLines->isEmpty()) {
             return response()->json(['header' => null, 'columns' => [], 'items' => []]);
         }
@@ -690,11 +708,14 @@ class PurchaseController extends Controller
             }
         }
         foreach ($formInfoMulti as $key => $meta) {
-            if (in_array($key, ['last_rate', 'unit_rate', 'available_qty'])) {
+            if (in_array($key, ['last_rate', 'unit_rate', 'available_qty', 'pur_internal_name_group'])) {
                 continue;
             }
             if (! ($meta['hidden'] ?? false)) {
                 $columns[] = ['key' => $key, 'label' => $meta['label'], 'align' => $meta['align'] ?? 'left'];
+                if ($key === 'pur_pr_detail_int') {
+                    $columns[] = ['key' => 'pur_internal_name_group', 'label' => 'Internal Name Group', 'align' => 'left'];
+                }
             }
         }
         $columns[] = ['key' => 'groupinfo_name', 'label' => 'Prod Group', 'align' => 'left'];

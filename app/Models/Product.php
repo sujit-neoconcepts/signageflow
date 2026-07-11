@@ -14,13 +14,15 @@ class Product extends Model
     public static function formInfo()
     {
         $allunits = Munit::select('name')->orderBy('name')->get()->pluck('name');
-        $consumableNames = ConsumableInternalName::select('id', 'name', 'unitName', 'unitAltName')
+        $consumableNames = ConsumableInternalName::with('group')
             ->orderBy('name')
             ->get()
             ->map(function ($item) {
+                $groupName = $item->group ? $item->group->name : '';
+                $labelText = $groupName ? "{$item->name} [{$groupName}]" : $item->name;
                 return [
                     'id' => $item->id,
-                    'label' => $item->name,
+                    'label' => $labelText,
                     'data' => [
                         'unitName' => $item->unitName,
                         'unitAltName' => $item->unitAltName,
@@ -80,7 +82,8 @@ class Product extends Model
     public static function getAllOption()
     {
         $alldatas = Product::leftJoin('consumable_internal_names as cin', 'cin.name', '=', 'products.pr_detail_int')
-            ->select('products.*', 'cin.unitPrice as master_unit_price')
+            ->leftJoin('consumable_internal_name_groups as cing', 'cing.id', '=', 'cin.consumable_internal_name_group_id')
+            ->select('products.*', 'cin.unitPrice as master_unit_price', 'cing.name as internal_name_group')
             ->get();
 
         // Efficiently fetch stock and rates in bulk by Internal Name (to match /admin/stocks)
