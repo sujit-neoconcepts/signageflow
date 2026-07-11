@@ -71,7 +71,7 @@ class User extends Authenticatable
         try {
 
             $details = [
-                'title' => '2Factor Athentication',
+                'title' => '2Factor Authentication',
                 'body' => 'One Time Code: '.$code.'<br> Valid for Next 5 Minutes.',
             ];
 

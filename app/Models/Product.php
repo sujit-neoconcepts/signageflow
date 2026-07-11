@@ -20,6 +20,7 @@ class Product extends Model
             ->map(function ($item) {
                 $groupName = $item->group ? $item->group->name : '';
                 $labelText = $groupName ? "{$item->name} [{$groupName}]" : $item->name;
+
                 return [
                     'id' => $item->id,
                     'label' => $labelText,
@@ -113,6 +114,20 @@ class Product extends Model
             ->get()
             ->pluck('pur_rate', 'pur_pr_detail_int');
 
+        // Last purchase incharge and location by product
+        $lastPurchases = \DB::table('purchases')
+            ->select('pur_incharge', 'pur_loc', 'pur_pr_id', 'pur_pr_detail')
+            ->whereIn('id', function ($query) {
+                $query->selectRaw('MAX(id)')
+                    ->from('purchases')
+                    ->where('entry_type', 0)
+                    ->groupBy('pur_pr_detail');
+            })
+            ->get();
+
+        $lastPurchasesById = $lastPurchases->whereNotNull('pur_pr_id')->keyBy('pur_pr_id');
+        $lastPurchasesByName = $lastPurchases->keyBy('pur_pr_detail');
+
         $allOpt = [];
         foreach ($alldatas as $alldata) {
             $in = $purSub[$alldata->pr_detail_int] ?? 0;
@@ -122,6 +137,10 @@ class Product extends Model
             $alldata->last_rate = $lastRates[$alldata->pr_detail_int] ?? 0;
             $alldata->available_qty = $balance;
             $alldata->unit_rate = $alldata->master_unit_price ?? 0;
+
+            $lastPurchase = $lastPurchasesById[$alldata->id] ?? $lastPurchasesByName[$alldata->pr_detail] ?? null;
+            $alldata->last_incharge = $lastPurchase ? $lastPurchase->pur_incharge : '';
+            $alldata->last_location = $lastPurchase ? $lastPurchase->pur_loc : '';
 
             $allOpt[] = [
                 'id' => $alldata->id,

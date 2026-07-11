@@ -55,18 +55,6 @@ const deleteSettinAuth = () => {
         });
     }
 }
-let fieldTypes = {
-    authPass: 'text',
-}
-function handleFocus(event) {
-    this.fieldTypes.authPass = 'password'
-}
-function handleBlur(event) {
-    if (!event.value) {
-        this.fieldTypes.authPass = 'text'
-    }
-
-}
 
 </script>
 
@@ -104,13 +92,15 @@ function handleBlur(event) {
             @confirm="isModalDangerActive2 = true">
             <p>Are you sure to delete?</p>
         </CardBoxModal>
-        <CardBoxModal v-model="isModalDangerActive2" buttonLabel="Validate" title="Please Validate" button="danger"
-            has-cancel @confirm="deleteSettinAuth">
-            <p>Please Enter Your Password To Delete Setting</p>
-            <FormField label="Password" help="">
-                <FormControl placeholder="Password" v-model="authPass" :type="fieldTypes.authPass" name="authPass" value=""
-                    @focus="handleFocus(this)" @blur="handleBlur(this)" autocomplete="off" required />
-            </FormField>
-        </CardBoxModal>
+        <form @submit.prevent="deleteSettinAuth">
+            <CardBoxModal v-model="isModalDangerActive2" buttonLabel="Validate" title="Please Validate" button="danger"
+                has-cancel @confirm="deleteSettinAuth">
+                <p>Please Enter Your Password To Delete Setting</p>
+                <FormField label="Password" help="">
+                    <FormControl placeholder="Password" v-model="authPass" type="password" name="authPass"
+                        autocomplete="off" required />
+                </FormField>
+            </CardBoxModal>
+        </form>
     </LayoutAuthenticated>
 </template>

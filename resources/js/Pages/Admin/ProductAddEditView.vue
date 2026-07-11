@@ -153,6 +153,28 @@ const submitInternalName = async () => {
         alert("Error creating Internal Name: " + (e.response?.data?.message || e.message));
     }
 };
+
+const isInternalNameGroupModalActive = ref(false);
+const internalNameGroupForm = reactive({ name: '' });
+
+const openInternalNameGroupModal = () => {
+    internalNameGroupForm.name = '';
+    isInternalNameGroupModalActive.value = true;
+};
+
+const submitInternalNameGroup = async () => {
+    try {
+        const response = await axios.post(route('consumableInternalNameGroup.store'), internalNameGroupForm, {headers: {'Accept': 'application/json'}});
+        internalNameGroups.value = response.data.data;
+        const matchingGroup = response.data.data.find(v => v.label.startsWith(internalNameGroupForm.name));
+        if (matchingGroup) {
+            internalNameForm.consumable_internal_name_group_id = matchingGroup.id;
+        }
+        isInternalNameGroupModalActive.value = false;
+    } catch (e) {
+        alert("Error creating Internal name Group: " + (e.response?.data?.message || e.message));
+    }
+};
 </script>
 <template>
     <LayoutAuthenticated>
@@ -263,7 +285,12 @@ const submitInternalName = async () => {
                 <FormField label="Name">
                     <FormControl v-model="internalNameForm.name" placeholder="Enter Internal Name" />
                 </FormField>
-                <FormField label="Internal name Group">
+                <FormField 
+                    label="Internal name Group" 
+                    addAndRefresh 
+                    :addFunction="openInternalNameGroupModal" 
+                    :refreshFunction="fetchInternalNameGroups"
+                >
                     <select v-model="internalNameForm.consumable_internal_name_group_id" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
                         <option :value="null">Select Internal name Group</option>
                         <option v-for="group in internalNameGroups" :key="group.id" :value="group.id">
@@ -295,6 +322,12 @@ const submitInternalName = async () => {
                 </FormField>
                 <FormField label="Open Stock Margin %">
                     <FormControl v-model="internalNameForm.openStockMarginPercent" type="number" />
+                </FormField>
+            </CardBoxModal>
+
+            <CardBoxModal v-model="isInternalNameGroupModalActive" title="Add Internal name Group" hasCancel @confirm="submitInternalNameGroup">
+                <FormField label="Group Name">
+                    <FormControl v-model="internalNameGroupForm.name" placeholder="Enter Group Name" />
                 </FormField>
             </CardBoxModal>
         </SectionMain>

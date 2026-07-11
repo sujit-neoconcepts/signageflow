@@ -65,17 +65,6 @@ const deleteUserAuth = () => {
         });
     }
 }
-const fieldTypes = ref('text')
-
-function handleFocus(event) {
-    fieldTypes.value = 'password'
-}
-function handleBlur(event) {
-    if (!authPass.value) {
-        fieldTypes.value = 'text'
-    }
-
-}
 
 </script>
 
@@ -118,14 +107,14 @@ function handleBlur(event) {
             @confirm="isModalDangerActive2 = true">
             <p>Are you sure to delete?</p>
         </CardBoxModal>
-        <form>
+        <form @submit.prevent="deleteUserAuth">
             <CardBoxModal v-model="isModalDangerActive2" buttonLabel="Validate" title="Please Validate" button="danger"
                 has-cancel @confirm="deleteUserAuth">
                 <p>Please Enter Your Password To Delete User</p>
 
                 <FormField label="Password" help="">
-                    <FormControl placeholder="Password" v-model="authPass" :type="fieldTypes" name="authPass" value=""
-                        @focus="handleFocus()" @blur="handleBlur()" autocomplete="off" required />
+                    <FormControl placeholder="Password" v-model="authPass" type="password" name="authPass"
+                        autocomplete="off" required />
                 </FormField>
             </CardBoxModal>
         </form>

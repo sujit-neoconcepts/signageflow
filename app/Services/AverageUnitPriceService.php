@@ -70,22 +70,6 @@ class AverageUnitPriceService
                     $consumable->unitPrice = $newAveragePrice;
                     $consumable->save();
 
-                    Log::info("Updated average price for {$internalName}: {$newAveragePrice} (UPDATE mode)", [
-                        'old_qty' => $oldQty,
-                        'old_price' => $oldPrice,
-                        'new_qty' => $currentQty,
-                        'new_price' => $currentPrice,
-                        'balance_qty' => $balanceQty,
-                        'total_qty_with_old' => $totalQtyWithOld,
-                        'total_value_with_old' => $totalValueWithOld,
-                        'old_contribution' => $oldContribution,
-                        'value_without_old' => $valueWithoutOld,
-                        'qty_without_old' => $qtyWithoutOld,
-                        'new_total_value' => $newTotalValue,
-                        'new_total_qty' => $newTotalQty,
-                        'excluded_purchase_id' => $excludePurchaseId,
-                    ]);
-
                     return $newAveragePrice;
                 } else {
                     Log::warning("Old purchase not found or internal name mismatch for ID: {$excludePurchaseId}");
@@ -117,15 +101,6 @@ class AverageUnitPriceService
             // Update the consumable internal name with new average price
             $consumable->unitPrice = $newAveragePrice;
             $consumable->save();
-
-            Log::info("Updated average price for {$internalName}: {$newAveragePrice} (CREATE mode)", [
-                'balance_qty' => $balanceQty,
-                'current_qty' => $currentQty,
-                'previous_balance_value' => $previousBalanceValue,
-                'newly_entered_value' => $newlyEnteredValue,
-                'total_qty' => $totalQty,
-                'excluded_purchase_id' => $excludePurchaseId,
-            ]);
 
             return $newAveragePrice;
 

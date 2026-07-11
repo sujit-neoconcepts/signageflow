@@ -164,9 +164,10 @@ class SettingController extends Controller
     {
         if ((Hash::check(request('password'), Auth::user()->password))) {
             $setting = Setting::find(request('id'));
-            $this->destroy($setting);
+
+            return $this->destroy($setting);
         } else {
-            return redirect()->route('setting.index')->with('message', 'Athentication Failed!!');
+            return redirect()->route('setting.index')->with('message', 'Authentication Failed!!');
         }
     }
 

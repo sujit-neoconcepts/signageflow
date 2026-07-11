@@ -434,9 +434,10 @@ class UserController extends Controller
     {
         if ((Hash::check(request('password'), Auth::user()->password))) {
             $user = User::find(request('id'));
-            $this->destroy($user);
+
+            return $this->destroy($user);
         } else {
-            return redirect()->route('user.index')->with(['message' => 'Athentication Failed!!', 'msg_type' => 'danger']);
+            return redirect()->route('user.index')->with(['message' => 'Authentication Failed!!', 'msg_type' => 'danger']);
         }
     }
 

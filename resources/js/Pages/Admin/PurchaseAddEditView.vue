@@ -346,7 +346,11 @@ const submitInternalName = async () => {
         
         await refreshInternalName();
         
-        const matchingName = props.resourceNeo.internalNames.find(cin => cin.label.toLowerCase() === internalNameForm.name.trim().toLowerCase());
+        const searchName = internalNameForm.name.trim().toLowerCase();
+        const matchingName = props.resourceNeo.internalNames.find(cin => {
+            const labelLower = cin.label.toLowerCase();
+            return labelLower === searchName || labelLower.startsWith(searchName + ' [');
+        });
         if (matchingName) {
             productForm.pr_detail_int = matchingName;
             handleInternalNameChange(matchingName);
@@ -355,6 +359,28 @@ const submitInternalName = async () => {
         isInternalNameModalActive.value = false;
     } catch (e) {
         alert("Error creating Internal Name: " + (e.response?.data?.message || e.message));
+    }
+};
+
+const isInternalNameGroupModalActive = ref(false);
+const internalNameGroupForm = reactive({ name: '' });
+
+const openInternalNameGroupModal = () => {
+    internalNameGroupForm.name = '';
+    isInternalNameGroupModalActive.value = true;
+};
+
+const submitInternalNameGroup = async () => {
+    try {
+        const response = await axios.post(route('consumableInternalNameGroup.store'), internalNameGroupForm, {headers: {'Accept': 'application/json'}});
+        internalNameGroups.value = response.data.data;
+        const matchingGroup = response.data.data.find(v => v.label.startsWith(internalNameGroupForm.name));
+        if (matchingGroup) {
+            internalNameForm.consumable_internal_name_group_id = matchingGroup.id;
+        }
+        isInternalNameGroupModalActive.value = false;
+    } catch (e) {
+        alert("Error creating Internal name Group: " + (e.response?.data?.message || e.message));
     }
 };
 
@@ -496,6 +522,15 @@ const fetchProd = (index) => {
             form["multi"][index].pur_pr_detail.data.last_rate ?? 0;
         form["multi"][index].unit_rate =
             form["multi"][index].pur_pr_detail.data.unit_rate ?? 0;
+
+        if (form["multi"][index].pur_pr_detail.data.last_incharge) {
+            form["multi"][index].pur_incharge =
+                form["multi"][index].pur_pr_detail.data.last_incharge;
+        }
+        if (form["multi"][index].pur_pr_detail.data.last_location) {
+            form["multi"][index].pur_loc =
+                form["multi"][index].pur_pr_detail.data.last_location;
+        }
     }
 };
 </script>
@@ -788,7 +823,12 @@ const fetchProd = (index) => {
             <FormField label="Internal Name">
                 <FormControl v-model="internalNameForm.name" placeholder="Enter Internal Name" />
             </FormField>
-            <FormField label="Internal name Group">
+            <FormField 
+                label="Internal name Group" 
+                addAndRefresh 
+                :addFunction="openInternalNameGroupModal" 
+                :refreshFunction="fetchInternalNameGroups"
+            >
                 <select v-model="internalNameForm.consumable_internal_name_group_id" class="rounded w-full border-gray-300 dark:border-gray-700 dark:bg-slate-800">
                     <option :value="null">Select Internal name Group</option>
                     <option v-for="group in internalNameGroups" :key="group.id" :value="group.id">
@@ -821,6 +861,11 @@ const fetchProd = (index) => {
                 <FormControl v-model="internalNameForm.openStockMarginPercent" type="number" placeholder="Enter Open Stock Margin %" />
             </FormField>
         </div>
+    </CardBoxModal>
+    <CardBoxModal v-model="isInternalNameGroupModalActive" title="Add Internal name Group" hasCancel @confirm="submitInternalNameGroup">
+        <FormField label="Group Name">
+            <FormControl v-model="internalNameGroupForm.name" placeholder="Enter Group Name" />
+        </FormField>
     </CardBoxModal>
     <div
         class="grid lg:grid-cols-6 lg:grid-cols-7 lg:grid-cols-8 lg:col-span-2 lg:col-span-4 lg:col-span-3"

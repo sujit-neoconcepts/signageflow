@@ -88,6 +88,8 @@ class Purchase extends Model
                     'last_rate' => 'data.last_rate',
                     'unit_rate' => 'data.unit_rate',
                     'available_qty' => 'data.available_qty',
+                    'pur_incharge' => 'data.last_incharge',
+                    'pur_loc' => 'data.last_location',
                 ],
             ],
 
