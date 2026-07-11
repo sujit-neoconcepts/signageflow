@@ -40,11 +40,7 @@ class ConsumableInternalNameGroup extends Model
             return 0.00;
         }
 
-        $sum = $items->sum(function ($item) {
-            return $item->unitPrice * (1 + $item->openStockMarginPercent / 100);
-        });
-
-        return (float) ($sum / $items->count());
+        return (float) $items->avg('unitPrice');
     }
 
     public function getOpenStockMarginPercentAttribute()
@@ -69,10 +65,7 @@ class ConsumableInternalNameGroup extends Model
             $averagePrice = 0.00;
 
             if (! $items->isEmpty()) {
-                $sum = $items->sum(function ($item) {
-                    return $item->unitPrice * (1 + $item->openStockMarginPercent / 100);
-                });
-                $averagePrice = $sum / $items->count();
+                $averagePrice = $items->avg('unitPrice');
             }
 
             return [
