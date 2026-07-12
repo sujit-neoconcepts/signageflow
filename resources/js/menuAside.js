@@ -38,10 +38,16 @@ export default [
         icon: mdiBasketFill,
         menu: [
             {
-                route: "munit.index",
-                label: "Measurement Unit",
-                icon: mdiScale,
-                resource: "munit",
+                route: "consumableInternalName.index",
+                label: "Product Internal Name",
+                icon: mdiFormatListBulletedType,
+                resource: "consumableInternalName",
+            },
+            {
+                route: "consumableInternalNameGroup.index",
+                label: "Product Internal Name Group",
+                icon: mdiFormatListBulletedType,
+                resource: "consumableInternalNameGroup",
             },
             {
                 route: "pgroup.index",
@@ -50,34 +56,10 @@ export default [
                 resource: "pgroup",
             },
             {
-                route: "location.index",
-                label: "Locations",
-                icon: mdiMapMarkerMultipleOutline,
-                resource: "location",
-            },
-            {
-                route: "expuser.index",
-                label: "Exp. Users",
-                icon: mdiAccountTie,
-                resource: "expuser",
-            },
-            {
-                route: "expcate.index",
-                label: "Exp. Category",
-                icon: mdiDragVariant,
-                resource: "expcate",
-            },
-            {
-                route: "consumableInternalName.index",
-                label: "Product Internal Name",
-                icon: mdiFormatListBulletedType,
-                resource: "consumableInternalName",
-            },
-            {
-                route: "consumableInternalNameGroup.index",
-                label: "Internal name Group",
-                icon: mdiFormatListBulletedType,
-                resource: "consumableInternalNameGroup",
+                route: "product.index",
+                icon: mdiAllInclusive,
+                label: "Products Bridge",
+                resource: "product",
             },
             {
                 route: "openStock.index",
@@ -85,50 +67,67 @@ export default [
                 label: "Open Stock",
                 resource: "openStock",
             },
-            
+            {
+                label: "Users & Roles",
+                icon: mdiAccountSupervisor,
+                menu: [
+                    {
+                        route: "user.index",
+                        label: "Users",
+                        icon: mdiAccountBoxMultiple,
+                        resource: "user",
+                    },
+                    {
+                        route: "role.index",
+                        label: "Role",
+                        icon: mdiAccountGroup,
+                        resource: "role",
+                    },
+                ],
+            },
+            {
+                route: "expuser.index",
+                label: "Expense Users",
+                icon: mdiAccountTie,
+                resource: "expuser",
+            },
+            {
+                route: "expcate.index",
+                label: "Expense Category",
+                icon: mdiDragVariant,
+                resource: "expcate",
+            },
+            {
+                route: "munit.index",
+                label: "Measurement Unit",
+                icon: mdiScale,
+                resource: "munit",
+            },
+            {
+                route: "location.index",
+                label: "Locations",
+                icon: mdiMapMarkerMultipleOutline,
+                resource: "location",
+            },
+            {
+                label: "Logs",
+                icon: mdiMonitorEye,
+                menu: [
+                    {
+                        route: "signinLog.index",
+                        label: "Signin Logs",
+                        icon: mdiAccountEye,
+                        resource: "signinLog",
+                    },
+                    {
+                        route: "activityLog.index",
+                        label: "Activity Logs",
+                        icon: mdiArchiveEye,
+                        resource: "activityLog",
+                    },
+                ],
+            },
         ],
-    },
-    {
-        label: "User & Roles",
-        icon: mdiAccountSupervisor,
-        menu: [
-            {
-                route: "user.index",
-                label: "Users",
-                icon: mdiAccountBoxMultiple,
-                resource: "user",
-            },
-            {
-                route: "role.index",
-                label: "Role",
-                icon: mdiAccountGroup,
-                resource: "role",
-            },
-        ],
-    },
-    {
-        label: "Logs",
-        icon: mdiMonitorEye,
-        menu: [
-            {
-                route: "signinLog.index",
-                label: "Signin Logs",
-                icon: mdiAccountEye,
-                resource: "signinLog",
-            },
-            {
-                route: "activityLog.index",
-                label: "Activity Logs",
-                icon: mdiArchiveEye,
-                resource: "activityLog",
-            },
-        ],
-    },
-    {
-                route: "product.index",
-                icon: mdiAllInclusive,
-                label: "Products",
-                resource: "product",
     },
     {
         label: "Associates",

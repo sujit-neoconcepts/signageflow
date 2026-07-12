@@ -107,9 +107,8 @@ const asideLgCloseClick = (event) => {
                 <AsideMenuList :menu="menu" :is-aside-xl-expanded="isAsideXlExpanded" @menu-click="menuClick" />
             </div>
 
-            <ul>
-                <AsideMenuItem :item="logoutItem" @menu-click="menuClick" />
-            </ul>
+            <!-- Slick blue bar at the bottom -->
+            <div class="h-1.5 bg-blue-600 w-full flex-shrink-0"></div>
         </div>
     </aside>
 </template>
