@@ -33,6 +33,10 @@ class Task extends Model
         'reminder_before_due',
         'reminder_sent',
         'start_notified',
+        'enquiry_no',
+        'sales_order_no',
+        'need_enquiry_number',
+        'need_sales_order_number',
     ];
 
     protected $casts = [
@@ -48,6 +52,8 @@ class Task extends Model
         'notify_channels' => 'array',
         'reminder_sent' => 'boolean',
         'start_notified' => 'boolean',
+        'need_enquiry_number' => 'boolean',
+        'need_sales_order_number' => 'boolean',
     ];
 
     public function creator()
@@ -76,6 +82,11 @@ class Task extends Model
     public function comments()
     {
         return $this->hasMany(TaskComment::class);
+    }
+
+    public function expenses()
+    {
+        return $this->hasMany(Expense::class, 'task_id');
     }
 
     public function parentTask()

@@ -27,6 +27,9 @@ const props = defineProps({
     progress: { type: Number, default: 0 },
     totalTasks: { type: Number, default: 0 },
     completedTasks: { type: Number, default: 0 },
+    groupedComments: { type: Array, default: () => [] },
+    groupedExpenses: { type: Array, default: () => [] },
+    expenseSummary: { type: Object, default: () => ({}) },
 });
 
 const getStatusColor = (status) => {
@@ -339,6 +342,127 @@ onMounted(() => {
                             </div>
                         </div>
                     </CardBox>
+
+                    <!-- Task History & Discussion Grouped by Stage -->
+                    <CardBox v-if="props.groupedComments && props.groupedComments.length > 0">
+                        <h3 class="text-md font-semibold text-gray-700 dark:text-slate-200 mb-4">
+                            Task History &amp; Discussion
+                        </h3>
+                        <div class="space-y-6">
+                            <div v-for="group in props.groupedComments" :key="group.stage_name" class="border-b border-gray-100 dark:border-slate-800 pb-4 last:border-0 last:pb-0">
+                                <h4 class="text-sm font-bold text-blue-600 dark:text-blue-400 mb-3 flex items-center">
+                                    <span class="mr-1.5">🏁</span> Stage: {{ group.stage_name }}
+                                </h4>
+                                <div class="space-y-3 pl-4 border-l-2 border-gray-100 dark:border-slate-800">
+                                    <div v-for="c in group.comments" :key="c.id" class="p-3 bg-gray-50/50 dark:bg-slate-900/10 border border-gray-100 dark:border-slate-800 rounded-lg">
+                                        <div class="flex justify-between items-start mb-1 text-xxs">
+                                            <div>
+                                                <span class="font-bold text-gray-700 dark:text-slate-350">{{ c.user.name }}</span>
+                                                <span class="px-1 py-0.2 rounded bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-slate-400 ml-1.5 capitalize">{{ c.user.role }}</span>
+                                            </div>
+                                            <span class="text-gray-400 font-mono">{{ c.created_at }}</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 dark:text-slate-305 whitespace-pre-wrap leading-relaxed">{{ c.comment }}</p>
+                                        
+                                        <!-- Files in comments -->
+                                        <div v-if="c.files && c.files.length > 0" class="mt-2 pt-2 border-t border-gray-100 dark:border-slate-800 space-y-1">
+                                            <div v-for="file in c.files" :key="file.id" class="flex items-center space-x-2 text-xs">
+                                                <span class="text-gray-400">📎</span>
+                                                <a :href="file.download_url" target="_blank" class="text-blue-500 hover:underline truncate">{{ file.file_name }}</a>
+                                                <span class="text-gray-400 text-xxs font-mono">({{ formatBytes(file.file_size) }})</span>
+                                                <audio v-if="isAudioFile(file)" :src="file.download_url" controls class="h-6 w-48 scale-90 origin-left"></audio>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </CardBox>
+                    <CardBox v-else>
+                        <h3 class="text-md font-semibold text-gray-700 dark:text-slate-200 mb-2">
+                            Task History &amp; Discussion
+                        </h3>
+                        <div class="text-sm text-gray-500 py-4 text-center">
+                            No task discussions logged yet for this job.
+                        </div>
+                    </CardBox>
+
+                    <!-- Expenses Grouped by Stage -->
+                    <CardBox>
+                        <div class="flex justify-between items-center mb-4 border-b border-gray-150 dark:border-slate-700 pb-3">
+                            <h3 class="text-md font-semibold text-gray-700 dark:text-slate-200">
+                                Job Expenses &amp; Deposits
+                            </h3>
+                            <div class="flex space-x-4 text-xs font-bold">
+                                <div class="text-green-600">Total Deposits: {{ props.expenseSummary.total_deposits }}</div>
+                                <div class="text-red-650">Total Expenses: {{ props.expenseSummary.total_expenses }}</div>
+                                <div :class="props.expenseSummary.balance.replace(/,/g, '') >= 0 ? 'text-blue-600' : 'text-orange-600'">
+                                    Balance: {{ props.expenseSummary.balance }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Summary Cards Top row -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="p-3 bg-green-50/50 dark:bg-green-950/10 border border-green-100 dark:border-green-900/30 rounded-lg flex flex-col">
+                                <span class="text-xxs font-semibold text-green-700 uppercase tracking-wider">Deposits Received</span>
+                                <span class="text-lg font-bold text-green-700 mt-1">{{ props.expenseSummary.total_deposits }}</span>
+                            </div>
+                            <div class="p-3 bg-red-50/50 dark:bg-red-950/10 border border-red-100 dark:border-red-900/30 rounded-lg flex flex-col">
+                                <span class="text-xxs font-semibold text-red-700 uppercase tracking-wider">Expenses Incurred</span>
+                                <span class="text-lg font-bold text-red-700 mt-1">{{ props.expenseSummary.total_expenses }}</span>
+                            </div>
+                            <div class="p-3 bg-blue-50/50 dark:bg-blue-950/10 border border-blue-100 dark:border-blue-900/30 rounded-lg flex flex-col">
+                                <span class="text-xxs font-semibold text-blue-700 uppercase tracking-wider">Net Balance</span>
+                                <span class="text-lg font-bold text-blue-700 mt-1">{{ props.expenseSummary.balance }}</span>
+                            </div>
+                        </div>
+
+                        <div v-if="props.groupedExpenses && props.groupedExpenses.length > 0" class="space-y-6">
+                            <div v-for="group in props.groupedExpenses" :key="group.stage_name" class="border border-gray-100 dark:border-slate-800 rounded-lg overflow-hidden">
+                                <div class="bg-gray-50 dark:bg-slate-800 p-3 flex justify-between items-center border-b border-gray-100 dark:border-slate-800">
+                                    <h4 class="text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider flex items-center">
+                                        <span class="mr-1.5">📁</span> Stage: {{ group.stage_name }}
+                                    </h4>
+                                    <div class="flex space-x-3 text-xxs font-bold">
+                                        <span class="text-green-600" v-if="group.total_deposits > 0">Dep: {{ group.total_deposits_formatted }}</span>
+                                        <span class="text-red-500" v-if="group.total_expenses > 0">Exp: {{ group.total_expenses_formatted }}</span>
+                                    </div>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse text-xs">
+                                        <thead>
+                                            <tr class="bg-gray-50/30 dark:bg-slate-900/10 text-gray-500 dark:text-slate-400 font-semibold border-b border-gray-100 dark:border-slate-800">
+                                                <th class="p-3">Date</th>
+                                                <th class="p-3">Category</th>
+                                                <th class="p-3">Type</th>
+                                                <th class="p-3">Done By</th>
+                                                <th class="p-3">Details</th>
+                                                <th class="p-3 text-right">Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
+                                            <tr v-for="exp in group.expenses" :key="exp.id" class="hover:bg-gray-50/50 dark:hover:bg-slate-800/10 text-gray-700 dark:text-slate-350">
+                                                <td class="p-3 font-mono">{{ exp.exp_date }}</td>
+                                                <td class="p-3">{{ exp.exp_cate }}</td>
+                                                <td class="p-3">
+                                                    <span :class="['px-1.5 py-0.5 rounded text-xxs font-bold uppercase border', exp.amt_type === 'Deposit' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200']">
+                                                        {{ exp.amt_type }}
+                                                    </span>
+                                                </td>
+                                                <td class="p-3">{{ exp.doneby || '—' }}</td>
+                                                <td class="p-3 truncate max-w-56" :title="exp.details">{{ exp.details || '—' }}</td>
+                                                <td class="p-3 text-right font-bold text-gray-900 dark:text-slate-100">{{ exp.amount }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="text-sm text-gray-500 py-6 text-center border border-dashed border-gray-250 dark:border-slate-800 rounded-lg">
+                            No expenses logged yet for this job.
+                        </div>
+                    </CardBox>
                 </div>
 
                 <!-- Sidebar -->
@@ -369,6 +493,23 @@ onMounted(() => {
                             <div class="flex justify-between" v-if="props.job.estimated_hours">
                                 <span class="text-gray-500">Est. Hours:</span>
                                 <span class="font-semibold text-gray-700 dark:text-slate-300">{{ props.job.estimated_hours }}h</span>
+                            </div>
+
+                            <div class="flex flex-col pt-2 border-t border-gray-150 dark:border-slate-800" v-if="props.job.enquiry_nos && props.job.enquiry_nos.length > 0">
+                                <span class="text-gray-550 mb-1 font-medium">Enquiry Numbers:</span>
+                                <div class="space-y-1 pl-2">
+                                    <div v-for="enq in props.job.enquiry_nos" :key="enq" class="font-semibold text-gray-700 dark:text-slate-300 text-xs">
+                                        🔗 {{ enq }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex flex-col pt-2 border-t border-gray-150 dark:border-slate-800" v-if="props.job.sales_order_nos && props.job.sales_order_nos.length > 0">
+                                <span class="text-gray-550 mb-1 font-medium">Sales Orders:</span>
+                                <div class="space-y-1 pl-2">
+                                    <div v-for="so in props.job.sales_order_nos" :key="so" class="font-semibold text-gray-700 dark:text-slate-300 text-xs">
+                                        📝 {{ so }}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </CardBox>

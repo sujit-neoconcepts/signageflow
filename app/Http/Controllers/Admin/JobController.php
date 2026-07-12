@@ -138,6 +138,8 @@ class JobController extends Controller
             'stages.*.end_date' => 'nullable|date',
             'stages.*.start_on_previous_complete' => 'nullable|boolean',
             'stages.*.notify_channels' => 'required|array|min:1',
+            'stages.*.need_enquiry_number' => 'nullable|boolean',
+            'stages.*.need_sales_order_number' => 'nullable|boolean',
         ]);
 
         DB::beginTransaction();
@@ -171,6 +173,8 @@ class JobController extends Controller
                         'job_stage_sort_order' => $index,
                         'notify_channels' => $stageData['notify_channels'] ?? ['email'],
                         'reminder_before_due' => 60,
+                        'need_enquiry_number' => $stageData['need_enquiry_number'] ?? false,
+                        'need_sales_order_number' => $stageData['need_sales_order_number'] ?? false,
                     ]);
 
                     // Attach assignees
@@ -233,6 +237,8 @@ class JobController extends Controller
             'tasks.assignees',
             'tasks.viewers',
             'tasks.comments.user',
+            'tasks.comments.files',
+            'expenses',
         ]);
 
         $workflowTasks = $job->tasks->whereNotNull('job_stage_sort_order')->values()->map(function ($task) {
@@ -291,10 +297,111 @@ class JobController extends Controller
             ];
         });
 
+        // Group comments by stage name
+        $groupedComments = [];
+        foreach ($job->tasks as $task) {
+            $stageName = $task->title;
+            $stageOrder = $task->job_stage_sort_order !== null ? $task->job_stage_sort_order : 9999;
+
+            $comments = $task->comments->map(function ($c) {
+                return [
+                    'id' => $c->id,
+                    'comment' => $c->comment,
+                    'status_update' => $c->status_update,
+                    'created_at' => $c->created_at->format('d-m-Y H:i'),
+                    'user' => [
+                        'name' => $c->user->name,
+                        'role' => $c->user->role_name,
+                    ],
+                    'files' => $c->files->map(function ($f) {
+                        return [
+                            'id' => $f->id,
+                            'file_name' => $f->file_name,
+                            'file_type' => $f->file_type,
+                            'file_size' => $f->file_size,
+                            'download_url' => route('task.commentFile.download', $f->id),
+                        ];
+                    }),
+                ];
+            });
+
+            if ($comments->isNotEmpty()) {
+                $groupedComments[] = [
+                    'stage_name' => $stageName,
+                    'stage_order' => $stageOrder,
+                    'comments' => $comments,
+                ];
+            }
+        }
+        $groupedComments = collect($groupedComments)->sortBy('stage_order')->values()->toArray();
+
         // Calculate progress
         $totalTasks = $job->tasks->count();
         $completedTasks = $job->tasks->whereIn('status', ['completed', 'verified', 'closed'])->count();
         $progress = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100) : 0;
+
+        // Group expenses by stage name
+        $jobExpenses = $job->expenses()->orderBy('exp_date', 'desc')->get();
+        $totalDeposits = $jobExpenses->where('amt_type', 'Deposit')->sum('amount');
+        $totalExpensesVal = $jobExpenses->where('amt_type', 'Expense')->sum('amount');
+        $balance = $totalDeposits - $totalExpensesVal;
+
+        $expenseSummary = [
+            'total_deposits' => number_format($totalDeposits, 2),
+            'total_expenses' => number_format($totalExpensesVal, 2),
+            'balance' => number_format($balance, 2),
+        ];
+
+        $taskStageMap = $job->tasks->pluck('title', 'id')->toArray();
+        $taskStageOrderMap = $job->tasks->pluck('job_stage_sort_order', 'id')->toArray();
+
+        $groupedExpenses = [];
+        foreach ($jobExpenses as $expense) {
+            $taskId = $expense->task_id;
+            $stageName = $taskId && isset($taskStageMap[$taskId]) ? $taskStageMap[$taskId] : 'General / Job Level';
+            $stageOrder = $taskId && isset($taskStageOrderMap[$taskId]) && $taskStageOrderMap[$taskId] !== null ? $taskStageOrderMap[$taskId] : 9999;
+
+            if (! isset($groupedExpenses[$stageName])) {
+                $groupedExpenses[$stageName] = [
+                    'stage_name' => $stageName,
+                    'stage_order' => $stageOrder,
+                    'expenses' => [],
+                    'total_deposits' => 0,
+                    'total_expenses' => 0,
+                ];
+            }
+
+            $groupedExpenses[$stageName]['expenses'][] = [
+                'id' => $expense->id,
+                'exp_date' => date('d-m-Y', strtotime($expense->exp_date)),
+                'amount' => number_format($expense->amount, 2),
+                'amt_type' => $expense->amt_type,
+                'exp_cate' => $expense->exp_cate,
+                'doneby' => $expense->doneby,
+                'details' => $expense->details,
+            ];
+
+            if ($expense->amt_type === 'Deposit') {
+                $groupedExpenses[$stageName]['total_deposits'] += $expense->amount;
+            } else {
+                $groupedExpenses[$stageName]['total_expenses'] += $expense->amount;
+            }
+        }
+
+        foreach ($groupedExpenses as &$g) {
+            $g['total_deposits_formatted'] = number_format($g['total_deposits'], 2);
+            $g['total_expenses_formatted'] = number_format($g['total_expenses'], 2);
+        }
+        unset($g);
+
+        $groupedExpenses = collect($groupedExpenses)->sortBy('stage_order')->values()->toArray();
+
+        $enquiryNos = $job->tasks->filter(fn ($t) => ! empty($t->enquiry_no))
+            ->map(fn ($t) => $t->enquiry_no.' ('.$t->title.')')
+            ->values()->all();
+        $salesOrderNos = $job->tasks->filter(fn ($t) => ! empty($t->sales_order_no))
+            ->map(fn ($t) => $t->sales_order_no.' ('.$t->title.')')
+            ->values()->all();
 
         return Inertia::render('Admin/JobShowView', [
             'job' => [
@@ -308,6 +415,8 @@ class JobController extends Controller
                 'client' => $job->client ? $job->client->cl_name : null,
                 'workflow' => $job->workflow ? $job->workflow->name : null,
                 'creator' => $job->creator->name,
+                'enquiry_nos' => $enquiryNos,
+                'sales_order_nos' => $salesOrderNos,
             ],
             'tasks' => $workflowTasks,
             'customTasks' => $customTasks,
@@ -315,6 +424,9 @@ class JobController extends Controller
             'progress' => $progress,
             'totalTasks' => $totalTasks,
             'completedTasks' => $completedTasks,
+            'groupedComments' => $groupedComments,
+            'groupedExpenses' => $groupedExpenses,
+            'expenseSummary' => $expenseSummary,
         ]);
     }
 
@@ -357,6 +469,8 @@ class JobController extends Controller
                     'end_date' => $task->end_date ? $task->end_date->format('Y-m-d H:i:s') : '',
                     'start_on_previous_complete' => (bool) $task->start_on_previous_complete,
                     'notify_channels' => $task->notify_channels ?? ['email'],
+                    'need_enquiry_number' => (bool) $task->need_enquiry_number,
+                    'need_sales_order_number' => (bool) $task->need_sales_order_number,
                 ];
             })->toArray(),
         ];
@@ -390,6 +504,8 @@ class JobController extends Controller
             'stages.*.end_date' => 'nullable|date',
             'stages.*.start_on_previous_complete' => 'nullable|boolean',
             'stages.*.notify_channels' => 'required|array|min:1',
+            'stages.*.need_enquiry_number' => 'nullable|boolean',
+            'stages.*.need_sales_order_number' => 'nullable|boolean',
         ]);
 
         DB::beginTransaction();
@@ -418,6 +534,8 @@ class JobController extends Controller
                         'start_on_previous_complete' => $stageData['start_on_previous_complete'] ?? false,
                         'job_stage_sort_order' => $index,
                         'notify_channels' => $stageData['notify_channels'] ?? ['email'],
+                        'need_enquiry_number' => $stageData['need_enquiry_number'] ?? false,
+                        'need_sales_order_number' => $stageData['need_sales_order_number'] ?? false,
                     ];
 
                     if (! empty($stageData['id'])) {

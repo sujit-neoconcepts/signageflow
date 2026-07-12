@@ -118,6 +118,8 @@ watch(selectedWorkflow, async (newVal) => {
             end_date: "",
             start_on_previous_complete: false,
             notify_channels: ["whatsapp", "mobile"],
+            need_enquiry_number: stage.need_enquiry_number ?? false,
+            need_sales_order_number: stage.need_sales_order_number ?? false,
         }));
     } catch (err) {
         console.error("Failed to fetch stages:", err);
@@ -223,6 +225,8 @@ const addStageAt = (index) => {
         end_date: "",
         start_on_previous_complete: false,
         notify_channels: ["whatsapp", "mobile"],
+        need_enquiry_number: false,
+        need_sales_order_number: false,
     });
 };
 
@@ -444,6 +448,21 @@ const submitform = () => {
                                                 {{ form.errors[`stages.${idx}.notify_channels`] }}
                                             </div>
                                         </div>
+
+                                         <div class="mt-3 flex flex-wrap gap-4 pt-3 border-t border-gray-100 dark:border-slate-800/80 text-xs" v-if="stage.need_enquiry_number || stage.need_sales_order_number">
+                                             <div v-if="stage.need_enquiry_number" class="flex items-center space-x-2">
+                                                 <span class="font-semibold text-gray-500">Need Enquiry Number:</span>
+                                                 <span class="px-2 py-0.5 rounded-full font-bold border bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900">
+                                                     Yes
+                                                 </span>
+                                             </div>
+                                             <div v-if="stage.need_sales_order_number" class="flex items-center space-x-2">
+                                                 <span class="font-semibold text-gray-500">Need Sales Order Number:</span>
+                                                 <span class="px-2 py-0.5 rounded-full font-bold border bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900">
+                                                     Yes
+                                                 </span>
+                                             </div>
+                                         </div>
 
                                         <div class="mt-3" v-if="idx > 0">
                                             <label class="inline-flex items-center cursor-pointer">

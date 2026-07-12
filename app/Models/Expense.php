@@ -14,7 +14,17 @@ class Expense extends Model
 
     const DATE_COLUMN = 'exp_date';
 
-    protected $fillable = ['exp_date', 'amount', 'doneby', 'exp_cate', 'details', 'job_details', 'job_no', 'incharge', 'amt_type'];
+    protected $fillable = ['exp_date', 'amount', 'doneby', 'exp_cate', 'details', 'job_details', 'job_no', 'incharge', 'amt_type', 'job_id', 'task_id'];
+
+    public function job()
+    {
+        return $this->belongsTo(Job::class, 'job_id');
+    }
+
+    public function task()
+    {
+        return $this->belongsTo(Task::class, 'task_id');
+    }
 
     public static function formInfo()
     {

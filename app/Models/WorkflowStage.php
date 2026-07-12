@@ -15,10 +15,14 @@ class WorkflowStage extends Model
         'description',
         'sort_order',
         'default_estimated_hours',
+        'need_enquiry_number',
+        'need_sales_order_number',
     ];
 
     protected $casts = [
         'default_estimated_hours' => 'decimal:2',
+        'need_enquiry_number' => 'boolean',
+        'need_sales_order_number' => 'boolean',
     ];
 
     public function workflow()

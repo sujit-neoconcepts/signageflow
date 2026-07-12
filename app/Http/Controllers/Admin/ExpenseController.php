@@ -34,18 +34,20 @@ class ExpenseController extends Controller
             $query->where(function ($query) use ($value, $formInfo, $formInfoMulti) {
                 Collection::wrap($value)->each(function ($value) use ($query, $formInfo, $formInfoMulti) {
                     foreach (array_keys($formInfo) as $key) {
-                        $query->orWhere($key, 'LIKE', "%{$value}%");
+                        $query->orWhere('expenses.'.$key, 'LIKE', "%{$value}%");
                     }
                     foreach (array_keys($formInfoMulti) as $key) {
-                        $query->orWhere($key, 'LIKE', "%{$value}%");
+                        $query->orWhere('expenses.'.$key, 'LIKE', "%{$value}%");
                     }
+                    $query->orWhere('jobs_manager.title', 'LIKE', "%{$value}%");
+                    $query->orWhere('tasks.title', 'LIKE', "%{$value}%");
                 });
             });
         });
         $perPage = request()->query('perPage') ?? 10;
         $filter_array = [];
         foreach (array_merge(array_diff(array_keys($formInfo), []), array_keys($formInfoMulti)) as $fvalue) {
-            $filter_array[] = AllowedFilter::exact($fvalue);
+            $filter_array[] = AllowedFilter::exact($fvalue, 'expenses.'.$fvalue);
         }
         $inc_f = request()->query('filter');
         $query_dep_before = Expense::where('amt_type', 'Deposit'); // ->inFinancialYear();
@@ -127,19 +129,22 @@ class ExpenseController extends Controller
         $this->resourceNeo['closing'] = number_format($closing, 2);
 
         $query = Expense::select('expenses.*')
-            ->selectRaw('IF(amt_type="Expense", amount*-1,amount) as amount')
-            ->selectRaw('IF(amt_type="Expense", amount, 0) as expense_amount')
-            ->selectRaw('IF(amt_type="Deposit", amount, 0) as deposit_amount');
+            ->leftJoin('jobs_manager', 'expenses.job_id', '=', 'jobs_manager.id')
+            ->leftJoin('tasks', 'expenses.task_id', '=', 'tasks.id')
+            ->selectRaw('IF(expenses.amt_type="Expense", expenses.amount*-1,expenses.amount) as amount')
+            ->selectRaw('IF(expenses.amt_type="Expense", expenses.amount, 0) as expense_amount')
+            ->selectRaw('IF(expenses.amt_type="Deposit", expenses.amount, 0) as deposit_amount')
+            ->selectRaw('CONCAT(COALESCE(jobs_manager.title, ""), IF(tasks.title IS NOT NULL AND tasks.title != "", CONCAT(" / ", tasks.title), "")) as job_task');
 
         if (\Auth::user()->can('all') || \Auth::user()->can('expense_list_for_all')) {
         } else {
-            $query = $query->where('incharge', \Auth::user()->name);
+            $query = $query->where('expenses.incharge', \Auth::user()->name);
         }
 
         if (! \Auth::user()->hasRole(['super-admin', 'admin'])) {
             $query = $query->where(function ($q) {
-                $q->whereNull('doneby')
-                    ->orWhere('doneby', 'NOT LIKE', '%Head Office%');
+                $q->whereNull('expenses.doneby')
+                    ->orWhere('expenses.doneby', 'NOT LIKE', '%Head Office%');
             });
         }
 
@@ -147,7 +152,7 @@ class ExpenseController extends Controller
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('-exp_date')
-            ->allowedSorts(array_merge(array_diff(array_keys($formInfo), []), array_keys($formInfoMulti), []))
+            ->allowedSorts(array_merge(array_diff(array_keys($formInfo), []), array_keys($formInfoMulti), ['job_task']))
             ->allowedFilters(array_merge($filter_array, [AllowedFilter::scope('exp_date_start'), AllowedFilter::scope('exp_date_end'), $globalSearch]))
             ->paginate($perPage)
             ->withQueryString();
@@ -171,6 +176,7 @@ class ExpenseController extends Controller
             }
             $table->column(key: 'expense_amount', label: 'Expense', extra: ['align' => 'right', 'showTotal' => true]);
             $table->column(key: 'deposit_amount', label: 'Deposit', extra: ['align' => 'right', 'showTotal' => true]);
+            $table->column(key: 'job_task', label: 'Job / Task', searchable: false, sortable: true);
             foreach (array_keys($formInfoMulti) as $key) {
                 $table->column($key, $formInfoMulti[$key]['label'], searchable: $formInfoMulti[$key]['searchable'] ?? false, sortable: $formInfoMulti[$key]['sortable'] ?? false, hidden: $formInfoMulti[$key]['hidden'] ?? false, extra: ['align' => $formInfoMulti[$key]['align'] ?? 'left', 'showTotal' => $formInfoMulti[$key]['showTotal'] ?? false]);
             }

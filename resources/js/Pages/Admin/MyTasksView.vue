@@ -13,6 +13,7 @@ import {
 import SectionMain from "@/components/SectionMain.vue";
 import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
 import BaseButton from "@/components/BaseButton.vue";
+import BaseIcon from "@/components/BaseIcon.vue";
 import CardBox from "@/components/CardBox.vue";
 import FormField from "@/components/FormField.vue";
 import NotificationBar from "@/components/NotificationBar.vue";
@@ -21,13 +22,31 @@ import { useToast } from "vue-toast-notification";
 import "vue-toast-notification/dist/theme-sugar.css";
 import { computed, onMounted, ref, watch } from "vue";
 import axios from "axios";
-import { formatDisplayDate } from "@/helpers/helpers";
+import { formatDisplayDate, getTodayString } from "@/helpers/helpers";
+import Multiselect from "vue-multiselect";
+import "../../../css/vue-multiselect.css";
 
 const message = computed(() => usePage().props.flash.message);
 const msg_type = computed(() => usePage().props.flash.msg_type ?? "warning");
 
 const props = defineProps({
     tasks: {
+        type: Array,
+        default: () => [],
+    },
+    enquiryOptions: {
+        type: Array,
+        default: () => [],
+    },
+    salesOrderOptions: {
+        type: Array,
+        default: () => [],
+    },
+    expenseCategories: {
+        type: Array,
+        default: () => [],
+    },
+    expenseDoneBy: {
         type: Array,
         default: () => [],
     },
@@ -52,6 +71,20 @@ const statusForm = useForm({
     status: "",
     comment: "",
     files: [],
+    enquiry_no: "",
+    sales_order_no: "",
+});
+
+const expenseForm = useForm({
+    exp_date: getTodayString(),
+    amount: "",
+    amt_type: "Expense",
+    exp_cate: "",
+    details: "",
+    job_details: "",
+    incharge: usePage().props.auth.user.name,
+    doneby: [],
+    job_no: "",
 });
 
 const fileList = ref([]);
@@ -91,7 +124,6 @@ const selectTask = async (task, isManualClick = false) => {
     fileList.value = [];
     statusFileList.value = [];
 
-    // Scroll to detailSection on mobile layout if manually clicked
     if (isManualClick && detailSection.value && window.innerWidth < 1024) {
         detailSection.value.scrollIntoView({ behavior: 'smooth' });
     }
@@ -99,11 +131,40 @@ const selectTask = async (task, isManualClick = false) => {
     try {
         const response = await axios.get(`/admin/task/${task.id}/json-details`);
         selectedTaskDetails.value = response.data;
+        statusForm.enquiry_no = response.data.task.enquiry_no ?? "";
+        statusForm.sales_order_no = response.data.task.sales_order_no ?? "";
+        expenseForm.job_details = task.job_name ?? "";
+        expenseForm.job_no = task.title ?? "";
     } catch (err) {
         console.error("Failed to load details:", err);
         useToast().error("Failed to load task details.");
     } finally {
         loadingDetails.value = false;
+    }
+};
+
+const submitExpense = async () => {
+    expenseForm.processing = true;
+    try {
+        await axios.post(route("task.storeExpense", selectedTask.value.id), {
+            exp_date: expenseForm.exp_date,
+            amount: expenseForm.amount,
+            amt_type: expenseForm.amt_type,
+            exp_cate: expenseForm.exp_cate,
+            details: expenseForm.details,
+            job_details: expenseForm.job_details,
+            incharge: expenseForm.incharge,
+            doneby: expenseForm.doneby,
+            job_no: expenseForm.job_no,
+        });
+        expenseForm.reset("amount", "details", "doneby");
+        useToast().success("Expense logged successfully!");
+        await selectTask(selectedTask.value);
+    } catch (err) {
+        console.error(err);
+        useToast().error(err.response?.data?.message || "Failed to log expense.");
+    } finally {
+        expenseForm.processing = false;
     }
 };
 
@@ -154,14 +215,13 @@ const postComment = () => {
             commentForm.reset();
             fileList.value = [];
             useToast().success("Comment added!");
-            selectTask(selectedTask.value); // reload details
+            selectTask(selectedTask.value);
         }
     });
 };
 
 const updateStatus = (status) => {
     if (status !== 'completed') {
-        // Direct update for accept / in_progress
         statusForm.status = status;
         statusForm.comment = `Marked task as ${status}.`;
         statusForm.post(route("task.updateAssigneeStatus", selectedTask.value.id), {
@@ -186,6 +246,18 @@ const submitCompletedTask = () => {
         }
     });
 };
+
+const isEnquiryInvalid = computed(() => {
+    if (!selectedTask.value || !selectedTask.value.need_enquiry_number) return false;
+    if (!statusForm.enquiry_no) return true;
+    return !props.enquiryOptions.includes(statusForm.enquiry_no);
+});
+
+const isSalesOrderInvalid = computed(() => {
+    if (!selectedTask.value || !selectedTask.value.need_sales_order_number) return false;
+    if (!statusForm.sales_order_no) return true;
+    return !props.salesOrderOptions.includes(statusForm.sales_order_no);
+});
 
 const getStatusClass = (status) => {
     switch (status) {
@@ -218,7 +290,6 @@ const canAccept = (task) => {
     return now >= startTime;
 };
 
-// Select the first task on mount if available
 onMounted(() => {
     if (props.tasks.length > 0) {
         selectTask(props.tasks[0], false);
@@ -400,6 +471,121 @@ onMounted(() => {
                             </div>
                         </CardBox>
 
+                        <!-- Expense Section -->
+                        <CardBox v-if="selectedTaskDetails">
+                            <h3 class="text-md font-semibold text-gray-700 dark:text-slate-200 mb-4">
+                                Task Expenses
+                            </h3>
+
+                            <!-- Expenses list -->
+                            <div v-if="selectedTaskDetails.expenses && selectedTaskDetails.expenses.length > 0" class="mb-6 space-y-2.5">
+                                <div class="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex justify-between">
+                                    <span>Logged Expenses</span>
+                                    <span class="text-blue-600 dark:text-blue-400">Total: {{ selectedTaskDetails.expenses.reduce((acc, curr) => acc + parseFloat(curr.amount.replace(/,/g, '')), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
+                                </div>
+                                <div class="overflow-x-auto border border-gray-100 dark:border-slate-800 rounded-lg">
+                                    <table class="w-full text-left border-collapse text-xs">
+                                        <thead>
+                                            <tr class="bg-gray-50 dark:bg-slate-800 text-gray-605 dark:text-slate-400 font-semibold border-b border-gray-100 dark:border-slate-800">
+                                                <th class="p-3">Date</th>
+                                                <th class="p-3">Category</th>
+                                                <th class="p-3">Type</th>
+                                                <th class="p-3 text-right">Amount</th>
+                                                <th class="p-3">Done By</th>
+                                                <th class="p-3">Details</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
+                                            <tr v-for="exp in selectedTaskDetails.expenses" :key="exp.id" class="hover:bg-gray-50/50 dark:hover:bg-slate-800/20 text-gray-700 dark:text-slate-300">
+                                                <td class="p-3 font-mono">{{ exp.exp_date }}</td>
+                                                <td class="p-3">{{ exp.exp_cate }}</td>
+                                                <td class="p-3">
+                                                    <span :class="['px-1.5 py-0.5 rounded text-xxs font-bold uppercase border', exp.amt_type === 'Deposit' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200']">
+                                                        {{ exp.amt_type }}
+                                                    </span>
+                                                </td>
+                                                <td class="p-3 text-right font-bold text-gray-800 dark:text-slate-200">{{ exp.amount }}</td>
+                                                <td class="p-3 truncate max-w-28">{{ exp.doneby }}</td>
+                                                <td class="p-3 truncate max-w-32" :title="exp.details">{{ exp.details || '—' }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div v-else class="text-sm text-gray-500 py-4 text-center border border-dashed border-gray-200 dark:border-slate-800 rounded-lg mb-6">
+                                No expenses logged for this task yet.
+                            </div>
+
+                            <!-- New Expense Form -->
+                            <div class="border-t border-gray-200 dark:border-slate-700 pt-4" v-if="!['completed', 'verified', 'closed'].includes(selectedTask.my_status)">
+                                <h4 class="text-sm font-semibold text-gray-700 dark:text-slate-305 mb-3">Log Task Expense / Deposit</h4>
+                                <form @submit.prevent="submitExpense" class="space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <FormField label="Date">
+                                            <input v-model="expenseForm.exp_date" type="date" required class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500" />
+                                        </FormField>
+
+                                        <FormField label="Amount">
+                                            <input v-model="expenseForm.amount" type="number" step="0.001" min="0" required placeholder="0.00" class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500" />
+                                        </FormField>
+
+                                        <FormField label="Type">
+                                            <select v-model="expenseForm.amt_type" required class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500">
+                                                <option value="Expense">Expense</option>
+                                                <option value="Deposit">Deposit</option>
+                                            </select>
+                                        </FormField>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField label="Category">
+                                            <select v-model="expenseForm.exp_cate" required class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500">
+                                                <option value="">Select Category</option>
+                                                <option v-for="cat in props.expenseCategories" :key="cat" :value="cat">{{ cat }}</option>
+                                            </select>
+                                        </FormField>
+
+                                        <FormField label="Location/Job Details">
+                                            <input v-model="expenseForm.job_details" type="text" required placeholder="e.g. Workshop" class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500" />
+                                        </FormField>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField label="Done By">
+                                            <Multiselect
+                                                v-model="expenseForm.doneby"
+                                                placeholder="Select users"
+                                                track-by="id"
+                                                label="label"
+                                                :multiple="true"
+                                                :close-on-select="false"
+                                                :options="props.expenseDoneBy"
+                                                class="mt-1"
+                                            />
+                                        </FormField>
+
+                                        <FormField label="Incharge">
+                                            <input v-model="expenseForm.incharge" type="text" required readonly class="w-full border rounded-lg px-3 py-2 bg-gray-100 dark:bg-slate-700/50 text-gray-500 text-sm cursor-not-allowed" />
+                                        </FormField>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField label="Detail/Description">
+                                            <textarea v-model="expenseForm.details" rows="2" placeholder="Describe the expense..." class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500"></textarea>
+                                        </FormField>
+
+                                        <FormField label="Comments/Reference">
+                                            <textarea v-model="expenseForm.job_no" rows="2" placeholder="e.g. Task name or bill reference..." class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500"></textarea>
+                                        </FormField>
+                                    </div>
+
+                                    <div class="flex justify-end pt-1">
+                                        <BaseButton type="submit" color="info" label="Log Expense" :disabled="expenseForm.processing" />
+                                    </div>
+                                </form>
+                            </div>
+                        </CardBox>
+
                         <!-- Comments feed -->
                         <CardBox>
                             <h3 class="text-md font-semibold text-gray-700 dark:text-slate-200 mb-4">
@@ -542,6 +728,43 @@ onMounted(() => {
                             <div v-else-if="selectedTask.my_status === 'in_progress'" class="space-y-4 border border-purple-200 p-4 rounded-lg bg-purple-50/5 dark:border-purple-900/30">
                                 <h4 class="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-1">Submit Progress/Complete Task</h4>
                                 
+                                <!-- Enquiry & Sales Order number inputs if required -->
+                                <div v-if="selectedTask.need_enquiry_number || selectedTask.need_sales_order_number" class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-3 border-b border-purple-100 dark:border-purple-950/20 mb-2">
+                                    <div v-if="selectedTask.need_enquiry_number">
+                                        <label class="text-xs font-semibold text-gray-500 block mb-1">Enquiry Number <span class="text-red-500">*</span></label>
+                                        <input
+                                            v-model="statusForm.enquiry_no"
+                                            list="enquiry-list"
+                                            type="text"
+                                            placeholder="Select or enter Enquiry No..."
+                                            class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500"
+                                            :class="{'border-red-500': isEnquiryInvalid}"
+                                        />
+                                        <datalist id="enquiry-list">
+                                            <option v-for="opt in props.enquiryOptions" :key="opt" :value="opt" />
+                                        </datalist>
+                                        <span v-if="isEnquiryInvalid && statusForm.enquiry_no" class="text-red-500 text-xxs font-semibold mt-1 block">Please enter a valid enquiry number.</span>
+                                        <span v-else-if="statusForm.enquiry_no" class="text-green-650 text-xxs font-semibold mt-1 block">✓ Valid Enquiry Number</span>
+                                    </div>
+
+                                    <div v-if="selectedTask.need_sales_order_number">
+                                        <label class="text-xs font-semibold text-gray-550 block mb-1">Sales Order Number <span class="text-red-500">*</span></label>
+                                        <input
+                                            v-model="statusForm.sales_order_no"
+                                            list="sales-order-list"
+                                            type="text"
+                                            placeholder="Select or enter Order No..."
+                                            class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500"
+                                            :class="{'border-red-500': isSalesOrderInvalid}"
+                                        />
+                                        <datalist id="sales-order-list">
+                                            <option v-for="opt in props.salesOrderOptions" :key="opt" :value="opt" />
+                                        </datalist>
+                                        <span v-if="isSalesOrderInvalid && statusForm.sales_order_no" class="text-red-500 text-xxs font-semibold mt-1 block">Please enter a valid sales order number.</span>
+                                        <span v-else-if="statusForm.sales_order_no" class="text-green-650 text-xxs font-semibold mt-1 block">✓ Valid Sales Order Number</span>
+                                    </div>
+                                </div>
+
                                 <FormField label="Submit Comments / Work Summary">
                                     <textarea
                                         v-model="statusForm.comment"
@@ -576,7 +799,7 @@ onMounted(() => {
                                             <div
                                                 v-for="(f, idx) in statusFileList"
                                                 :key="idx"
-                                                class="flex justify-between items-center bg-gray-100 dark:bg-slate-800 p-1.5 px-2.5 rounded text-xs"
+                                                class="flex justify-between items-center bg-gray-150 dark:bg-slate-800 p-1.5 px-2.5 rounded text-xs"
                                             >
                                                 <span class="truncate font-medium max-w-44">{{ f.name }}</span>
                                                 <button type="button" class="text-red-550 font-bold text-xs ml-2" @click="removeStatusFile(idx)">✕</button>
@@ -593,7 +816,7 @@ onMounted(() => {
                                         type="button"
                                         color="success"
                                         label="Submit Task for Verification"
-                                        :disabled="statusForm.processing || !statusForm.comment.trim()"
+                                        :disabled="statusForm.processing || !statusForm.comment.trim() || isEnquiryInvalid || isSalesOrderInvalid"
                                         @click="submitCompletedTask"
                                     />
                                 </div>

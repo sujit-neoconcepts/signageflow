@@ -52,6 +52,11 @@ class Job extends Model
         return $this->hasMany(JobFile::class, 'job_id');
     }
 
+    public function expenses()
+    {
+        return $this->hasMany(Expense::class, 'job_id');
+    }
+
     /**
      * Recalculate job status based on linked task statuses.
      */

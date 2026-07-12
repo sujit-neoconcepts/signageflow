@@ -526,15 +526,29 @@ class TaskController extends Controller
                 'my_feedback' => $pivot ? $pivot->feedback : null,
                 'completed_at' => $pivot && $pivot->completed_at ? \Illuminate\Support\Carbon::parse($pivot->completed_at)->format('d-m-Y H:i') : null,
                 'job_name' => $task->job ? $task->job->title : null,
+                'job_id' => $task->job_id,
                 'start_date' => $task->start_date ? $task->start_date->format('d-m-Y H:i') : null,
                 'start_date_raw' => $task->start_date ? $task->start_date->toIso8601String() : null,
                 'estimated_hours' => $task->estimated_hours,
                 'job_stage_sort_order' => $task->job_stage_sort_order,
+                'enquiry_no' => $task->enquiry_no,
+                'sales_order_no' => $task->sales_order_no,
+                'need_enquiry_number' => (bool) $task->need_enquiry_number,
+                'need_sales_order_number' => (bool) $task->need_sales_order_number,
             ];
         });
 
+        $enquiryOptions = \App\Models\Enquiry::select('enquiry_no')->orderBy('enquiry_no', 'desc')->take(1000)->get()->pluck('enquiry_no')->toArray();
+        $salesOrderOptions = \App\Models\SalesOrder::select('order_no')->orderBy('order_no', 'desc')->take(1000)->get()->pluck('order_no')->toArray();
+        $expenseCategories = \App\Models\Expcate::select('name')->orderBy('name')->get()->pluck('name')->toArray();
+        $expenseDoneBy = \App\Models\Expuser::getAllOption();
+
         return Inertia::render('Admin/MyTasksView', [
             'tasks' => $formattedTasks,
+            'enquiryOptions' => $enquiryOptions,
+            'salesOrderOptions' => $salesOrderOptions,
+            'expenseCategories' => $expenseCategories,
+            'expenseDoneBy' => $expenseDoneBy,
         ]);
     }
 
@@ -554,10 +568,40 @@ class TaskController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
+        $validationRules = [];
+        if ($request->status === 'completed') {
+            if ($task->need_enquiry_number) {
+                if (! $task->enquiry_no || $request->has('enquiry_no')) {
+                    $validationRules['enquiry_no'] = 'required|string|exists:enquiries,enquiry_no';
+                }
+            }
+            if ($task->need_sales_order_number) {
+                if (! $task->sales_order_no || $request->has('sales_order_no')) {
+                    $validationRules['sales_order_no'] = 'required|string|exists:sales_orders,order_no';
+                }
+            }
+        }
+
+        if (! empty($validationRules)) {
+            $request->validate($validationRules, [
+                'enquiry_no.required' => 'Enquiry Number is required for this stage.',
+                'enquiry_no.exists' => 'The provided Enquiry Number is invalid.',
+                'sales_order_no.required' => 'Sales Order Number is required for this stage.',
+                'sales_order_no.exists' => 'The provided Sales Order Number is invalid.',
+            ]);
+
+            if ($request->has('enquiry_no')) {
+                $task->update(['enquiry_no' => $request->enquiry_no]);
+            }
+            if ($request->has('sales_order_no')) {
+                $task->update(['sales_order_no' => $request->sales_order_no]);
+            }
+        }
+
         if (in_array($request->status, ['accepted', 'in_progress']) && $task->start_date && now()->lt($task->start_date)) {
             return redirect()->back()->with([
-                'message' => 'You cannot accept or start this task before its start date/time: ' . $task->start_date->format('d-m-Y H:i'),
-                'msg_type' => 'danger'
+                'message' => 'You cannot accept or start this task before its start date/time: '.$task->start_date->format('d-m-Y H:i'),
+                'msg_type' => 'danger',
             ]);
         }
 
@@ -806,6 +850,7 @@ class TaskController extends Controller
             'comments.user',
             'comments.files',
             'job.files',
+            'expenses',
         ]);
 
         $comments = $task->comments->map(function ($c) {
@@ -865,6 +910,18 @@ class TaskController extends Controller
             ];
         });
 
+        $expenses = $task->expenses->map(function ($e) {
+            return [
+                'id' => $e->id,
+                'exp_date' => date('d-m-Y', strtotime($e->exp_date)),
+                'amount' => number_format($e->amount, 2),
+                'amt_type' => $e->amt_type,
+                'exp_cate' => $e->exp_cate,
+                'doneby' => $e->doneby,
+                'details' => $e->details,
+            ];
+        });
+
         return response()->json([
             'task' => [
                 'id' => $task->id,
@@ -883,12 +940,95 @@ class TaskController extends Controller
                 'start_date_raw' => $task->start_date ? $task->start_date->toIso8601String() : null,
                 'estimated_hours' => $task->estimated_hours,
                 'job_stage_sort_order' => $task->job_stage_sort_order,
+                'enquiry_no' => $task->enquiry_no,
+                'sales_order_no' => $task->sales_order_no,
+                'need_enquiry_number' => (bool) $task->need_enquiry_number,
+                'need_sales_order_number' => (bool) $task->need_sales_order_number,
             ],
             'assignees' => $assigneeStatuses,
             'viewers' => $task->viewers->pluck('name')->all(),
             'files' => $files,
             'comments' => $comments,
             'job_files' => $jobFiles,
+            'expenses' => $expenses,
         ]);
+    }
+
+    public function storeTaskExpense(Request $request, Task $task)
+    {
+        $request->validate([
+            'exp_date' => 'required|date',
+            'amount' => 'required|numeric',
+            'amt_type' => 'required|in:Expense,Deposit',
+            'exp_cate' => 'required|string',
+            'details' => 'nullable|string',
+            'job_details' => 'required|string',
+            'incharge' => 'required|string',
+            'doneby' => 'nullable|array',
+            'job_no' => 'nullable|string',
+        ]);
+
+        if (strtotime($request->exp_date) < strtotime('-2 days') && ! (\Auth::user()->can('expense_back_date_entry'))) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'The Expense Date cannot be older than 2 days.'], 422);
+            }
+
+            return redirect()->back()->withErrors(['exp_date' => 'The Expense Date cannot be older than 2 days.']);
+        }
+
+        $doneby = '';
+        if ($request->has('doneby') && is_array($request->doneby)) {
+            $ids = [];
+            foreach ($request->doneby as $db) {
+                if (is_array($db) && isset($db['id'])) {
+                    $ids[] = $db['id'];
+                } elseif (is_string($db) || is_numeric($db)) {
+                    $ids[] = $db;
+                }
+            }
+            $doneby = implode(',', $ids);
+        }
+
+        $expense = \App\Models\Expense::create([
+            'exp_date' => date('Y-m-d', strtotime($request->exp_date)),
+            'amount' => $request->amount,
+            'amt_type' => $request->amt_type,
+            'exp_cate' => $request->exp_cate,
+            'details' => $request->details,
+            'job_details' => $request->job_details,
+            'incharge' => $request->incharge,
+            'doneby' => $doneby,
+            'job_no' => $request->job_no,
+            'job_id' => $task->job_id,
+            'task_id' => $task->id,
+        ]);
+
+        \ActivityLog::add([
+            'action' => 'added',
+            'module' => 'expense',
+            'data_key' => $expense->exp_cate.' (Task: '.$task->title.')',
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Expense Created and Linked Successfully', 'expense' => $expense]);
+        }
+
+        return redirect()->back()->with(['message' => 'Expense Created and Linked Successfully', 'msg_type' => 'success']);
+    }
+
+    public function validateEnquiryNo(Request $request)
+    {
+        $request->validate(['enquiry_no' => 'required|string']);
+        $exists = \App\Models\Enquiry::where('enquiry_no', $request->enquiry_no)->exists();
+
+        return response()->json(['valid' => $exists]);
+    }
+
+    public function validateSalesOrderNo(Request $request)
+    {
+        $request->validate(['sales_order_no' => 'required|string']);
+        $exists = \App\Models\SalesOrder::where('order_no', $request->sales_order_no)->exists();
+
+        return response()->json(['valid' => $exists]);
     }
 }

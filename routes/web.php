@@ -240,6 +240,9 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::resource('job', \App\Http\Controllers\Admin\JobController::class);
 
     // Task Manager
+    Route::post('task/{task}/store-expense', [\App\Http\Controllers\Admin\TaskController::class, 'storeTaskExpense'])->name('task.storeExpense');
+    Route::post('task/validate-enquiry-no', [\App\Http\Controllers\Admin\TaskController::class, 'validateEnquiryNo'])->name('task.validateEnquiryNo');
+    Route::post('task/validate-sales-order-no', [\App\Http\Controllers\Admin\TaskController::class, 'validateSalesOrderNo'])->name('task.validateSalesOrderNo');
     Route::get('task/my-tasks', [\App\Http\Controllers\Admin\TaskController::class, 'myTasks'])->name('task.myTasks');
     Route::post('task/{task}/update-status', [\App\Http\Controllers\Admin\TaskController::class, 'updateAssigneeStatus'])->name('task.updateAssigneeStatus');
     Route::post('task/{task}/add-comment', [\App\Http\Controllers\Admin\TaskController::class, 'addComment'])->name('task.addComment');
