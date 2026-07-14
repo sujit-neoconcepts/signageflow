@@ -37,6 +37,7 @@ class Task extends Model
         'sales_order_no',
         'need_enquiry_number',
         'need_sales_order_number',
+        'need_expense',
     ];
 
     protected $casts = [
@@ -54,6 +55,7 @@ class Task extends Model
         'start_notified' => 'boolean',
         'need_enquiry_number' => 'boolean',
         'need_sales_order_number' => 'boolean',
+        'need_expense' => 'boolean',
     ];
 
     public function creator()

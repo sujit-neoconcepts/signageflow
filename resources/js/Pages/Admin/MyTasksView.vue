@@ -472,7 +472,7 @@ onMounted(() => {
                         </CardBox>
 
                         <!-- Expense Section -->
-                        <CardBox v-if="selectedTaskDetails">
+                        <CardBox v-if="selectedTaskDetails && selectedTaskDetails.task && selectedTaskDetails.task.need_expense">
                             <h3 class="text-md font-semibold text-gray-700 dark:text-slate-200 mb-4">
                                 Task Expenses
                             </h3>
@@ -699,16 +699,16 @@ onMounted(() => {
                             <div v-if="selectedTask.my_status === 'pending'" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50 bg-opacity-20 border border-amber-200 p-4 rounded-lg bg-amber-50/40 dark:border-amber-900/30">
                                 <div class="flex items-center space-x-2 text-amber-600 dark:text-amber-400">
                                     <BaseIcon :path="mdiAlert" size="20" />
-                                    <span v-if="canAccept(selectedTask)">You have not accepted this task yet.</span>
-                                    <span v-else>This task cannot be accepted before its start date/time: <strong>{{ selectedTask.start_date }}</strong></span>
+                                    <span v-if="canAccept(selectedTask)">You have not accepted and started this task yet.</span>
+                                    <span v-else>This task cannot be started before its start date/time: <strong>{{ selectedTask.start_date }}</strong></span>
                                 </div>
                                 <BaseButton
                                     v-if="canAccept(selectedTask)"
                                     type="button"
                                     color="info"
-                                    :icon="mdiCheck"
-                                    label="Accept Task"
-                                    @click="updateStatus('accepted')"
+                                    :icon="mdiPlay"
+                                    label="Accept and Start Task"
+                                    @click="updateStatus('in_progress')"
                                 />
                             </div>
 

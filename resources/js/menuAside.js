@@ -130,34 +130,35 @@ export default [
         ],
     },
     {
-        label: "Associates",
-        icon: mdiHandshake,
+        label: "Tasks Manager",
+        icon: mdiClipboardCheckOutline,
         menu: [
             {
-                route: "supplier.index",
-                icon: mdiTruckDelivery,
-                label: "Suppliers",
-                resource: "supplier",
+                route: "workflow.index",
+                label: "Workflows",
+                icon: mdiSitemap,
+                resource: "workflow",
             },
             {
-                route: "client.index",
-                icon: mdiAccountMultiple,
-                label: "Clients",
-                resource: "client",
+                route: "job.index",
+                label: "Jobs",
+                icon: mdiBriefcase,
+                resource: "job",
+            },
+            {
+                route: "task.index",
+                label: "Tasks",
+                icon: mdiClipboardCheckOutline,
+                resource: "task",
+            },
+            {
+                route: "task.myTasks",
+                label: "My Tasks",
+                icon: mdiCalendarCheck,
+                resource: "task",
+                permission: "task_MyTasksList",
             },
         ],
-    },
-    {
-        route: "opening.index",
-        icon: mdiCartPlus,
-        label: "Opening",
-        resource: "opening",
-    },
-    {
-        route: "purchase.index",
-        icon: mdiBasketFill,
-        label: "Purchases",
-        resource: "purchase",
     },
     {
         route: "enquiry.index",
@@ -172,17 +173,19 @@ export default [
         resource: "salesOrder",
     },
     {
+        route: "purchase.index",
+        icon: mdiBasketFill,
+        label: "Purchases",
+        resource: "purchase",
+    },
+    
+    
+    {
         route: "outward.index",
         icon: mdiCartArrowUp,
         label: "Outwards",
         resource: "outward",
     },
-    {
-        route: "expense.index",
-        icon: mdiCurrencyInr,
-        label: "Expense",
-        resource: "expense",
-    },      
     {
         label: "Stocks",
         icon: mdiBasketFill,
@@ -208,6 +211,36 @@ export default [
                 icon: mdiInvoiceList,
                 label: "Stocks Level",
                 resource: "stocks",
+            },
+        ],
+    },
+    {
+        route: "expense.index",
+        icon: mdiCurrencyInr,
+        label: "Expense",
+        resource: "expense",
+    },      
+    {
+        route: "opening.index",
+        icon: mdiCartPlus,
+        label: "Opening",
+        resource: "opening",
+    },
+    {
+        label: "Associates",
+        icon: mdiHandshake,
+        menu: [
+            {
+                route: "supplier.index",
+                icon: mdiTruckDelivery,
+                label: "Suppliers",
+                resource: "supplier",
+            },
+            {
+                route: "client.index",
+                icon: mdiAccountMultiple,
+                label: "Clients",
+                resource: "client",
             },
         ],
     },
@@ -253,35 +286,5 @@ export default [
             },
         ],
     },
-    {
-        label: "Tasks Manager",
-        icon: mdiClipboardCheckOutline,
-        menu: [
-            {
-                route: "workflow.index",
-                label: "Workflows",
-                icon: mdiSitemap,
-                resource: "workflow",
-            },
-            {
-                route: "job.index",
-                label: "Jobs",
-                icon: mdiBriefcase,
-                resource: "job",
-            },
-            {
-                route: "task.index",
-                label: "Tasks",
-                icon: mdiClipboardCheckOutline,
-                resource: "task",
-            },
-            {
-                route: "task.myTasks",
-                label: "My Tasks",
-                icon: mdiCalendarCheck,
-                resource: "task",
-                permission: "task_MyTasksList",
-            },
-        ],
-    },
+    
 ];

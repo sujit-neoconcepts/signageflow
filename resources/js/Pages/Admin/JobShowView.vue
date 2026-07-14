@@ -391,30 +391,18 @@ onMounted(() => {
                     <CardBox>
                         <div class="flex justify-between items-center mb-4 border-b border-gray-150 dark:border-slate-700 pb-3">
                             <h3 class="text-md font-semibold text-gray-700 dark:text-slate-200">
-                                Job Expenses &amp; Deposits
+                                Job Expenses
                             </h3>
                             <div class="flex space-x-4 text-xs font-bold">
-                                <div class="text-green-600">Total Deposits: {{ props.expenseSummary.total_deposits }}</div>
                                 <div class="text-red-650">Total Expenses: {{ props.expenseSummary.total_expenses }}</div>
-                                <div :class="props.expenseSummary.balance.replace(/,/g, '') >= 0 ? 'text-blue-600' : 'text-orange-600'">
-                                    Balance: {{ props.expenseSummary.balance }}
-                                </div>
                             </div>
                         </div>
 
                         <!-- Summary Cards Top row -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                            <div class="p-3 bg-green-50/50 dark:bg-green-950/10 border border-green-100 dark:border-green-900/30 rounded-lg flex flex-col">
-                                <span class="text-xxs font-semibold text-green-700 uppercase tracking-wider">Deposits Received</span>
-                                <span class="text-lg font-bold text-green-700 mt-1">{{ props.expenseSummary.total_deposits }}</span>
-                            </div>
+                        <div class="mb-6 max-w-xs">
                             <div class="p-3 bg-red-50/50 dark:bg-red-950/10 border border-red-100 dark:border-red-900/30 rounded-lg flex flex-col">
                                 <span class="text-xxs font-semibold text-red-700 uppercase tracking-wider">Expenses Incurred</span>
                                 <span class="text-lg font-bold text-red-700 mt-1">{{ props.expenseSummary.total_expenses }}</span>
-                            </div>
-                            <div class="p-3 bg-blue-50/50 dark:bg-blue-950/10 border border-blue-100 dark:border-blue-900/30 rounded-lg flex flex-col">
-                                <span class="text-xxs font-semibold text-blue-700 uppercase tracking-wider">Net Balance</span>
-                                <span class="text-lg font-bold text-blue-700 mt-1">{{ props.expenseSummary.balance }}</span>
                             </div>
                         </div>
 
@@ -425,7 +413,6 @@ onMounted(() => {
                                         <span class="mr-1.5">📁</span> Stage: {{ group.stage_name }}
                                     </h4>
                                     <div class="flex space-x-3 text-xxs font-bold">
-                                        <span class="text-green-600" v-if="group.total_deposits > 0">Dep: {{ group.total_deposits_formatted }}</span>
                                         <span class="text-red-500" v-if="group.total_expenses > 0">Exp: {{ group.total_expenses_formatted }}</span>
                                     </div>
                                 </div>
@@ -435,7 +422,6 @@ onMounted(() => {
                                             <tr class="bg-gray-50/30 dark:bg-slate-900/10 text-gray-500 dark:text-slate-400 font-semibold border-b border-gray-100 dark:border-slate-800">
                                                 <th class="p-3">Date</th>
                                                 <th class="p-3">Category</th>
-                                                <th class="p-3">Type</th>
                                                 <th class="p-3">Done By</th>
                                                 <th class="p-3">Details</th>
                                                 <th class="p-3 text-right">Amount</th>
@@ -445,11 +431,6 @@ onMounted(() => {
                                             <tr v-for="exp in group.expenses" :key="exp.id" class="hover:bg-gray-50/50 dark:hover:bg-slate-800/10 text-gray-700 dark:text-slate-350">
                                                 <td class="p-3 font-mono">{{ exp.exp_date }}</td>
                                                 <td class="p-3">{{ exp.exp_cate }}</td>
-                                                <td class="p-3">
-                                                    <span :class="['px-1.5 py-0.5 rounded text-xxs font-bold uppercase border', exp.amt_type === 'Deposit' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200']">
-                                                        {{ exp.amt_type }}
-                                                    </span>
-                                                </td>
                                                 <td class="p-3">{{ exp.doneby || '—' }}</td>
                                                 <td class="p-3 truncate max-w-56" :title="exp.details">{{ exp.details || '—' }}</td>
                                                 <td class="p-3 text-right font-bold text-gray-900 dark:text-slate-100">{{ exp.amount }}</td>

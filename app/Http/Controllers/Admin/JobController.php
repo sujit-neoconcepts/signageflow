@@ -140,6 +140,7 @@ class JobController extends Controller
             'stages.*.notify_channels' => 'required|array|min:1',
             'stages.*.need_enquiry_number' => 'nullable|boolean',
             'stages.*.need_sales_order_number' => 'nullable|boolean',
+            'stages.*.need_expense' => 'nullable|boolean',
         ]);
 
         DB::beginTransaction();
@@ -175,6 +176,7 @@ class JobController extends Controller
                         'reminder_before_due' => 60,
                         'need_enquiry_number' => $stageData['need_enquiry_number'] ?? false,
                         'need_sales_order_number' => $stageData['need_sales_order_number'] ?? false,
+                        'need_expense' => $stageData['need_expense'] ?? false,
                     ]);
 
                     // Attach assignees
@@ -341,15 +343,11 @@ class JobController extends Controller
         $progress = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100) : 0;
 
         // Group expenses by stage name
-        $jobExpenses = $job->expenses()->orderBy('exp_date', 'desc')->get();
-        $totalDeposits = $jobExpenses->where('amt_type', 'Deposit')->sum('amount');
-        $totalExpensesVal = $jobExpenses->where('amt_type', 'Expense')->sum('amount');
-        $balance = $totalDeposits - $totalExpensesVal;
+        $jobExpenses = $job->expenses()->where('amt_type', 'Expense')->orderBy('exp_date', 'desc')->get();
+        $totalExpensesVal = $jobExpenses->sum('amount');
 
         $expenseSummary = [
-            'total_deposits' => number_format($totalDeposits, 2),
             'total_expenses' => number_format($totalExpensesVal, 2),
-            'balance' => number_format($balance, 2),
         ];
 
         $taskStageMap = $job->tasks->pluck('title', 'id')->toArray();
@@ -366,7 +364,6 @@ class JobController extends Controller
                     'stage_name' => $stageName,
                     'stage_order' => $stageOrder,
                     'expenses' => [],
-                    'total_deposits' => 0,
                     'total_expenses' => 0,
                 ];
             }
@@ -381,15 +378,10 @@ class JobController extends Controller
                 'details' => $expense->details,
             ];
 
-            if ($expense->amt_type === 'Deposit') {
-                $groupedExpenses[$stageName]['total_deposits'] += $expense->amount;
-            } else {
-                $groupedExpenses[$stageName]['total_expenses'] += $expense->amount;
-            }
+            $groupedExpenses[$stageName]['total_expenses'] += $expense->amount;
         }
 
         foreach ($groupedExpenses as &$g) {
-            $g['total_deposits_formatted'] = number_format($g['total_deposits'], 2);
             $g['total_expenses_formatted'] = number_format($g['total_expenses'], 2);
         }
         unset($g);
@@ -471,6 +463,7 @@ class JobController extends Controller
                     'notify_channels' => $task->notify_channels ?? ['email'],
                     'need_enquiry_number' => (bool) $task->need_enquiry_number,
                     'need_sales_order_number' => (bool) $task->need_sales_order_number,
+                    'need_expense' => (bool) $task->need_expense,
                 ];
             })->toArray(),
         ];
@@ -506,6 +499,7 @@ class JobController extends Controller
             'stages.*.notify_channels' => 'required|array|min:1',
             'stages.*.need_enquiry_number' => 'nullable|boolean',
             'stages.*.need_sales_order_number' => 'nullable|boolean',
+            'stages.*.need_expense' => 'nullable|boolean',
         ]);
 
         DB::beginTransaction();
@@ -536,6 +530,7 @@ class JobController extends Controller
                         'notify_channels' => $stageData['notify_channels'] ?? ['email'],
                         'need_enquiry_number' => $stageData['need_enquiry_number'] ?? false,
                         'need_sales_order_number' => $stageData['need_sales_order_number'] ?? false,
+                        'need_expense' => $stageData['need_expense'] ?? false,
                     ];
 
                     if (! empty($stageData['id'])) {

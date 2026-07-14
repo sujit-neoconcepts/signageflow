@@ -120,6 +120,7 @@ watch(selectedWorkflow, async (newVal) => {
             notify_channels: ["whatsapp", "mobile"],
             need_enquiry_number: stage.need_enquiry_number ?? false,
             need_sales_order_number: stage.need_sales_order_number ?? false,
+            need_expense: stage.need_expense ?? false,
         }));
     } catch (err) {
         console.error("Failed to fetch stages:", err);
@@ -227,6 +228,7 @@ const addStageAt = (index) => {
         notify_channels: ["whatsapp", "mobile"],
         need_enquiry_number: false,
         need_sales_order_number: false,
+        need_expense: false,
     });
 };
 
@@ -462,6 +464,14 @@ const submitform = () => {
                                                      Yes
                                                  </span>
                                              </div>
+                                         </div>
+
+                                         <div class="mt-3">
+                                             <label class="inline-flex items-center cursor-pointer">
+                                                 <input type="checkbox" v-model="stage.need_expense" class="sr-only peer" />
+                                                 <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                                 <span class="ms-2 text-xs font-medium text-gray-600 dark:text-gray-400">Enable Task Expenses</span>
+                                             </label>
                                          </div>
 
                                         <div class="mt-3" v-if="idx > 0">

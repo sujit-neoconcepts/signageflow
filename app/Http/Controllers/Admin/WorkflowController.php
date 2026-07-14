@@ -95,6 +95,7 @@ class WorkflowController extends Controller
             'stages.*.default_estimated_hours' => 'nullable|numeric|min:0',
             'stages.*.need_enquiry_number' => 'nullable|boolean',
             'stages.*.need_sales_order_number' => 'nullable|boolean',
+            'stages.*.need_expense' => 'nullable|boolean',
             'stages.*.executives' => 'nullable|array',
             'stages.*.executives.*.id' => 'required|exists:users,id',
         ]);
@@ -116,6 +117,7 @@ class WorkflowController extends Controller
                     'default_estimated_hours' => $stageData['default_estimated_hours'] ?? null,
                     'need_enquiry_number' => $stageData['need_enquiry_number'] ?? false,
                     'need_sales_order_number' => $stageData['need_sales_order_number'] ?? false,
+                    'need_expense' => $stageData['need_expense'] ?? false,
                 ]);
 
                 if (! empty($stageData['executives'])) {
@@ -165,6 +167,7 @@ class WorkflowController extends Controller
             'stages.*.default_estimated_hours' => 'nullable|numeric|min:0',
             'stages.*.need_enquiry_number' => 'nullable|boolean',
             'stages.*.need_sales_order_number' => 'nullable|boolean',
+            'stages.*.need_expense' => 'nullable|boolean',
             'stages.*.executives' => 'nullable|array',
             'stages.*.executives.*.id' => 'required|exists:users,id',
         ]);
@@ -199,6 +202,7 @@ class WorkflowController extends Controller
                         'default_estimated_hours' => $stageData['default_estimated_hours'] ?? null,
                         'need_enquiry_number' => $stageData['need_enquiry_number'] ?? false,
                         'need_sales_order_number' => $stageData['need_sales_order_number'] ?? false,
+                        'need_expense' => $stageData['need_expense'] ?? false,
                     ]);
                 } else {
                     // Create new stage
@@ -209,6 +213,7 @@ class WorkflowController extends Controller
                         'default_estimated_hours' => $stageData['default_estimated_hours'] ?? null,
                         'need_enquiry_number' => $stageData['need_enquiry_number'] ?? false,
                         'need_sales_order_number' => $stageData['need_sales_order_number'] ?? false,
+                        'need_expense' => $stageData['need_expense'] ?? false,
                     ]);
                 }
 
@@ -297,6 +302,7 @@ class WorkflowController extends Controller
                     'default_estimated_hours' => $stage->default_estimated_hours,
                     'need_enquiry_number' => $stage->need_enquiry_number,
                     'need_sales_order_number' => $stage->need_sales_order_number,
+                    'need_expense' => $stage->need_expense,
                 ]);
 
                 if ($stage->defaultExecutives->isNotEmpty()) {
@@ -338,6 +344,7 @@ class WorkflowController extends Controller
                     'default_estimated_hours' => $stage->default_estimated_hours,
                     'need_enquiry_number' => (bool) $stage->need_enquiry_number,
                     'need_sales_order_number' => (bool) $stage->need_sales_order_number,
+                    'need_expense' => (bool) $stage->need_expense,
                     'executives' => $stage->defaultExecutives->map(function ($exec) {
                         return [
                             'id' => $exec->id,

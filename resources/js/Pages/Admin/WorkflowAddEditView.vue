@@ -42,7 +42,7 @@ const form = useForm({
     description: "",
     is_active: true,
     stages: [
-        { id: null, name: "", description: "", default_estimated_hours: "", executives: [], need_enquiry_number: false, need_sales_order_number: false },
+        { id: null, name: "", description: "", default_estimated_hours: "", executives: [], need_enquiry_number: false, need_sales_order_number: false, need_expense: false },
     ],
 });
 
@@ -64,6 +64,7 @@ onBeforeMount(() => {
                 executives: s.default_executives ?? [],
                 need_enquiry_number: s.need_enquiry_number ?? false,
                 need_sales_order_number: s.need_sales_order_number ?? false,
+                need_expense: s.need_expense ?? false,
             }));
         }
     }
@@ -78,6 +79,7 @@ const addStage = () => {
         executives: [],
         need_enquiry_number: false,
         need_sales_order_number: false,
+        need_expense: false,
     });
 };
 
@@ -317,7 +319,7 @@ const submitform = () => {
                                     <FormControl v-model="stage.description" type="textarea" placeholder="Stage instructions..." rows="2" />
                                 </FormField>
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
                                     <FormField label="Need Enquiry Number">
                                         <label class="inline-flex items-center mt-2 cursor-pointer">
                                             <input type="checkbox" v-model="stage.need_enquiry_number" class="sr-only peer" />
@@ -331,6 +333,14 @@ const submitform = () => {
                                             <input type="checkbox" v-model="stage.need_sales_order_number" class="sr-only peer" />
                                             <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                                             <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">{{ stage.need_sales_order_number ? 'Yes' : 'No' }}</span>
+                                        </label>
+                                    </FormField>
+
+                                    <FormField label="Enable Task Expenses">
+                                        <label class="inline-flex items-center mt-2 cursor-pointer">
+                                            <input type="checkbox" v-model="stage.need_expense" class="sr-only peer" />
+                                            <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">{{ stage.need_expense ? 'Yes' : 'No' }}</span>
                                         </label>
                                     </FormField>
                                 </div>

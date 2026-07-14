@@ -944,6 +944,7 @@ class TaskController extends Controller
                 'sales_order_no' => $task->sales_order_no,
                 'need_enquiry_number' => (bool) $task->need_enquiry_number,
                 'need_sales_order_number' => (bool) $task->need_sales_order_number,
+                'need_expense' => (bool) $task->need_expense,
             ],
             'assignees' => $assigneeStatuses,
             'viewers' => $task->viewers->pluck('name')->all(),
