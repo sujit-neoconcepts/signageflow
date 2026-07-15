@@ -55,7 +55,20 @@ class ProcessWorkflowStages extends Command
             $notifyCount++;
         }
 
-        $this->info("Completed processing: filled start_date for {$filledCount} tasks, notified {$notifyCount} tasks.");
+        // 3. Send job completion notifications for jobs that are completed but not notified yet
+        $completedJobs = \App\Models\Job::whereIn('status', ['completed', 'closed'])
+            ->where('job_completed_notified', false)
+            ->get();
+
+        $jobNotifyCount = 0;
+        foreach ($completedJobs as $job) {
+            $job->update(['job_completed_notified' => true]);
+            TaskNotificationService::notifyJobCompleted($job);
+            $this->line("Sent job completed notification for Job ID {$job->id} ('{$job->title}').");
+            $jobNotifyCount++;
+        }
+
+        $this->info("Completed processing: filled start_date for {$filledCount} tasks, notified {$notifyCount} tasks, notified {$jobNotifyCount} jobs.");
 
         return Command::SUCCESS;
     }

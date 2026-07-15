@@ -20,11 +20,13 @@ class Job extends Model
         'estimated_hours',
         'status',
         'created_by',
+        'job_completed_notified',
     ];
 
     protected $casts = [
         'due_date' => 'datetime',
         'estimated_hours' => 'decimal:2',
+        'job_completed_notified' => 'boolean',
     ];
 
     public function client()

@@ -48,6 +48,8 @@ return [
             'reminder' => env('WHATSAPP_TEMPLATE_REMINDER', 'task_reminder'),
             'status_update' => env('WHATSAPP_TEMPLATE_STATUS_UPDATE', 'task_status_update'),
             'loop' => env('WHATSAPP_TEMPLATE_LOOP', 'task_loop_notification'),
+            'activity_update' => env('WHATSAPP_TEMPLATE_ACTIVITY_UPDATE', 'task_activity_update'),
+            'job_completed' => env('WHATSAPP_TEMPLATE_JOB_COMPLETED', 'job_completed'),
         ],
     ],
 ];

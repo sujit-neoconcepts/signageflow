@@ -151,6 +151,106 @@ class TaskNotificationService
     }
 
     /**
+     * Notify task creator about activity updates (comments, file uploads, voice notes, expenses) done by assignees.
+     */
+    public static function notifyActivityUpdate(Task $task, User $actor, string $activityType, ?string $detail = null)
+    {
+        $task->load(['creator', 'job']);
+
+        // Don't notify the creator about their own activities
+        if ($task->creator_id === $actor->id) {
+            return;
+        }
+
+        $channels = $task->notify_channels ?? ['email'];
+
+        $activityLabel = '';
+        switch ($activityType) {
+            case 'comment':
+                $activityLabel = 'added a comment';
+                break;
+            case 'file_upload':
+                $activityLabel = 'uploaded a file';
+                break;
+            case 'voice_note':
+                $activityLabel = 'recorded a voice note';
+                break;
+            case 'expense':
+                $activityLabel = 'added an expense';
+                break;
+            default:
+                $activityLabel = 'updated activity';
+        }
+
+        $title = "Task Activity: {$actor->name} {$activityLabel}";
+        $body = "Hello {$task->creator->name},<br><br>".
+                "{$actor->name} has performed an activity on the task.<br><br>".
+                "<strong>Task Title:</strong> {$task->title}<br>".
+                '<strong>Activity:</strong> '.ucfirst($activityType).'<br>'.
+                ($detail ? "<strong>Details:</strong> {$detail}<br>" : '').
+                '<strong>Date/Time:</strong> '.now()->format('d-m-Y H:i').'<br><br>'.
+                'Please review the task in the Task Manager.';
+
+        $taskDetail = self::getDetailedTaskString($task);
+        $activitySummary = "{$actor->name} {$activityLabel}".($detail ? ": {$detail}" : '');
+
+        self::send($task->creator, $title, $body, $channels, [
+            'name' => config('services.whatsapp.templates.activity_update', 'task_activity_update'),
+            'parameters' => [
+                $task->creator->name,
+                $taskDetail,
+                $activitySummary,
+            ],
+        ]);
+    }
+
+    /**
+     * Notify all assignees and viewers when a job completes.
+     */
+    public static function notifyJobCompleted(\App\Models\Job $job)
+    {
+        $job->load(['tasks.assignees', 'tasks.viewers']);
+
+        // Find all unique assignees and viewers across all tasks in the job
+        $usersToNotify = collect();
+
+        foreach ($job->tasks as $task) {
+            foreach ($task->assignees as $assignee) {
+                $usersToNotify->put($assignee->id, $assignee);
+            }
+            foreach ($task->viewers as $viewer) {
+                $usersToNotify->put($viewer->id, $viewer);
+            }
+        }
+
+        if ($usersToNotify->isEmpty()) {
+            return;
+        }
+
+        $title = "Job Completed: {$job->title}";
+        $jobDetail = "Job: {$job->title}".(! empty($job->description) ? " | {$job->description}" : '');
+
+        // Since notify_channels is task-based, we'll default to ['email', 'whatsapp'] or try to get channels from first task
+        $firstTask = $job->tasks->first();
+        $channels = $firstTask ? ($firstTask->notify_channels ?? ['email']) : ['email'];
+
+        foreach ($usersToNotify as $user) {
+            $body = "Hello {$user->name},<br><br>".
+                    "Great news! The job <strong>{$job->title}</strong> has been completed successfully.<br><br>".
+                    'All associated workflow stages/tasks are now finished.<br><br>'.
+                    'Thank you for your effort!';
+
+            self::send($user, $title, $body, $channels, [
+                'name' => config('services.whatsapp.templates.job_completed', 'job_completed'),
+                'parameters' => [
+                    $user->name,
+                    $jobDetail,
+                ],
+            ]);
+        }
+    }
+
+    /**
      * Build detailed task details string (task name, job name, description, start time).
      */
     private static function getDetailedTaskString(Task $task): string

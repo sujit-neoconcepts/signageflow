@@ -503,7 +503,7 @@ class TaskController extends Controller
             ->orWhereHas('viewers', function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             })
-            ->with(['creator', 'job', 'assignees' => function ($q) use ($user) {
+            ->with(['creator', 'job.client', 'assignees' => function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             }])
             ->orderBy('created_at', 'desc')
@@ -527,6 +527,7 @@ class TaskController extends Controller
                 'completed_at' => $pivot && $pivot->completed_at ? \Illuminate\Support\Carbon::parse($pivot->completed_at)->format('d-m-Y H:i') : null,
                 'job_name' => $task->job ? $task->job->title : null,
                 'job_id' => $task->job_id,
+                'client_name' => ($task->job && $task->job->client) ? $task->job->client->cl_name : null,
                 'start_date' => $task->start_date ? $task->start_date->format('d-m-Y H:i') : null,
                 'start_date_raw' => $task->start_date ? $task->start_date->toIso8601String() : null,
                 'estimated_hours' => $task->estimated_hours,
@@ -662,11 +663,41 @@ class TaskController extends Controller
             }
 
             // Recalculate job status if task belongs to a job
+            $nextTaskToStart = null;
+            $jobToNotify = null;
             if ($task->job_id) {
                 $task->job->recalculateStatus();
+
+                if ($taskNewStatus === 'completed') {
+                    $nextSortOrder = $task->job_stage_sort_order + 1;
+                    $nextTask = Task::where('job_id', $task->job_id)
+                        ->where('job_stage_sort_order', $nextSortOrder)
+                        ->first();
+                    if ($nextTask && $nextTask->start_on_previous_complete && is_null($nextTask->start_date)) {
+                        $nextTask->update([
+                            'start_date' => now(),
+                            'start_notified' => true,
+                        ]);
+                        $nextTaskToStart = $nextTask;
+                    }
+                }
+
+                $job = $task->job->fresh();
+                if (in_array($job->status, ['completed', 'closed']) && ! $job->job_completed_notified) {
+                    $job->update(['job_completed_notified' => true]);
+                    $jobToNotify = $job;
+                }
             }
 
             DB::commit();
+
+            if ($nextTaskToStart) {
+                TaskNotificationService::notifyTaskStart($nextTaskToStart);
+            }
+
+            if ($jobToNotify) {
+                TaskNotificationService::notifyJobCompleted($jobToNotify);
+            }
 
             // Notify Task Creator
             TaskNotificationService::notifyStatusUpdate($task, $user, $newStatus, $request->comment);
@@ -718,6 +749,33 @@ class TaskController extends Controller
             }
 
             DB::commit();
+
+            $hasVoiceNote = false;
+            $hasFiles = false;
+            if ($request->hasFile('files')) {
+                foreach ($request->file('files') as $file) {
+                    $name = strtolower($file->getClientOriginalName());
+                    if (str_contains($name, 'voice_note') ||
+                        str_ends_with($name, '.webm') ||
+                        str_ends_with($name, '.ogg') ||
+                        str_ends_with($name, '.wav') ||
+                        str_ends_with($name, '.mp3') ||
+                        str_contains($file->getMimeType(), 'audio')) {
+                        $hasVoiceNote = true;
+                    } else {
+                        $hasFiles = true;
+                    }
+                }
+            }
+
+            $activityType = 'comment';
+            if ($hasVoiceNote && ! $hasFiles) {
+                $activityType = 'voice_note';
+            } elseif ($hasFiles && ! $hasVoiceNote) {
+                $activityType = 'file_upload';
+            }
+
+            TaskNotificationService::notifyActivityUpdate($task, Auth::user(), $activityType, $request->comment);
 
             return redirect()->back()->with(['message' => 'Comment Added Successfully', 'msg_type' => 'success']);
         } catch (\Exception $e) {
@@ -1009,6 +1067,13 @@ class TaskController extends Controller
             'module' => 'expense',
             'data_key' => $expense->exp_cate.' (Task: '.$task->title.')',
         ]);
+
+        TaskNotificationService::notifyActivityUpdate(
+            $task,
+            \Auth::user(),
+            'expense',
+            "Category: {$request->exp_cate}, Amount: ".number_format($request->amount, 2)
+        );
 
         if ($request->wantsJson()) {
             return response()->json(['message' => 'Expense Created and Linked Successfully', 'expense' => $expense]);

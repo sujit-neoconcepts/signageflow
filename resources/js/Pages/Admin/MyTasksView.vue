@@ -403,6 +403,15 @@ onMounted(() => {
                                 {{ selectedTaskDetails.task.title }}
                             </h2>
 
+                            <div v-if="selectedTask.job_name" class="flex flex-wrap gap-x-4 gap-y-1 items-center text-xs text-gray-500 mb-4">
+                                <span class="flex items-center">
+                                    <span class="mr-1">📁</span> Job: <strong class="text-gray-700 dark:text-slate-300 ml-1">{{ selectedTask.job_name }}</strong>
+                                </span>
+                                <span v-if="selectedTask.client_name" class="flex items-center">
+                                    <span class="mr-1">👤</span> Client: <strong class="text-gray-700 dark:text-slate-300 ml-1">{{ selectedTask.client_name }}</strong>
+                                </span>
+                            </div>
+
                             <div v-if="selectedTask.job_stage_sort_order !== null" class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 dark:bg-slate-800/40 border border-gray-100 dark:border-slate-800/80 p-3 rounded-lg mb-4 text-xs">
                                 <div class="flex items-center space-x-2">
                                     <span class="text-gray-500 font-medium dark:text-slate-400">Estimated Duration:</span>
@@ -467,6 +476,138 @@ onMounted(() => {
                                             <a :href="file.download_url" target="_blank" class="text-blue-600 hover:underline font-semibold ml-2">Download</a>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </CardBox>
+
+                        <!-- Action Console for Assignee -->
+                        <CardBox v-if="selectedTask.is_assignee && !['verified', 'closed'].includes(selectedTask.my_status)">
+                            <h3 class="text-md font-semibold text-gray-700 dark:text-slate-200 mb-4">Work Console</h3>
+
+                            <!-- State 1: Pending (Unaccepted) -->
+                            <div v-if="selectedTask.my_status === 'pending'" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50 bg-opacity-20 border border-amber-200 p-4 rounded-lg bg-amber-50/40 dark:border-amber-900/30">
+                                <div class="flex items-center space-x-2 text-amber-600 dark:text-amber-400">
+                                    <BaseIcon :path="mdiAlert" size="20" />
+                                    <span v-if="canAccept(selectedTask)">You have not accepted and started this task yet.</span>
+                                    <span v-else>This task cannot be started before its start date/time: <strong>{{ selectedTask.start_date }}</strong></span>
+                                </div>
+                                <BaseButton
+                                    v-if="canAccept(selectedTask)"
+                                    type="button"
+                                    color="info"
+                                    :icon="mdiPlay"
+                                    label="Accept and Start Task"
+                                    @click="updateStatus('in_progress')"
+                                />
+                            </div>
+
+                            <!-- State 2: Accepted -->
+                            <div v-else-if="selectedTask.my_status === 'accepted'" class="flex items-center space-x-3 bg-blue-50 bg-opacity-20 border border-blue-200 p-4 rounded-lg dark:border-blue-900/30">
+                                <span class="text-blue-600">🚀 Task accepted. Start when ready.</span>
+                                <BaseButton
+                                    type="button"
+                                    color="success"
+                                    :icon="mdiPlay"
+                                    label="Start Work (In Progress)"
+                                    @click="updateStatus('in_progress')"
+                                />
+                            </div>
+
+                            <!-- State 3: In Progress (Completing form) -->
+                            <div v-else-if="selectedTask.my_status === 'in_progress'" class="space-y-4 border border-purple-200 p-4 rounded-lg bg-purple-50/5 dark:border-purple-900/30">
+                                <h4 class="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-1">Submit Progress/Complete Task</h4>
+                                
+                                <!-- Enquiry & Sales Order number inputs if required -->
+                                <div v-if="selectedTask.need_enquiry_number || selectedTask.need_sales_order_number" class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-3 border-b border-purple-100 dark:border-purple-950/20 mb-2">
+                                    <div v-if="selectedTask.need_enquiry_number">
+                                        <label class="text-xs font-semibold text-gray-500 block mb-1">Enquiry Number <span class="text-red-500">*</span></label>
+                                        <input
+                                            v-model="statusForm.enquiry_no"
+                                            list="enquiry-list"
+                                            type="text"
+                                            placeholder="Select or enter Enquiry No..."
+                                            class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500"
+                                            :class="{'border-red-500': isEnquiryInvalid}"
+                                        />
+                                        <datalist id="enquiry-list">
+                                            <option v-for="opt in props.enquiryOptions" :key="opt" :value="opt" />
+                                        </datalist>
+                                        <span v-if="isEnquiryInvalid && statusForm.enquiry_no" class="text-red-500 text-xxs font-semibold mt-1 block">Please enter a valid enquiry number.</span>
+                                        <span v-else-if="statusForm.enquiry_no" class="text-green-650 text-xxs font-semibold mt-1 block">✓ Valid Enquiry Number</span>
+                                    </div>
+
+                                    <div v-if="selectedTask.need_sales_order_number">
+                                        <label class="text-xs font-semibold text-gray-550 block mb-1">Sales Order Number <span class="text-red-500">*</span></label>
+                                        <input
+                                            v-model="statusForm.sales_order_no"
+                                            list="sales-order-list"
+                                            type="text"
+                                            placeholder="Select or enter Order No..."
+                                            class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500"
+                                            :class="{'border-red-500': isSalesOrderInvalid}"
+                                        />
+                                        <datalist id="sales-order-list">
+                                            <option v-for="opt in props.salesOrderOptions" :key="opt" :value="opt" />
+                                        </datalist>
+                                        <span v-if="isSalesOrderInvalid && statusForm.sales_order_no" class="text-red-500 text-xxs font-semibold mt-1 block">Please enter a valid sales order number.</span>
+                                        <span v-else-if="statusForm.sales_order_no" class="text-green-650 text-xxs font-semibold mt-1 block">✓ Valid Sales Order Number</span>
+                                    </div>
+                                </div>
+
+                                <FormField label="Submit Comments / Work Summary">
+                                    <textarea
+                                        v-model="statusForm.comment"
+                                        class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500"
+                                        rows="3"
+                                        placeholder="Summarize what you completed or describe progress..."
+                                        required
+                                    ></textarea>
+                                </FormField>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <!-- Files list -->
+                                    <div>
+                                        <label class="text-xs font-semibold text-gray-500 block mb-1">Attach Completed Files</label>
+                                        <BaseButton
+                                            type="button"
+                                            color="info"
+                                            label="Select File"
+                                            small
+                                            outline
+                                            @click="statusFileInputRef.click()"
+                                        />
+                                        <input
+                                            ref="statusFileInputRef"
+                                            type="file"
+                                            multiple
+                                            class="hidden"
+                                            @change="onStatusFilesSelected"
+                                        />
+
+                                        <div v-if="statusFileList.length > 0" class="mt-2 space-y-1">
+                                            <div
+                                                v-for="(f, idx) in statusFileList"
+                                                :key="idx"
+                                                class="flex justify-between items-center bg-gray-150 dark:bg-slate-800 p-1.5 px-2.5 rounded text-xs"
+                                            >
+                                                <span class="truncate font-medium max-w-44">{{ f.name }}</span>
+                                                <button type="button" class="text-red-550 font-bold text-xs ml-2" @click="removeStatusFile(idx)">✕</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Voice note recorder -->
+                                    <VoiceRecorder @recorded="handleStatusRecordedVoiceNote" />
+                                </div>
+
+                                <div class="flex justify-end pt-2">
+                                    <BaseButton
+                                        type="button"
+                                        color="success"
+                                        label="Submit Task for Verification"
+                                        :disabled="statusForm.processing || !statusForm.comment.trim() || isEnquiryInvalid || isSalesOrderInvalid"
+                                        @click="submitCompletedTask"
+                                    />
                                 </div>
                             </div>
                         </CardBox>
@@ -686,138 +827,6 @@ onMounted(() => {
                                         label="Post Comment"
                                         :disabled="commentForm.processing || !commentForm.comment.trim()"
                                         @click="postComment"
-                                    />
-                                </div>
-                            </div>
-                        </CardBox>
-
-                        <!-- Action Console for Assignee -->
-                        <CardBox v-if="selectedTask.is_assignee && !['verified', 'closed'].includes(selectedTask.my_status)">
-                            <h3 class="text-md font-semibold text-gray-700 dark:text-slate-200 mb-4">Work Console</h3>
-
-                            <!-- State 1: Pending (Unaccepted) -->
-                            <div v-if="selectedTask.my_status === 'pending'" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50 bg-opacity-20 border border-amber-200 p-4 rounded-lg bg-amber-50/40 dark:border-amber-900/30">
-                                <div class="flex items-center space-x-2 text-amber-600 dark:text-amber-400">
-                                    <BaseIcon :path="mdiAlert" size="20" />
-                                    <span v-if="canAccept(selectedTask)">You have not accepted and started this task yet.</span>
-                                    <span v-else>This task cannot be started before its start date/time: <strong>{{ selectedTask.start_date }}</strong></span>
-                                </div>
-                                <BaseButton
-                                    v-if="canAccept(selectedTask)"
-                                    type="button"
-                                    color="info"
-                                    :icon="mdiPlay"
-                                    label="Accept and Start Task"
-                                    @click="updateStatus('in_progress')"
-                                />
-                            </div>
-
-                            <!-- State 2: Accepted -->
-                            <div v-else-if="selectedTask.my_status === 'accepted'" class="flex items-center space-x-3 bg-blue-50 bg-opacity-20 border border-blue-200 p-4 rounded-lg dark:border-blue-900/30">
-                                <span class="text-blue-600">🚀 Task accepted. Start when ready.</span>
-                                <BaseButton
-                                    type="button"
-                                    color="success"
-                                    :icon="mdiPlay"
-                                    label="Start Work (In Progress)"
-                                    @click="updateStatus('in_progress')"
-                                />
-                            </div>
-
-                            <!-- State 3: In Progress (Completing form) -->
-                            <div v-else-if="selectedTask.my_status === 'in_progress'" class="space-y-4 border border-purple-200 p-4 rounded-lg bg-purple-50/5 dark:border-purple-900/30">
-                                <h4 class="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-1">Submit Progress/Complete Task</h4>
-                                
-                                <!-- Enquiry & Sales Order number inputs if required -->
-                                <div v-if="selectedTask.need_enquiry_number || selectedTask.need_sales_order_number" class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-3 border-b border-purple-100 dark:border-purple-950/20 mb-2">
-                                    <div v-if="selectedTask.need_enquiry_number">
-                                        <label class="text-xs font-semibold text-gray-500 block mb-1">Enquiry Number <span class="text-red-500">*</span></label>
-                                        <input
-                                            v-model="statusForm.enquiry_no"
-                                            list="enquiry-list"
-                                            type="text"
-                                            placeholder="Select or enter Enquiry No..."
-                                            class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500"
-                                            :class="{'border-red-500': isEnquiryInvalid}"
-                                        />
-                                        <datalist id="enquiry-list">
-                                            <option v-for="opt in props.enquiryOptions" :key="opt" :value="opt" />
-                                        </datalist>
-                                        <span v-if="isEnquiryInvalid && statusForm.enquiry_no" class="text-red-500 text-xxs font-semibold mt-1 block">Please enter a valid enquiry number.</span>
-                                        <span v-else-if="statusForm.enquiry_no" class="text-green-650 text-xxs font-semibold mt-1 block">✓ Valid Enquiry Number</span>
-                                    </div>
-
-                                    <div v-if="selectedTask.need_sales_order_number">
-                                        <label class="text-xs font-semibold text-gray-550 block mb-1">Sales Order Number <span class="text-red-500">*</span></label>
-                                        <input
-                                            v-model="statusForm.sales_order_no"
-                                            list="sales-order-list"
-                                            type="text"
-                                            placeholder="Select or enter Order No..."
-                                            class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500"
-                                            :class="{'border-red-500': isSalesOrderInvalid}"
-                                        />
-                                        <datalist id="sales-order-list">
-                                            <option v-for="opt in props.salesOrderOptions" :key="opt" :value="opt" />
-                                        </datalist>
-                                        <span v-if="isSalesOrderInvalid && statusForm.sales_order_no" class="text-red-500 text-xxs font-semibold mt-1 block">Please enter a valid sales order number.</span>
-                                        <span v-else-if="statusForm.sales_order_no" class="text-green-650 text-xxs font-semibold mt-1 block">✓ Valid Sales Order Number</span>
-                                    </div>
-                                </div>
-
-                                <FormField label="Submit Comments / Work Summary">
-                                    <textarea
-                                        v-model="statusForm.comment"
-                                        class="w-full border rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-sm focus:ring-blue-500"
-                                        rows="3"
-                                        placeholder="Summarize what you completed or describe progress..."
-                                        required
-                                    ></textarea>
-                                </FormField>
-
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <!-- Files list -->
-                                    <div>
-                                        <label class="text-xs font-semibold text-gray-500 block mb-1">Attach Completed Files</label>
-                                        <BaseButton
-                                            type="button"
-                                            color="info"
-                                            label="Select File"
-                                            small
-                                            outline
-                                            @click="statusFileInputRef.click()"
-                                        />
-                                        <input
-                                            ref="statusFileInputRef"
-                                            type="file"
-                                            multiple
-                                            class="hidden"
-                                            @change="onStatusFilesSelected"
-                                        />
-
-                                        <div v-if="statusFileList.length > 0" class="mt-2 space-y-1">
-                                            <div
-                                                v-for="(f, idx) in statusFileList"
-                                                :key="idx"
-                                                class="flex justify-between items-center bg-gray-150 dark:bg-slate-800 p-1.5 px-2.5 rounded text-xs"
-                                            >
-                                                <span class="truncate font-medium max-w-44">{{ f.name }}</span>
-                                                <button type="button" class="text-red-550 font-bold text-xs ml-2" @click="removeStatusFile(idx)">✕</button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Voice note recorder -->
-                                    <VoiceRecorder @recorded="handleStatusRecordedVoiceNote" />
-                                </div>
-
-                                <div class="flex justify-end pt-2">
-                                    <BaseButton
-                                        type="button"
-                                        color="success"
-                                        label="Submit Task for Verification"
-                                        :disabled="statusForm.processing || !statusForm.comment.trim() || isEnquiryInvalid || isSalesOrderInvalid"
-                                        @click="submitCompletedTask"
                                     />
                                 </div>
                             </div>
