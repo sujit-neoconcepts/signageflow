@@ -92,17 +92,14 @@ const fetchConsumableOptions = async () => {
     }
 };
 
-const fetchCostSheetOptions = async () => {
+const fetchCostSheetOptions = async (type) => {
     try {
-        const types = ["signage", "cabinet", "letters"];
-        for (const type of types) {
-            const { data } = await axios.get(route("costSheetCompositions.options"), {
-                params: { prod_type: type },
-            });
-            costSheetOptions.value[type] = data;
-        }
+        const { data } = await axios.get(route("costSheetCompositions.options"), {
+            params: { prod_type: type },
+        });
+        costSheetOptions.value[type] = data;
     } catch (error) {
-        console.error("Error fetching cost sheet options:", error);
+        console.error(`Error fetching cost sheet options for ${type}:`, error);
     }
 };
 
@@ -174,7 +171,7 @@ const fetchCompositions = async () => {
 // ─── Lifecycle & watchers ────────────────────────────────────────────────────
 onMounted(() => {
     fetchConsumableOptions();
-    ["signage", "cabinet", "letter"].forEach(fetchCostSheetOptions);
+    ["signage", "cabinet", "letters"].forEach(fetchCostSheetOptions);
 });
 
 watch(isOpen, (newVal) => {
@@ -442,7 +439,7 @@ const getCostSheetUnitPrice = (item) => {
                                 <td v-else class="px-3 py-1.5">
                                     <VueMultiselect
                                         v-model="row.selectedItem"
-                                        :options="costSheetOptions[sec.key]"
+                                        :options="(costSheetOptions[sec.key] || []).filter(item => item.id != props.costSheetId)"
                                         label="name"
                                         track-by="id"
                                         :placeholder="`Search ${sec.label} item…`"

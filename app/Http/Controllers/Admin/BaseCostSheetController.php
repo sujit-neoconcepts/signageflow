@@ -610,6 +610,8 @@ abstract class BaseCostSheetController extends Controller
                     } else {
                         if (empty($compChildName)) {
                             $errors[] = "Row {$rowNumber}: comp_child_name is required for {$section} section.";
+                        } elseif ($compChildName === $name) {
+                            $errors[] = "Row {$rowNumber}: A cost sheet cannot reference itself in compositions.";
                         }
                     }
 

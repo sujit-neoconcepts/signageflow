@@ -11,9 +11,11 @@ use App\Services\OpenStockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use ProtoneMedia\LaravelQueryBuilderInertiaJs\InertiaTable;
 use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\AllowedSort;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class OpenStockController extends Controller
@@ -27,7 +29,7 @@ class OpenStockController extends Controller
 
     public function __construct()
     {
-        $this->middleware('can:openStock_list', ['only' => ['index', 'detail']]);
+        $this->middleware('can:openStock_list', ['only' => ['index', 'groupIndex', 'detail']]);
         $this->middleware('can:openStock_adjust', ['only' => ['create', 'store']]);
     }
 
@@ -35,6 +37,7 @@ class OpenStockController extends Controller
     {
         $formInfo = [
             'internal_name' => ['label' => 'Internal Name', 'searchable' => true, 'sortable' => true],
+            'group_name' => ['label' => 'Internal Name Group', 'searchable' => true, 'sortable' => true],
             'location' => ['label' => 'Location', 'searchable' => true, 'sortable' => true],
             'incharge' => ['label' => 'Incharge', 'searchable' => true, 'sortable' => true],
             'open_stock_unit' => ['label' => 'Open Stock Unit', 'sortable' => true],
@@ -48,7 +51,8 @@ class OpenStockController extends Controller
                 Collection::wrap($value)->each(function ($value) use ($query) {
                     $query->orWhere('open_stock_balances.internal_name', 'LIKE', "%{$value}%")
                         ->orWhere('open_stock_balances.location', 'LIKE', "%{$value}%")
-                        ->orWhere('open_stock_balances.incharge', 'LIKE', "%{$value}%");
+                        ->orWhere('open_stock_balances.incharge', 'LIKE', "%{$value}%")
+                        ->orWhere('cing.name', 'LIKE', "%{$value}%");
                 });
             });
         });
@@ -61,14 +65,25 @@ class OpenStockController extends Controller
         $query = OpenStockBalance::select('open_stock_balances.*')
             ->selectRaw('IFNULL(cin.unitPrice, 0) as current_unit_price')
             ->selectRaw('ROUND(open_stock_balances.qty * IFNULL(cin.unitPrice, 0), 2) as stock_value')
+            ->selectRaw('cing.name as group_name')
             ->leftJoinSub($latestConsumablePerName, 'cin_latest', function ($join) {
                 $join->on('cin_latest.name', '=', 'open_stock_balances.internal_name');
             })
-            ->leftJoin('consumable_internal_names as cin', 'cin.id', '=', 'cin_latest.max_id');
+            ->leftJoin('consumable_internal_names as cin', 'cin.id', '=', 'cin_latest.max_id')
+            ->leftJoin('consumable_internal_name_groups as cing', 'cing.id', '=', 'cin.consumable_internal_name_group_id');
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('internal_name')
-            ->allowedSorts(['internal_name', 'location', 'incharge', 'open_stock_unit', 'qty', 'current_unit_price', 'stock_value'])
+            ->allowedSorts([
+                'internal_name',
+                AllowedSort::field('group_name', 'cing.name'),
+                'location',
+                'incharge',
+                'open_stock_unit',
+                'qty',
+                'current_unit_price',
+                'stock_value',
+            ])
             ->allowedFilters([
                 AllowedFilter::exact('internal_name'),
                 AllowedFilter::exact('location'),
@@ -93,6 +108,7 @@ class OpenStockController extends Controller
             ];
         }
         $this->resourceNeo['showTotal'] = true;
+        $this->resourceNeo['showall'] = true;
 
         return Inertia::render('Admin/OpenStockView', [
             'resourceData' => $resourceData,
@@ -222,5 +238,152 @@ class OpenStockController extends Controller
             'message' => 'Open Stock adjusted successfully !!',
             'msg_type' => 'success',
         ]);
+    }
+
+    public function groupIndex()
+    {
+        $resourceNeo = $this->resourceNeo;
+        $resourceNeo['resourceName'] = 'openStockGroup';
+        $resourceNeo['resourceTitle'] = 'Open Stock Group';
+        unset($resourceNeo['extraMainLinks']);
+
+        $formInfo = [
+            'group_name' => ['label' => 'Internal Name Group', 'searchable' => true, 'sortable' => true],
+            'open_stock_unit' => ['label' => 'Open Stock Unit', 'sortable' => true],
+            'qty' => ['label' => 'Qty', 'sortable' => true, 'align' => 'right', 'showTotal' => true],
+            'current_unit_price' => ['label' => 'Current Unit Price', 'sortable' => true, 'align' => 'right'],
+            'stock_value' => ['label' => 'Stock Value', 'sortable' => true, 'align' => 'right', 'showTotal' => true],
+            'sold_qty' => ['label' => 'Sold Qty', 'sortable' => true, 'align' => 'right', 'showTotal' => true],
+            'sold_value' => ['label' => 'Sold Value', 'sortable' => true, 'align' => 'right', 'showTotal' => true],
+            'balance_qty' => ['label' => 'Balance Qty', 'sortable' => true, 'align' => 'right', 'showTotal' => true],
+        ];
+
+        $globalSearch = AllowedFilter::callback('global', function ($query, $value) {
+            $query->where(function ($query) use ($value) {
+                Collection::wrap($value)->each(function ($value) use ($query) {
+                    $query->orWhere('details.group_name', 'LIKE', "%{$value}%");
+                });
+            });
+        });
+
+        $perPage = request()->query('perPage') ?? 10;
+
+        $latestConsumablePerName = ConsumableInternalName::selectRaw('MAX(id) as max_id, name')
+            ->groupBy('name');
+
+        $detailsQuery = OpenStockBalance::select('open_stock_balances.open_stock_unit', 'open_stock_balances.qty')
+            ->selectRaw('IFNULL(cin.unitPrice, 0) as unit_price')
+            ->selectRaw('COALESCE(cing.name, "Uncategorized") as group_name')
+            ->leftJoinSub($latestConsumablePerName, 'cin_latest', function ($join) {
+                $join->on('cin_latest.name', '=', 'open_stock_balances.internal_name');
+            })
+            ->leftJoin('consumable_internal_names as cin', 'cin.id', '=', 'cin_latest.max_id')
+            ->leftJoin('consumable_internal_name_groups as cing', 'cing.id', '=', 'cin.consumable_internal_name_group_id');
+
+        $fyStart = session('financial_year_start');
+        $fyEnd = session('financial_year_end');
+
+        // Aggregated CTE query as raw sql string for join
+        $salesSubquerySql = "
+            (WITH RECURSIVE resolved_compositions AS (
+                SELECT
+                    csc.cost_sheet_id AS root_cost_sheet_id,
+                    csc.section,
+                    csc.consumable_internal_name_group_id,
+                    csc.child_cost_sheet_id,
+                    1 AS depth
+                FROM cost_sheet_compositions csc
+
+                UNION ALL
+
+                SELECT
+                    rc.root_cost_sheet_id,
+                    csc.section,
+                    csc.consumable_internal_name_group_id,
+                    csc.child_cost_sheet_id,
+                    rc.depth + 1
+                FROM resolved_compositions rc
+                JOIN cost_sheet_compositions csc ON csc.cost_sheet_id = rc.child_cost_sheet_id
+                WHERE rc.section IN ('signage', 'letters', 'cabinet')
+                AND rc.depth < 10
+            )
+            SELECT
+                cing.name AS group_name,
+                ROUND(SUM(soi.qty), 4) AS sold_qty,
+                ROUND(SUM(soi.taxable_amount), 2) AS sold_value
+            FROM resolved_compositions rc
+            JOIN consumable_internal_name_groups cing ON cing.id = rc.consumable_internal_name_group_id
+            JOIN sales_order_items soi ON soi.cost_sheet_id = rc.root_cost_sheet_id
+            JOIN sales_orders so ON so.id = soi.sales_order_id
+            WHERE rc.section = 'raw_material'
+            AND so.order_date BETWEEN '{$fyStart}' AND '{$fyEnd}'
+            GROUP BY cing.name)
+        ";
+
+        $query = OpenStockBalance::fromSub($detailsQuery, 'details')
+            ->select('details.group_name', 'details.open_stock_unit')
+            ->selectRaw('CONCAT(details.group_name, "_", details.open_stock_unit) as row_id')
+            ->selectRaw('SUM(details.qty) as qty')
+            ->selectRaw('ROUND(SUM(details.qty * details.unit_price), 2) as stock_value')
+            ->selectRaw('ROUND(IF(SUM(details.qty) > 0, SUM(details.qty * details.unit_price) / SUM(details.qty), 0), 2) as current_unit_price')
+            ->selectRaw('COALESCE(sales.sold_qty, 0.0000) as sold_qty')
+            ->selectRaw('COALESCE(sales.sold_value, 0.00) as sold_value')
+            ->selectRaw('ROUND(SUM(details.qty) - COALESCE(sales.sold_qty, 0.0000), 4) as balance_qty')
+            ->leftJoin(DB::raw("$salesSubquerySql as sales"), 'sales.group_name', '=', 'details.group_name')
+            ->groupBy('details.group_name', 'details.open_stock_unit', 'sales.sold_qty', 'sales.sold_value');
+
+        $resourceData = QueryBuilder::for($query)
+            ->defaultSort('group_name')
+            ->allowedSorts([
+                'group_name',
+                'open_stock_unit',
+                'qty',
+                'current_unit_price',
+                'stock_value',
+                'sold_qty',
+                'sold_value',
+                'balance_qty',
+            ])
+            ->allowedFilters([
+                AllowedFilter::exact('group_name'),
+                AllowedFilter::exact('open_stock_unit'),
+                $globalSearch,
+            ])
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $resourceData->getCollection()->transform(function ($item) {
+            $array = $item->toArray();
+            $array['id'] = $array['row_id'];
+
+            return $array;
+        });
+
+        if (Auth::user()->can('openStock_export')) {
+            $resourceNeo['bulkActions']['csvExport'] = [];
+        }
+
+        $resourceNeo['showTotal'] = true;
+        $resourceNeo['showall'] = true;
+
+        return Inertia::render('Admin/OpenStockGroupView', [
+            'resourceData' => $resourceData,
+            'resourceNeo' => $resourceNeo,
+        ])->table(function (InertiaTable $table) use ($formInfo) {
+            $table->withGlobalSearch();
+            foreach ($formInfo as $key => $value) {
+                $table->column(
+                    $key,
+                    $value['label'],
+                    searchable: $value['searchable'] ?? false,
+                    sortable: $value['sortable'] ?? false,
+                    extra: [
+                        'type' => $value['type'] ?? '',
+                        'align' => $value['align'] ?? 'left',
+                        'showTotal' => $value['showTotal'] ?? false,
+                    ]
+                );
+            }
+        });
     }
 }

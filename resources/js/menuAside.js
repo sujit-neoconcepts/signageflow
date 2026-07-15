@@ -68,6 +68,12 @@ export default [
                 resource: "openStock",
             },
             {
+                route: "openStockGroup.index",
+                icon: mdiInvoiceList,
+                label: "Open Stock Group",
+                resource: "openStock",
+            },
+            {
                 label: "Users & Roles",
                 icon: mdiAccountSupervisor,
                 menu: [

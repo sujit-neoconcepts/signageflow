@@ -145,6 +145,7 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     // Open Stock + Sales Order
     Route::resource('openStock', OpenStockController::class)->only(['index', 'create', 'store']);
     Route::post('/openStock/detail', [OpenStockController::class, 'detail'])->name('openStock.detail');
+    Route::get('/openStockGroup', [OpenStockController::class, 'groupIndex'])->name('openStockGroup.index');
     Route::get('signageCostSheet-import', [SignageCostSheetController::class, 'importView'])->name('signageCostSheet.import');
     Route::post('signageCostSheet-import', [SignageCostSheetController::class, 'import']);
     Route::get('signageCostSheet-import-with-composition', [SignageCostSheetController::class, 'importWithCompositionView'])->name('signageCostSheet.importWithComposition');

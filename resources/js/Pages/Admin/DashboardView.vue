@@ -209,10 +209,10 @@ const chartOptions = {
 };
 
 const expenseChartHeight = computed(() => {
-    // 384px is equivalent to Tailwind's h-96
-    const minHeight = 384; 
-    // Allocate ~45px per bar so they remain thick and clickable, plus 60px for axes/padding
-    const dynamicHeight = props.expensesByCategory.length * 45 + 60; 
+    // 192px is equivalent to Tailwind's h-48
+    const minHeight = 192; 
+    // Allocate ~22px per bar so they remain thick and clickable, plus 30px for axes/padding
+    const dynamicHeight = props.expensesByCategory.length * 22 + 30; 
     return Math.max(minHeight, dynamicHeight) + 'px';
 });
 
@@ -341,27 +341,6 @@ const formatCurrency = (amount) => {
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 <CardBox 
                     v-if="props.can.view_stock_metrics"
-                    class="bg-gradient-to-r from-blue-500 to-blue-600 text-white cursor-pointer"
-                    is-hoverable
-                    @click="router.get(route('product.index'), { perPage: 10000 })"
-                >
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-blue-100 text-sm">Total Products</p>
-                            <p class="text-2xl font-bold">
-                                {{ formatNumber(stockOverview.total_products) }}
-                            </p>
-                        </div>
-                        <BaseIcon
-                            :path="mdiPackageVariant"
-                            size="48"
-                            class="text-blue-200"
-                        />
-                    </div>
-                </CardBox>
- 
-                <CardBox 
-                    v-if="props.can.view_stock_metrics"
                     class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white cursor-pointer"
                     is-hoverable
                     @click="router.get(route('stocks.level'), { 'filter[status]': 'Below Threshold' })"
@@ -377,6 +356,27 @@ const formatCurrency = (amount) => {
                             :path="mdiAlert"
                             size="48"
                             class="text-yellow-200"
+                        />
+                    </div>
+                </CardBox>
+                
+                <CardBox 
+                    v-if="props.can.view_sales_metrics"
+                    class="bg-gradient-to-r from-blue-500 to-blue-600 text-white cursor-pointer"
+                    is-hoverable
+                    @click="router.get(route('salesOrder.index'), { 'filter[order_date_start]': filterStartDate, 'filter[order_date_end]': filterEndDate })"
+                >
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-blue-100 text-sm">Total Sale</p>
+                            <p class="text-2xl font-bold">
+                                {{ formatCurrency(expensesData.total_sale_value) }}
+                            </p>
+                        </div>
+                        <BaseIcon
+                            :path="mdiChartLine"
+                            size="48"
+                            class="text-blue-200"
                         />
                     </div>
                 </CardBox>
@@ -524,41 +524,16 @@ const formatCurrency = (amount) => {
                     </div>
                 </CardBox>
             </div>
-            <!-- Expenses Summary -->
-            <div v-if="props.can.view_purchase_metrics || props.can.view_expense_metrics || props.can.view_outward_metrics || props.can.view_stock_metrics" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <CardBox v-if="props.can.view_purchase_metrics || props.can.view_expense_metrics || props.can.view_outward_metrics">
-                    <h3 class="text-lg font-semibold mb-4 flex items-center">
-                        <BaseIcon :path="mdiCashMultiple" class="mr-2 text-blue-600" />
-                        Expenses Summary
-                    </h3>
-                    <div class="space-y-4">
-                        <div v-if="props.can.view_purchase_metrics" class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                            <span class="text-gray-700">Purchase Value</span>
-                            <span class="font-bold text-blue-600">
-                                {{ formatCurrency(expensesData.total_purchase_value) }}
-                            </span>
-                        </div>
-                        <div v-if="props.can.view_outward_metrics" class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                            <span class="text-gray-700">Outward Value</span>
-                            <span class="font-bold text-green-600">
-                                {{ formatCurrency(expensesData.total_outward_value) }}
-                            </span>
-                        </div>
-                        <div v-if="props.can.view_expense_metrics" class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                            <span class="text-gray-700">Total Expenses</span>
-                            <span class="font-bold text-purple-600">
-                                {{ formatCurrency(expensesData.total_expense) }}
-                            </span>
-                        </div>
-                        <div v-if="props.can.view_expense_metrics" class="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
-                            <span class="text-gray-700">Total Deposits</span>
-                            <span class="font-bold text-yellow-600">
-                                {{ formatCurrency(expensesData.total_deposit) }}
-                            </span>
-                        </div>
+            <!-- Monthly Trend & Quick Links Grid -->
+            <div v-if="props.can.view_purchase_metrics || props.can.view_outward_metrics || props.can.view_stock_metrics || props.can.view_expense_metrics" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- Monthly Trend Chart -->
+                <CardBox v-if="props.can.view_purchase_metrics || props.can.view_outward_metrics">
+                    <div class="h-80">
+                        <Bar :data="trendData" :options="trendOptions" />
                     </div>
                 </CardBox>
 
+                <!-- Quick Links -->
                 <CardBox v-if="props.can.view_stock_metrics || props.can.view_purchase_metrics || props.can.view_outward_metrics || props.can.view_expense_metrics">
                     <h3 class="text-lg font-semibold mb-4 flex items-center">
                         <BaseIcon :path="mdiChartLine" class="mr-2 text-green-600" />
@@ -617,31 +592,21 @@ const formatCurrency = (amount) => {
                 </CardBox>
             </div>
 
-            <!-- Charts Row -->
-            <div v-if="props.can.view_purchase_metrics || props.can.view_outward_metrics" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <!-- Monthly Trend Chart -->
-                <CardBox v-if="props.can.view_purchase_metrics || props.can.view_outward_metrics">
-                    <div class="h-80">
-                        <Bar :data="trendData" :options="trendOptions" />
-                    </div>
-                </CardBox>
-
+            <!-- Charts Row: Top 10 Suppliers and Expenses by Category -->
+            <div v-if="props.can.view_expense_metrics || props.can.view_purchase_metrics" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <!-- Top Suppliers Chart -->
                 <CardBox v-if="props.can.view_purchase_metrics">
                     <h3 class="text-lg font-semibold mb-4 flex items-center">
                         <BaseIcon :path="mdiChartBar" class="mr-2 text-indigo-600" />
                         Top 10 Suppliers by Purchase Value
                     </h3>
-                    <div class="h-64">
+                    <div class="h-48">
                         <Bar :data="topSuppliersData" :options="chartOptions" />
                     </div>
                 </CardBox>
-            </div>
 
-            <!-- Charts Row 2 -->
-            <div v-if="props.can.view_expense_metrics" class="grid grid-cols-1 gap-6 mb-6">
                 <!-- Expenses by Category Chart -->
-                <CardBox>
+                <CardBox v-if="props.can.view_expense_metrics">
                     <h3 class="text-lg font-semibold mb-4 flex items-center">
                         <BaseIcon :path="mdiChartBar" class="mr-2 text-red-600" />
                         Expenses by Category (Click to View)

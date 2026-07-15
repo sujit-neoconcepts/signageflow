@@ -36,7 +36,15 @@ class CostSheetCompositionController extends Controller
             'compositions.*.id' => 'nullable|integer',
             'compositions.*.section' => 'required|in:raw_material,signage,cabinet,letters,custom_cost',
             'compositions.*.consumable_internal_name_group_id' => 'nullable|exists:consumable_internal_name_groups,id',
-            'compositions.*.child_cost_sheet_id' => 'nullable|exists:cost_sheets,id',
+            'compositions.*.child_cost_sheet_id' => [
+                'nullable',
+                'exists:cost_sheets,id',
+                function ($attribute, $value, $fail) use ($costSheet) {
+                    if ($value == $costSheet->id) {
+                        $fail('A cost sheet cannot be composed of itself.');
+                    }
+                },
+            ],
             'compositions.*.custom_name' => 'nullable|string|max:255',
             'compositions.*.custom_unit_price' => 'nullable|numeric|min:0',
             'compositions.*.quantity' => 'required|numeric|min:0',

@@ -8,6 +8,7 @@ use App\Models\Job;
 use App\Models\Outward;
 use App\Models\Product;
 use App\Models\Purchase;
+use App\Models\SalesOrder;
 use App\Models\Task;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -46,15 +47,15 @@ class DashboardController extends Controller
 
         // Consumables Stock Overview
         $stockOverview = [
-            'total_products' => Product::count(),
             'low_stock_items' => Product::leftJoin('stock_thresholds as st', 'products.pr_detail_int', '=', 'st.pr_detail_int')
                 ->whereRaw('(SELECT COALESCE(SUM(pur_qty_int), 0) FROM purchases WHERE pur_pr_detail_int = products.pr_detail_int) - (SELECT COALESCE(SUM(out_qty), 0) FROM outwards WHERE out_product = products.pr_detail_int) < COALESCE(st.threshold_qty, 0)')
                 ->count(DB::raw('DISTINCT products.pr_detail_int')),
         ];
 
-        // Expenses Data - filtered by date range
+        // Expenses Data & Sales Data - filtered by date range
         $totalPurchaseValue = (float) Purchase::whereBetween('pur_date', [$startDate, $endDate])->sum('pur_amnt_total');
         $totalOutwardValue = (float) Outward::whereBetween('out_date', [$startDate, $endDate])->sum(DB::raw('out_qty * unitPrice'));
+        $totalSaleValue = (float) SalesOrder::whereBetween('order_date', [$startDate, $endDate])->sum('total_amount');
 
         // Build expense query with Head Office filter for non-admin users
         $expenseQuery = Expense::whereBetween('exp_date', [$startDate, $endDate])->where('amt_type', 'Expense');
@@ -91,6 +92,7 @@ class DashboardController extends Controller
             'total_outward_value' => $totalOutwardValue,
             'total_expense' => $totalExpense,
             'total_deposit' => $totalDeposit,
+            'total_sale_value' => $totalSaleValue,
         ];
 
         // Monthly Purchase/Outward Trend - always last 12 months including current month (ignores date filter)
@@ -210,6 +212,7 @@ class DashboardController extends Controller
             'view_job_metrics' => $user->can('dashboard_viewJobMetrics'),
             'view_task_metrics' => $user->can('dashboard_viewTaskMetrics'),
             'view_my_tasks' => $user->can('dashboard_viewMyTasks'),
+            'view_sales_metrics' => $user->can('salesOrder_list'),
         ];
 
         return Inertia::render('Admin/DashboardView', [
