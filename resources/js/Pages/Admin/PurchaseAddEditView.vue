@@ -46,15 +46,27 @@ const roundHalfUp = (num) => {
     return Number(Math.round(parseFloat(num || 0) + "e+2") + "e-2");
 };
 
-const calSumTotal = computed(() => {
+const rawSumTotal = computed(() => {
     let sum = 0;
     for (const key in form["multi"]) {
         if (form["multi"][key].pur_amnt_total) {
             sum += parseFloat(form["multi"][key].pur_amnt_total);
         }
     }
+    return sum;
+});
+
+watch(rawSumTotal, (newVal) => {
+    if (!props.formdata.id) {
+        const rounded = Math.round(newVal);
+        const diff = rounded - newVal;
+        form.roundoff = diff.toFixed(2);
+    }
+});
+
+const calSumTotal = computed(() => {
     const roundoff = parseFloat(form.roundoff) || 0;
-    return roundHalfUp(sum + roundoff).toFixed(2);
+    return roundHalfUp(rawSumTotal.value + roundoff).toFixed(2);
 });
 const multiDatas = ref([props.resourceNeo.formInfoMulti]);
 const addMoreMulti = () => {

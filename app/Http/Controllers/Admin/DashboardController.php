@@ -79,6 +79,7 @@ class DashboardController extends Controller
             ->select('exp_cate', DB::raw('SUM(amount) as total_value'))
             ->groupBy('exp_cate')
             ->orderByDesc('total_value')
+            ->take(10)
             ->get()
             ->map(function ($item) {
                 return [

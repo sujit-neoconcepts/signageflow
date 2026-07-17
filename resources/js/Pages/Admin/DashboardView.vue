@@ -216,6 +216,14 @@ const expenseChartHeight = computed(() => {
     return Math.max(minHeight, dynamicHeight) + 'px';
 });
 
+const suppliersChartHeight = computed(() => {
+    // 192px is equivalent to Tailwind's h-48
+    const minHeight = 192; 
+    // Allocate ~22px per bar, plus 30px for axes/padding
+    const dynamicHeight = props.topSuppliers.length * 22 + 30; 
+    return Math.max(minHeight, dynamicHeight) + 'px';
+});
+
 const expenseCategoryData = computed(() => ({
     labels: props.expensesByCategory.map((exp) => exp.exp_cate),
     datasets: [
@@ -600,7 +608,7 @@ const formatCurrency = (amount) => {
                         <BaseIcon :path="mdiChartBar" class="mr-2 text-indigo-600" />
                         Top 10 Suppliers by Purchase Value
                     </h3>
-                    <div class="h-48">
+                    <div :style="{ height: suppliersChartHeight }">
                         <Bar :data="topSuppliersData" :options="chartOptions" />
                     </div>
                 </CardBox>
@@ -609,7 +617,7 @@ const formatCurrency = (amount) => {
                 <CardBox v-if="props.can.view_expense_metrics">
                     <h3 class="text-lg font-semibold mb-4 flex items-center">
                         <BaseIcon :path="mdiChartBar" class="mr-2 text-red-600" />
-                        Expenses by Category (Click to View)
+                        Top 10 Expenses by Category (Click to View)
                     </h3>
                     <div class="text-sm text-gray-500 mb-2">Click on any bar to open the filtered expense report for that category.</div>
                     <div :style="{ height: expenseChartHeight }">
