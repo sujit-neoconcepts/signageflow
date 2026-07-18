@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "803341923556",
+    "project_id": "signageflow-1db71",
+    "storage_bucket": "signageflow-1db71.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:803341923556:android:44a8c816b80fa1c765e8f1",
+        "android_client_info": {
+          "package_name": "com.tiwariindustries.signage"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJ5yx7PMvNZ0MmJ-CIR-pQtq1_g3Siow0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
