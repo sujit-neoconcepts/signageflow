@@ -107,6 +107,11 @@ class ConsumableInternalNameGroupController extends Controller
             $this->resourceNeo['bulkActions']['csvExport'] = [];
         }
 
+        $this->resourceNeo['detailModal'] = true;
+        $this->resourceNeo['detailModalRoute'] = 'consumableInternalNameGroup.show';
+        $this->resourceNeo['detailModalTitle'] = 'Consumable Group Details';
+        $this->resourceNeo['clickableName'] = true;
+
         // Add import link to extraMainLinks
         $this->resourceNeo['extraMainLinks'] = [
             [
@@ -333,5 +338,60 @@ class ConsumableInternalNameGroupController extends Controller
     public function options()
     {
         return response()->json(ConsumableInternalNameGroup::getAllOption());
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(ConsumableInternalNameGroup $consumableInternalNameGroup)
+    {
+        $group = $consumableInternalNameGroup;
+
+        // Fetch all internal name items that belong to this group
+        $items = \App\Models\ConsumableInternalName::where('consumable_internal_name_group_id', $group->id)
+            ->orderBy('name')
+            ->get();
+
+        $formattedItems = $items->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'unitPrice' => number_format((float) $item->unitPrice, 2, '.', ''),
+                'unitName' => $item->unitName,
+                'unitAltName' => $item->unitAltName,
+                'openStockUnitText' => $item->openStockUnit == 1 ? 'Alternative' : 'Main',
+                'openStockMarginPercent' => number_format((float) $item->openStockMarginPercent, 2, '.', ''),
+            ];
+        });
+
+        // Calculate average price and margin for the brief info
+        $averagePrice = $items->isEmpty() ? 0.00 : $items->avg('unitPrice');
+        $margin = $items->isEmpty() ? 0.00 : ($items->first()->openStockMarginPercent ?? 0.00);
+        $firstItem = $items->first();
+
+        $header = [
+            'fields' => [
+                ['label' => 'Group Name', 'value' => $group->name],
+                ['label' => 'Unit', 'value' => $firstItem ? $firstItem->unitName : '-'],
+                ['label' => 'Alt Unit', 'value' => $firstItem ? $firstItem->unitAltName : '-'],
+                ['label' => 'Average Price', 'value' => number_format((float) $averagePrice, 2, '.', '')],
+                ['label' => 'Margin %', 'value' => number_format((float) $margin, 2, '.', '')],
+            ],
+        ];
+
+        $columns = [
+            ['key' => 'name', 'label' => 'Name', 'align' => 'left'],
+            ['key' => 'unitPrice', 'label' => 'Unit Price', 'align' => 'right'],
+            ['key' => 'unitName', 'label' => 'Unit Name', 'align' => 'left'],
+            ['key' => 'unitAltName', 'label' => 'Unit Alt Name', 'align' => 'left'],
+            ['key' => 'openStockUnitText', 'label' => 'Open Stock Unit', 'align' => 'left'],
+            ['key' => 'openStockMarginPercent', 'label' => 'Open Stock Margin %', 'align' => 'right'],
+        ];
+
+        return response()->json([
+            'header' => $header,
+            'columns' => $columns,
+            'items' => $formattedItems,
+        ]);
     }
 }

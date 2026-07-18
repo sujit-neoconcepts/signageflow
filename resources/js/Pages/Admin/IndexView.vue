@@ -206,6 +206,18 @@ const checkConditions = (item, conditions) => {
                     :resourceNeo="resourceNeo"
                     :stickyHeader="!0"
                 >
+                    <template #cell(name)="{ item }">
+                        <span
+                            v-if="props.resourceNeo.clickableName"
+                            class="text-blue-600 dark:text-blue-400 underline cursor-pointer hover:text-blue-800 dark:hover:text-blue-300 font-medium"
+                            @click.prevent="openDetails(item)"
+                        >
+                            {{ item.name }}
+                        </span>
+                        <span v-else>
+                            {{ item.name }}
+                        </span>
+                    </template>
                     <template #cell(actions)="{ item: dItem }">
                         <div class="relative menu-container">
                             <ActionMenu
@@ -356,13 +368,22 @@ const checkConditions = (item, conditions) => {
             <div v-if="isDetailLoading">Loading...</div>
             <div v-else>
                 <div v-if="detailData.header" class="mb-4 text-sm">
-                    <div><b>Invoice:</b> {{ detailData.header.pur_inv }}</div>
-                    <div><b>Purchase Date:</b> {{ detailData.header.pur_date }}</div>
-                    <div><b>Received Date:</b> {{ detailData.header.received_date }}</div>
-                    <div><b>Supplier:</b> {{ detailData.header.pur_supplier }}</div>
-                    <div v-if="detailData.header.roundoff !== undefined"><b>Roundoff:</b> {{ detailData.header.roundoff }}</div>
-                    <div><b>Item Count:</b> {{ detailData.header.item_count }}</div>
-                    <div><b>Sum Total:</b> {{ detailData.header.sum_total }}</div>
+                    <template v-if="detailData.header.fields">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 border-b border-gray-200 dark:border-slate-700 pb-3 mb-3">
+                            <div v-for="field in detailData.header.fields" :key="field.label">
+                                <b>{{ field.label }}:</b> {{ field.value }}
+                            </div>
+                        </div>
+                    </template>
+                    <template v-else>
+                        <div><b>Invoice:</b> {{ detailData.header.pur_inv }}</div>
+                        <div><b>Purchase Date:</b> {{ detailData.header.pur_date }}</div>
+                        <div><b>Received Date:</b> {{ detailData.header.received_date }}</div>
+                        <div><b>Supplier:</b> {{ detailData.header.pur_supplier }}</div>
+                        <div v-if="detailData.header.roundoff !== undefined"><b>Roundoff:</b> {{ detailData.header.roundoff }}</div>
+                        <div><b>Item Count:</b> {{ detailData.header.item_count }}</div>
+                        <div><b>Sum Total:</b> {{ detailData.header.sum_total }}</div>
+                    </template>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full border border-gray-200 dark:border-slate-700 text-sm">
