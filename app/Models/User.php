@@ -128,4 +128,14 @@ class User extends Authenticatable
         return $this->belongsToMany(Task::class, 'task_viewers', 'user_id', 'task_id')
             ->withTimestamps();
     }
+
+    public function deviceTokens()
+    {
+        return $this->hasMany(MobileDeviceToken::class);
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(UserNotification::class)->latest();
+    }
 }

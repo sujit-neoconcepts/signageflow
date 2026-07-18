@@ -391,9 +391,38 @@ class TaskNotificationService
             }
         }
 
-        // 3. Mobile App Notification (Placeholder)
+        // 3. Mobile App Notification
         if (in_array('mobile', $channels)) {
-            Log::info("Mobile App Notification (Placeholder) sent to User ID {$user->id} ({$user->name}): {$subject} - ".strip_tags($body));
+            try {
+                \App\Models\UserNotification::create([
+                    'user_id' => $user->id,
+                    'title' => $subject,
+                    'body' => strip_tags(html_entity_decode($body)),
+                ]);
+            } catch (\Exception $e) {
+                Log::error("Failed to save mobile notification to database for User ID {$user->id}: ".$e->getMessage());
+            }
+
+            try {
+                $tokens = $user->deviceTokens;
+                if ($tokens->isNotEmpty()) {
+                    foreach ($tokens as $deviceToken) {
+                        FirebaseService::sendPushNotification(
+                            $deviceToken->token,
+                            $subject,
+                            strip_tags(html_entity_decode($body)),
+                            [
+                                'type' => 'task_notification',
+                                'timestamp' => now()->toIso8601String(),
+                            ]
+                        );
+                    }
+                } else {
+                    Log::info("User ID {$user->id} does not have any active push notification tokens.");
+                }
+            } catch (\Exception $e) {
+                Log::error("Failed to send push notifications to User ID {$user->id}: ".$e->getMessage());
+            }
         }
     }
 }
