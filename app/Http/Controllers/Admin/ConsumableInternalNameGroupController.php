@@ -39,22 +39,65 @@ class ConsumableInternalNameGroupController extends Controller
     {
         $formInfo = ConsumableInternalNameGroup::formInfo();
         $formInfoMulti = [];
-        $globalSearch = AllowedFilter::callback('global', function ($query, $value) use ($formInfo) {
-            $query->where(function ($query) use ($value, $formInfo) {
-                Collection::wrap($value)->each(function ($value) use ($query, $formInfo) {
-                    foreach (array_keys($formInfo) as $key) {
-                        $query->orWhere($key, 'LIKE', "%{$value}%");
-                    }
+
+        $query = ConsumableInternalNameGroup::query()
+            ->leftJoin('consumable_internal_names', 'consumable_internal_names.consumable_internal_name_group_id', '=', 'consumable_internal_name_groups.id')
+            ->select(
+                'consumable_internal_name_groups.id',
+                'consumable_internal_name_groups.name',
+                DB::raw('MIN(consumable_internal_names.unitName) as unitName'),
+                DB::raw('MIN(consumable_internal_names.unitAltName) as unitAltName'),
+                DB::raw('ROUND(AVG(consumable_internal_names.unitPrice), 2) as unitPrice'),
+                DB::raw('MIN(consumable_internal_names.openStockMarginPercent) as openStockMarginPercent')
+            )
+            ->groupBy('consumable_internal_name_groups.id', 'consumable_internal_name_groups.name');
+
+        $allowedSorts = [
+            \Spatie\QueryBuilder\AllowedSort::field('name', 'consumable_internal_name_groups.name'),
+            \Spatie\QueryBuilder\AllowedSort::field('unitName', 'unitName'),
+            \Spatie\QueryBuilder\AllowedSort::field('unitAltName', 'unitAltName'),
+            \Spatie\QueryBuilder\AllowedSort::field('unitPrice', 'unitPrice'),
+            \Spatie\QueryBuilder\AllowedSort::field('openStockMarginPercent', 'openStockMarginPercent'),
+        ];
+
+        $globalSearch = AllowedFilter::callback('global', function ($query, $value) {
+            $query->where(function ($query) use ($value) {
+                Collection::wrap($value)->each(function ($value) use ($query) {
+                    $query->orWhere('consumable_internal_name_groups.name', 'LIKE', "%{$value}%");
                 });
             });
         });
+
+        $allowedFilters = [
+            $globalSearch,
+            AllowedFilter::partial('name', 'consumable_internal_name_groups.name'),
+        ];
+
         $perPage = request()->query('perPage') ?? 10;
-        $resourceData = QueryBuilder::for(ConsumableInternalNameGroup::class)
-            ->defaultSort('name')
-            ->allowedSorts(array_keys($formInfo))
-            ->allowedFilters(array_merge(array_keys($formInfo), [$globalSearch]))
+        $resourceData = QueryBuilder::for($query)
+            ->defaultSort('consumable_internal_name_groups.name')
+            ->allowedSorts($allowedSorts)
+            ->allowedFilters($allowedFilters)
             ->paginate($perPage)
             ->withQueryString();
+
+        $resourceData->getCollection()->transform(function ($item) {
+            $item->setAppends([]);
+
+            if (isset($item->unitPrice)) {
+                $item->unitPrice = number_format((float) $item->unitPrice, 2, '.', '');
+            } else {
+                $item->unitPrice = '0.00';
+            }
+
+            if (isset($item->openStockMarginPercent)) {
+                $item->openStockMarginPercent = number_format((float) $item->openStockMarginPercent, 2, '.', '');
+            } else {
+                $item->openStockMarginPercent = '0.00';
+            }
+
+            return $item;
+        });
 
         if (Auth::user()->can('consumableInternalNameGroup_delete')) {
             $this->resourceNeo['bulkActions'] = ['bulk_delete' => []];
@@ -78,6 +121,10 @@ class ConsumableInternalNameGroupController extends Controller
             foreach (array_keys($formInfo) as $key) {
                 $table->column($key, $formInfo[$key]['label'], searchable: $formInfo[$key]['searchable'] ?? false, sortable: $formInfo[$key]['sortable'] ?? false, hidden: $formInfo[$key]['hidden'] ?? false);
             }
+            $table->column('unitName', 'Unit', sortable: true);
+            $table->column('unitAltName', 'Alt Unit', sortable: true);
+            $table->column('unitPrice', 'Unit Price', sortable: true, extra: ['align' => 'right']);
+            $table->column('openStockMarginPercent', 'Margin', sortable: true, extra: ['align' => 'right']);
             $table->column(label: 'Actions')->perPageOptions([10, 15, 30, 50, 100]);
         });
     }

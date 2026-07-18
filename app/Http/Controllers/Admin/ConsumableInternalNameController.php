@@ -29,7 +29,7 @@ class ConsumableInternalNameController extends Controller
 
     public function __construct()
     {
-        $this->middleware('can:consumableInternalName_list', ['only' => ['index', 'show']]);
+        $this->middleware('can:consumableInternalName_list', ['only' => ['index', 'show', 'checkup']]);
         $this->middleware('can:consumableInternalName_create', ['only' => ['create', 'store', 'importView', 'import']]);
         $this->middleware('can:consumableInternalName_delete', ['only' => ['destroy', 'bulkDestroy']]);
         $this->middleware('can:consumableInternalName_edit', ['only' => ['edit', 'update']]);
@@ -96,6 +96,11 @@ class ConsumableInternalNameController extends Controller
                 'label' => 'Sync',
                 'link' => 'consumableInternalName.sync',
                 'icon' => 'M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15V18M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z',
+            ],
+            [
+                'label' => 'Checkup',
+                'link' => 'consumableInternalName.checkup',
+                'icon' => 'M19,3H14.82C14.4,1.84 13.3,1 12,1C10.7,1 9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3M10,17L5,12L6.41,10.59L10,14.17L17.59,6.58L19,8L10,17Z',
             ],
         ];
         $this->resourceNeo['showTotal'] = true;
@@ -467,5 +472,59 @@ class ConsumableInternalNameController extends Controller
             });
 
         return response()->json($options);
+    }
+
+    public function checkup()
+    {
+        // 1. Fetch group IDs where members have inconsistent unitName, unitAltName, or openStockMarginPercent
+        $mismatchGroupIds = DB::table('consumable_internal_names')
+            ->whereNotNull('consumable_internal_name_group_id')
+            ->groupBy('consumable_internal_name_group_id')
+            ->havingRaw('COUNT(DISTINCT unitName) > 1 OR COUNT(DISTINCT unitAltName) > 1 OR COUNT(DISTINCT openStockMarginPercent) > 1')
+            ->pluck('consumable_internal_name_group_id');
+
+        // 2. Fetch the corresponding groups along with their items
+        $groups = \App\Models\ConsumableInternalNameGroup::with('items')
+            ->whereIn('id', $mismatchGroupIds)
+            ->get();
+
+        $discrepancyData = [];
+
+        foreach ($groups as $group) {
+            $items = $group->items;
+            if ($items->isEmpty()) {
+                continue;
+            }
+
+            // Find the most frequent values (mode) in the group to highlight anomalies
+            $unitNameMode = $items->groupBy('unitName')->sortByDesc->count()->keys()->first();
+            $unitAltNameMode = $items->groupBy('unitAltName')->sortByDesc->count()->keys()->first();
+            $marginMode = $items->groupBy('openStockMarginPercent')->sortByDesc->count()->keys()->first();
+
+            $groupItems = [];
+            foreach ($items as $item) {
+                $groupItems[] = [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'unitName' => $item->unitName,
+                    'unitAltName' => $item->unitAltName,
+                    'openStockMarginPercent' => number_format((float)$item->openStockMarginPercent, 2, '.', ''),
+                    'mismatch_unit' => $item->unitName !== $unitNameMode,
+                    'mismatch_alt_unit' => $item->unitAltName !== $unitAltNameMode,
+                    'mismatch_margin' => (float)$item->openStockMarginPercent != (float)$marginMode,
+                ];
+            }
+
+            $discrepancyData[] = [
+                'id' => $group->id,
+                'name' => $group->name,
+                'items' => $groupItems,
+            ];
+        }
+
+        return Inertia::render('Admin/ConsumableInternalNameCheckupView', [
+            'groups' => $discrepancyData,
+            'resourceNeo' => $this->resourceNeo
+        ]);
     }
 }

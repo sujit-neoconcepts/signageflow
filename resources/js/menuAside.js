@@ -39,13 +39,13 @@ export default [
         menu: [
             {
                 route: "consumableInternalName.index",
-                label: "Product Internal Name",
+                label: "Internal Name",
                 icon: mdiFormatListBulletedType,
                 resource: "consumableInternalName",
             },
             {
                 route: "consumableInternalNameGroup.index",
-                label: "Product Internal Name Group",
+                label: "Internal Name Group",
                 icon: mdiFormatListBulletedType,
                 resource: "consumableInternalNameGroup",
             },

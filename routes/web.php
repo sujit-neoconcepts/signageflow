@@ -55,6 +55,7 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::get('consumableInternalName-import', [ConsumableInternalNameController::class, 'importView'])->name('consumableInternalName.import');
     Route::post('consumableInternalName-import', [ConsumableInternalNameController::class, 'import']);
     Route::get('consumableInternalName/sync', [ConsumableInternalNameController::class, 'sync'])->name('consumableInternalName.sync');
+    Route::get('consumableInternalName/checkup', [ConsumableInternalNameController::class, 'checkup'])->name('consumableInternalName.checkup');
     Route::resource('consumableInternalName', ConsumableInternalNameController::class);
     Route::delete('consumableInternalName-bulk-destroy', [ConsumableInternalNameController::class, 'bulkDestroy'])->name('consumableInternalName.bulkDestroy');
 
