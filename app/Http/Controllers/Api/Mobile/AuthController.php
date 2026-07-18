@@ -25,8 +25,8 @@ class AuthController extends Controller
             ]);
         }
 
-        if (! $user->can('task_MyTasksList')) {
-            abort(403, 'You do not have mobile task access.');
+        if (! $user->can('task_MyTasksList') && ! $user->can('expense_list')) {
+            abort(403, 'You do not have mobile app access.');
         }
 
         $user->tokens()->where('name', 'mobile-app')->delete();
