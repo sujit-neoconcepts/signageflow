@@ -24,15 +24,21 @@ class ExpenseController extends Controller
             'category' => 'nullable|string',
             'date_from' => 'nullable|date',
             'date_to' => 'nullable|date',
+            'all_dates' => 'nullable|boolean',
             'per_page' => 'nullable|integer|min:1|max:100',
         ]);
 
-        $startDate = $request->filled('date_from')
-            ? Carbon::parse($request->date_from)->startOfDay()
-            : now()->startOfDay();
-        $endDate = $request->filled('date_to')
-            ? Carbon::parse($request->date_to)->endOfDay()
-            : now()->endOfDay();
+        if ($request->boolean('all_dates', false)) {
+            $startDate = Carbon::parse('2000-01-01')->startOfDay();
+            $endDate = now()->addYears(10)->endOfDay();
+        } else {
+            $startDate = $request->filled('date_from')
+                ? Carbon::parse($request->date_from)->startOfDay()
+                : now()->startOfDay();
+            $endDate = $request->filled('date_to')
+                ? Carbon::parse($request->date_to)->endOfDay()
+                : now()->endOfDay();
+        }
 
         $baseBefore = $this->visibleExpenseQuery($request)
             ->where('exp_date', '<', $startDate);

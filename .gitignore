@@ -19,3 +19,7 @@ yarn-error.log
 /.vscode
 **/.DS_Store
 /Temp
+
+# Keystores
+/*.jks
+/signage-keystore.jks

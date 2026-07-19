@@ -20,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _loading = false;
+  bool _obscurePassword = true;
   String? _error;
 
   String _cleanErrorMessage(Object error) {
@@ -156,10 +157,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 14),
                     TextField(
                       controller: _password,
-                      obscureText: true,
-                      decoration: const InputDecoration(
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
                         labelText: 'Password',
-                        prefixIcon: Icon(Icons.lock_rounded),
+                        prefixIcon: const Icon(Icons.lock_rounded),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
+                          ),
+                          onPressed: () =>
+                              setState(() => _obscurePassword = !_obscurePassword),
+                        ),
                       ),
                     ),
                     if (_error != null)

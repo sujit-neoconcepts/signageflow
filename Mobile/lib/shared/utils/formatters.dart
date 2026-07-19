@@ -12,6 +12,31 @@ String labelFor(String value) => value
     )
     .join(' ');
 
+DateTime? parseDMY(String? value) {
+  if (value == null || value.trim().isEmpty) return null;
+  try {
+    final parts = value.trim().split(' ');
+    final dateParts = parts[0].split('-');
+    if (dateParts.length < 3) return null;
+    final day = int.parse(dateParts[0]);
+    final month = int.parse(dateParts[1]);
+    final year = int.parse(dateParts[2]);
+
+    int hour = 0;
+    int minute = 0;
+    if (parts.length > 1) {
+      final timeParts = parts[1].split(':');
+      if (timeParts.length >= 2) {
+        hour = int.parse(timeParts[0]);
+        minute = int.parse(timeParts[1]);
+      }
+    }
+    return DateTime(year, month, day, hour, minute);
+  } catch (_) {
+    return null;
+  }
+}
+
 Color statusColorFor(dynamic value) {
   switch (value) {
     case 'pending':

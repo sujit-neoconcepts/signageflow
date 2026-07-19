@@ -39,9 +39,20 @@ class TaskController extends Controller
             ->orderByDesc('created_at');
 
         if ($request->filled('status') && $request->status !== 'all') {
-            $query->whereHas('assignees', fn ($q) => $q
-                ->where('users.id', $user->id)
-                ->where('task_assignees.status', $request->status));
+            if ($request->status === 'overdue' || $request->status === 'over_due') {
+                $query->whereHas('assignees', fn ($q) => $q
+                    ->where('users.id', $user->id)
+                    ->whereNotIn('task_assignees.status', ['completed', 'verified', 'closed']))
+                    ->whereNotNull('due_date')
+                    ->where('due_date', '<', now()->toDateString());
+            } elseif ($request->status === 'viewer') {
+                $query->whereHas('viewers', fn ($q) => $q->where('users.id', $user->id))
+                    ->whereDoesntHave('assignees', fn ($q) => $q->where('users.id', $user->id));
+            } else {
+                $query->whereHas('assignees', fn ($q) => $q
+                    ->where('users.id', $user->id)
+                    ->where('task_assignees.status', $request->status));
+            }
         }
 
         if ($request->filled('search')) {
@@ -85,8 +96,14 @@ class TaskController extends Controller
             'expenses',
         ]);
 
+        $user = $request->user();
+        $isAssignee = $task->assignees->contains($user->id);
+        $pivot = $isAssignee ? $task->assignees->firstWhere('id', $user->id)->pivot : null;
+        $myStatus = $pivot ? $pivot->status : 'viewer';
+
         return response()->json([
             'task' => $this->formatTaskDetail($task),
+            'my_status' => $myStatus,
             'assignees' => $task->assignees->map(fn ($u) => [
                 'id' => $u->id,
                 'name' => $u->name,
@@ -237,7 +254,7 @@ class TaskController extends Controller
         $this->authorizeTaskAccess($request, $task);
 
         $request->validate([
-            'comment' => 'required|string',
+            'comment' => 'nullable|string',
             'files' => 'nullable|array',
             'files.*' => 'nullable|file',
         ]);
@@ -247,7 +264,7 @@ class TaskController extends Controller
             $comment = TaskComment::create([
                 'task_id' => $task->id,
                 'user_id' => $request->user()->id,
-                'comment' => $request->comment,
+                'comment' => $request->comment ?? '',
             ]);
             $storedFiles = $this->storeCommentFiles($request, $comment);
             DB::commit();

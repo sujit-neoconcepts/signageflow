@@ -22,8 +22,13 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   Map<String, dynamic> _meta = {};
   String _type = 'all';
   String? _category;
+  String _dateFilter = 'all';
+  DateTimeRange? _customDateRange;
   bool _loading = true;
   String? _error;
+  int _page = 1;
+  int _lastPage = 1;
+  bool _loadingMore = false;
 
   @override
   void initState() {
@@ -33,30 +38,140 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
   Future<void> _load() async {
     setState(() {
+      _page = 1;
       _loading = true;
       _error = null;
     });
     try {
+      final queryParams = <String, String>{
+        'search': _search.text.trim(),
+        'page': '$_page',
+      };
+      if (_type != 'all') {
+        queryParams['type'] = _type;
+      }
+      if (_category != null) {
+        queryParams['category'] = _category!;
+      }
+
+      if (_dateFilter == 'all') {
+        queryParams['all_dates'] = '1';
+      } else {
+        DateTime? from;
+        DateTime? to;
+        final now = DateTime.now();
+
+        if (_dateFilter == 'today') {
+          from = DateTime(now.year, now.month, now.day);
+          to = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        } else if (_dateFilter == 'yesterday') {
+          final yesterday = now.subtract(const Duration(days: 1));
+          from = DateTime(yesterday.year, yesterday.month, yesterday.day);
+          to = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
+        } else if (_dateFilter == 'this_week') {
+          final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+          from = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+          to = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        } else if (_dateFilter == 'this_month') {
+          from = DateTime(now.year, now.month, 1);
+          to = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        } else if (_dateFilter == 'custom' && _customDateRange != null) {
+          from = _customDateRange!.start;
+          to = _customDateRange!.end;
+        }
+
+        if (from != null && to != null) {
+          queryParams['date_from'] = from.toIso8601String().substring(0, 10);
+          queryParams['date_to'] = to.toIso8601String().substring(0, 10);
+        }
+      }
+
       final results = await Future.wait([
-        widget.api.getJson('/expenses', {
-          'search': _search.text.trim(),
-          'type': _type == 'all' ? null : _type,
-          'category': _category,
-        }),
+        widget.api.getJson('/expenses', queryParams),
         if (_meta.isEmpty) widget.api.getJson('/expenses/meta'),
       ]);
       final data = results.first;
       setState(() {
         _summary = data['summary'] as Map<String, dynamic>;
-        _expenses =
-            ((data['expenses'] as Map<String, dynamic>)['data']
-                as List<dynamic>);
+        _expenses = List.from(
+          ((data['expenses'] as Map<String, dynamic>)['data']
+              as List<dynamic>),
+        );
+        _lastPage = (data['expenses'] as Map<String, dynamic>)['last_page'] as int? ?? 1;
         if (results.length > 1) _meta = results[1];
       });
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loading || _loadingMore || _page >= _lastPage) return;
+    setState(() {
+      _loadingMore = true;
+    });
+    try {
+      final queryParams = <String, String>{
+        'search': _search.text.trim(),
+        'page': '${_page + 1}',
+      };
+      if (_type != 'all') {
+        queryParams['type'] = _type;
+      }
+      if (_category != null) {
+        queryParams['category'] = _category!;
+      }
+
+      if (_dateFilter == 'all') {
+        queryParams['all_dates'] = '1';
+      } else {
+        DateTime? from;
+        DateTime? to;
+        final now = DateTime.now();
+
+        if (_dateFilter == 'today') {
+          from = DateTime(now.year, now.month, now.day);
+          to = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        } else if (_dateFilter == 'yesterday') {
+          final yesterday = now.subtract(const Duration(days: 1));
+          from = DateTime(yesterday.year, yesterday.month, yesterday.day);
+          to = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
+        } else if (_dateFilter == 'this_week') {
+          final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+          from = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+          to = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        } else if (_dateFilter == 'this_month') {
+          from = DateTime(now.year, now.month, 1);
+          to = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        } else if (_dateFilter == 'custom' && _customDateRange != null) {
+          from = _customDateRange!.start;
+          to = _customDateRange!.end;
+        }
+
+        if (from != null && to != null) {
+          queryParams['date_from'] = from.toIso8601String().substring(0, 10);
+          queryParams['date_to'] = to.toIso8601String().substring(0, 10);
+        }
+      }
+
+      final data = await widget.api.getJson('/expenses', queryParams);
+      setState(() {
+        _page++;
+        _expenses.addAll(
+          ((data['expenses'] as Map<String, dynamic>)['data'] as List<dynamic>),
+        );
+        _lastPage = (data['expenses'] as Map<String, dynamic>)['last_page'] as int? ?? 1;
+      });
+    } catch (e) {
+      _snack('Failed to load more: ${e.toString().replaceFirst('Exception: ', '')}', error: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingMore = false;
+        });
+      }
     }
   }
 
@@ -97,7 +212,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 110),
+        padding: EdgeInsets.fromLTRB(18, 8, 18, 110 + MediaQuery.of(context).padding.bottom),
         children: [
           Container(
             padding: const EdgeInsets.all(18),
@@ -118,37 +233,50 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _SmallSummary(
-                        label: 'Opening',
-                        value: moneyLabel(_summary['opening']),
-                        color: Colors.blueGrey,
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _SmallSummary(
+                          label: 'Opening Balance',
+                          value: moneyLabel(_summary['opening']),
+                          color: Colors.blueGrey,
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      child: _SmallSummary(
-                        label: 'Deposit',
-                        value: moneyLabel(_summary['deposit']),
-                        color: Colors.teal,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _SmallSummary(
+                          label: 'Total Deposit',
+                          value: moneyLabel(_summary['deposit']),
+                          color: Colors.teal,
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      child: _SmallSummary(
-                        label: 'Expense',
-                        value: moneyLabel(_summary['expense']),
-                        color: Colors.red,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 10),
-                _SmallSummary(
-                  label: 'Closing Balance',
-                  value: moneyLabel(_summary['closing']),
-                  color: appAccent,
-                  isWide: true,
+                const SizedBox(height: 8),
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _SmallSummary(
+                          label: 'Total Expense',
+                          value: moneyLabel(_summary['expense']),
+                          color: Colors.red,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _SmallSummary(
+                          label: 'Closing Balance',
+                          value: moneyLabel(_summary['closing']),
+                          color: appAccent,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -170,6 +298,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               ChoiceChip(
                 label: const Text('All'),
@@ -197,7 +326,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               ),
               if (categories.isNotEmpty)
                 DropdownMenu<String>(
-                  width: 190,
+                  width: 160,
                   hintText: 'Category',
                   initialSelection: _category,
                   dropdownMenuEntries: categories
@@ -208,6 +337,42 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     _load();
                   },
                 ),
+              DropdownMenu<String>(
+                width: 160,
+                hintText: 'Date Filter',
+                initialSelection: _dateFilter,
+                dropdownMenuEntries: const [
+                  DropdownMenuEntry(value: 'all', label: 'All Time'),
+                  DropdownMenuEntry(value: 'today', label: 'Today'),
+                  DropdownMenuEntry(value: 'yesterday', label: 'Yesterday'),
+                  DropdownMenuEntry(value: 'this_week', label: 'This Week'),
+                  DropdownMenuEntry(value: 'this_month', label: 'This Month'),
+                  DropdownMenuEntry(value: 'custom', label: 'Custom Range'),
+                ],
+                onSelected: (value) async {
+                  if (value == 'custom') {
+                    final picked = await showDateRangePicker(
+                      context: context,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now().add(const Duration(days: 305)),
+                      initialDateRange: _customDateRange,
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        _dateFilter = 'custom';
+                        _customDateRange = picked;
+                      });
+                      _load();
+                    }
+                  } else if (value != null) {
+                    setState(() {
+                      _dateFilter = value;
+                      _customDateRange = null;
+                    });
+                    _load();
+                  }
+                },
+              ),
               if (_category != null)
                 ActionChip(
                   label: const Text('Clear category'),
@@ -215,6 +380,27 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   onPressed: () {
                     setState(() => _category = null);
                     _load();
+                  },
+                ),
+              if (_dateFilter == 'custom' && _customDateRange != null)
+                ActionChip(
+                  label: Text(
+                    '${DateFormat('dd-MM').format(_customDateRange!.start)} - ${DateFormat('dd-MM-yy').format(_customDateRange!.end)}',
+                  ),
+                  avatar: const Icon(Icons.calendar_month_rounded, size: 16),
+                  onPressed: () async {
+                    final picked = await showDateRangePicker(
+                      context: context,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now().add(const Duration(days: 305)),
+                      initialDateRange: _customDateRange,
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        _customDateRange = picked;
+                      });
+                      _load();
+                    }
                   },
                 ),
             ],
@@ -237,7 +423,19 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           ..._expenses.map(
             (item) => ExpenseLedgerCard(expense: item as Map<String, dynamic>),
           ),
-          const SizedBox(height: 70),
+          if (_page < _lastPage) ...[
+            const SizedBox(height: 14),
+            Center(
+              child: _loadingMore
+                  ? const CircularProgressIndicator()
+                  : OutlinedButton.icon(
+                      onPressed: _loadMore,
+                      icon: const Icon(Icons.arrow_downward_rounded),
+                      label: const Text('Load More'),
+                    ),
+            ),
+          ],
+          const SizedBox(height: 30),
           FilledButton.icon(
             onPressed: _openCreate,
             icon: const Icon(Icons.add_rounded),
@@ -254,18 +452,15 @@ class _SmallSummary extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
-    this.isWide = false,
   });
 
   final String label;
   final String value;
   final Color color;
-  final bool isWide;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.only(right: isWide ? 0 : 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: .09),
@@ -289,7 +484,7 @@ class _SmallSummary extends StatelessWidget {
               style: TextStyle(
                 color: color,
                 fontWeight: FontWeight.w900,
-                fontSize: isWide ? 22 : 16,
+                fontSize: 16,
               ),
             ),
           ),
@@ -372,7 +567,60 @@ class ExpenseLedgerCard extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 8),
                     child: AppPill(text: expense['job_task'], color: appAccent),
                   ),
+                if ((expense['incharge'] ?? '').toString().isNotEmpty || (expense['doneby'] ?? '').toString().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        if ((expense['incharge'] ?? '').toString().isNotEmpty)
+                          _CardPill(
+                            icon: Icons.person_rounded,
+                            label: 'User: ${expense['incharge']}',
+                          ),
+                        if ((expense['doneby'] ?? '').toString().isNotEmpty)
+                          _CardPill(
+                            icon: Icons.engineering_rounded,
+                            label: 'Done by: ${expense['doneby']}',
+                          ),
+                      ],
+                    ),
+                  ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CardPill extends StatelessWidget {
+  const _CardPill({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: Colors.blueGrey.shade700),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.blueGrey.shade800,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

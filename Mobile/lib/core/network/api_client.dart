@@ -81,9 +81,17 @@ class ApiClient {
 
   Future<void> downloadAndOpen(String url, String fileName) async {
     try {
-      final response = await http.get(Uri.parse(url), headers: headers);
+      Uri parsedUri = Uri.parse(url);
+      final clientBaseUri = Uri.parse(baseUrl);
+      parsedUri = parsedUri.replace(
+        scheme: clientBaseUri.scheme,
+        host: clientBaseUri.host,
+        port: clientBaseUri.port,
+      );
+
+      final response = await http.get(parsedUri, headers: headers);
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw Exception('Download failed');
+        throw Exception('Download failed with status: ${response.statusCode}');
       }
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/$fileName');
