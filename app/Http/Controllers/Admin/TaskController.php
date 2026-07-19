@@ -830,6 +830,8 @@ class TaskController extends Controller
 
             DB::commit();
 
+            TaskNotificationService::notifyTaskStatusUpdatedByManager($task, Auth::user(), $newStatus, $request->comment);
+
             \ActivityLog::add([
                 'action' => 'updated',
                 'module' => 'taskStatus',

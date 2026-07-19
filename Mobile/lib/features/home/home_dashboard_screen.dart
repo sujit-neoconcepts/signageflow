@@ -24,6 +24,7 @@ class HomeDashboardScreen extends StatefulWidget {
 class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   int _taskCount = 0;
   int _activeTaskCount = 0;
+  int _overdueTaskCount = 0;
   Map<String, dynamic> _expenseSummary = {};
   bool _loading = true;
   String? _error;
@@ -51,6 +52,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         expenses = await widget.api.getJson('/expenses');
       } catch (_) {}
 
+      final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
       setState(() {
         _taskCount = taskRows.length;
         _activeTaskCount = taskRows
@@ -60,6 +62,21 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 'verified',
                 'closed',
               ].contains(task['my_status']),
+            )
+            .length;
+        _overdueTaskCount = taskRows
+            .where(
+              (task) =>
+                  task['my_status'] != 'viewer' &&
+                  ![
+                    'completed',
+                    'verified',
+                    'closed',
+                  ].contains(task['my_status']) &&
+                  task['due_date'] != null &&
+                  task['due_date'].toString().isNotEmpty &&
+                  parseDMY(task['due_date'].toString()) != null &&
+                  parseDMY(task['due_date'].toString())!.isBefore(today),
             )
             .length;
         _expenseSummary = (expenses['summary'] as Map<String, dynamic>?) ?? {};
@@ -76,7 +93,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 110),
+        padding: EdgeInsets.fromLTRB(18, 8, 18, 110 + MediaQuery.of(context).padding.bottom),
         children: [
           Container(
             padding: const EdgeInsets.all(22),
@@ -142,49 +159,93 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.15,
-            children: [
-              _ActionMetricCard(
-                label: 'Tasks',
-                value: '$_taskCount',
-                caption: 'assigned or looped',
-                icon: Icons.task_alt_rounded,
-                color: appAccent,
-                onTap: widget.onOpenTasks,
-              ),
-              _ActionMetricCard(
-                label: 'Active',
-                value: '$_activeTaskCount',
-                caption: 'need attention',
-                icon: Icons.flash_on_rounded,
-                color: Colors.deepOrange,
-                onTap: widget.onOpenTasks,
-              ),
-              _ActionMetricCard(
-                label: 'Expense',
-                value: moneyLabel(_expenseSummary['expense']),
-                caption: 'selected period',
-                icon: Icons.trending_down_rounded,
-                color: Colors.red,
-                onTap: widget.onOpenExpenses,
-              ),
-              _ActionMetricCard(
-                label: 'Closing',
-                value: moneyLabel(_expenseSummary['closing']),
-                caption: 'cash position',
-                icon: Icons.account_balance_wallet_rounded,
-                color: Colors.teal,
-                onTap: widget.onOpenExpenses,
-              ),
-            ],
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _ActionMetricCard(
+                    label: 'Active Tasks',
+                    value: '$_activeTaskCount',
+                    caption: 'need attention',
+                    icon: Icons.flash_on_rounded,
+                    color: Colors.deepOrange,
+                    onTap: widget.onOpenTasks,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ActionMetricCard(
+                    label: 'Overdue Tasks',
+                    value: '$_overdueTaskCount',
+                    caption: 'past due date',
+                    icon: Icons.error_outline_rounded,
+                    color: Colors.red,
+                    onTap: widget.onOpenTasks,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _ActionMetricCard(
+                    label: 'Total Tasks',
+                    value: '$_taskCount',
+                    caption: 'assigned or looped',
+                    icon: Icons.task_alt_rounded,
+                    color: appAccent,
+                    onTap: widget.onOpenTasks,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ActionMetricCard(
+                    label: 'Total Deposit',
+                    value: moneyLabel(_expenseSummary['deposit']),
+                    caption: "today's deposit",
+                    icon: Icons.trending_up_rounded,
+                    color: Colors.teal,
+                    onTap: widget.onOpenExpenses,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _ActionMetricCard(
+                    label: 'Total Expense',
+                    value: moneyLabel(_expenseSummary['expense']),
+                    caption: "today's expense",
+                    icon: Icons.trending_down_rounded,
+                    color: Colors.redAccent,
+                    onTap: widget.onOpenExpenses,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ActionMetricCard(
+                    label: 'Closing Balance',
+                    value: moneyLabel(_expenseSummary['closing']),
+                    caption: 'cash position',
+                    icon: Icons.account_balance_wallet_rounded,
+                    color: Colors.blue,
+                    onTap: widget.onOpenExpenses,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
           AppPanel(
             title: 'Quick Actions',
             child: Column(
@@ -262,12 +323,13 @@ class _ActionMetricCard extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             CircleAvatar(
               backgroundColor: color.withValues(alpha: .12),
               child: Icon(icon, color: color),
             ),
-            const Spacer(),
+            const SizedBox(height: 12),
             FittedBox(
               child: Text(
                 value,
