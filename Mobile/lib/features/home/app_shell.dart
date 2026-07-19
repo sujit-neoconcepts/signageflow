@@ -129,7 +129,30 @@ class _TaskHomeState extends State<TaskHome> {
         ),
         leading: Builder(
           builder: (context) => IconButton(
-            icon: const Icon(Icons.menu_rounded),
+            icon: Container(
+              padding: const EdgeInsets.all(0),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFFE2E8F0),
+                  width: 1.5,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.asset(
+                  'assets/images/logo-w.png',
+                  height: 32,
+                  width: 32,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.menu_rounded,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                ),
+              ),
+            ),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
@@ -200,11 +223,20 @@ class _TaskHomeState extends State<TaskHome> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: const Color(0xFFE2E8F0),
+              width: 1,
+            ),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x220F172A),
-                blurRadius: 22,
-                offset: Offset(0, 10),
+                color: Color(0x0E000000),
+                blurRadius: 18,
+                offset: Offset(0, -4), // project shadow upwards to separate from body content
+              ),
+              BoxShadow(
+                color: Color(0x06000000),
+                blurRadius: 8,
+                offset: Offset(0, 4),
               ),
             ],
           ),
@@ -270,7 +302,7 @@ class AppDrawer extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Image.asset(
-                  'assets/images/logo-w.png',
+                  'assets/images/logo-b.png',
                   height: 54,
                   errorBuilder: (context, error, stackTrace) => const Icon(
                     Icons.business_rounded,
@@ -289,7 +321,7 @@ class AppDrawer extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Tasks and consumable expenses',
+                  'Tiwari Industries',
                   style: TextStyle(
                     color: Colors.white70,
                     fontWeight: FontWeight.w600,
@@ -324,7 +356,6 @@ class AppDrawer extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.notifications_active_rounded),
             title: const Text('Notifications'),
-            subtitle: const Text('Firebase Messaging enabled'),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -336,15 +367,20 @@ class AppDrawer extends StatelessWidget {
             },
           ),
           const Spacer(),
-          ListTile(
-            leading: const Icon(Icons.logout_rounded, color: Colors.red),
-            title: const Text(
-              'Logout',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w800),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: const Icon(Icons.logout_rounded, color: Colors.red),
+                title: const Text(
+                  'Logout',
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.w800),
+                ),
+                onTap: onLogout,
+              ),
             ),
-            onTap: onLogout,
           ),
-          const SizedBox(height: 18),
         ],
       ),
     );

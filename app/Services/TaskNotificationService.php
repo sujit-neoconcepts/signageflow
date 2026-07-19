@@ -120,6 +120,43 @@ class TaskNotificationService
     }
 
     /**
+     * Notify assignees about overall task status updates by the manager.
+     */
+    public static function notifyTaskStatusUpdatedByManager(Task $task, User $manager, string $newStatus, ?string $comment = null)
+    {
+        $task->load(['assignees', 'job']);
+        $channels = $task->notify_channels ?? ['email'];
+
+        $title = "Task Status Updated by Manager - {$task->title}";
+        $taskDetail = self::getDetailedTaskString($task);
+        $statusStr = ucfirst($newStatus);
+        if (! empty($comment)) {
+            $statusStr .= " (Reason: {$comment})";
+        }
+
+        foreach ($task->assignees as $assignee) {
+            $body = "Hello {$assignee->name},<br><br>".
+                    "The overall status of your assigned task has been updated by {$manager->name}.<br><br>".
+                    "<strong>Task Title:</strong> {$task->title}<br>".
+                    "<strong>New Status:</strong> ".ucfirst($newStatus)."<br>".
+                    ($comment ? "<strong>Reason/Comment:</strong> {$comment}<br>" : '').
+                    "<strong>Updated At:</strong> ".now()->format('d-m-Y H:i')."<br><br>".
+                    "Please review the task in your workspace.";
+
+            self::send($assignee, $title, $body, $channels, [
+                'name' => config('services.whatsapp.templates.status_update', 'task_status_update'),
+                'parameters' => [
+                    $assignee->name,
+                    $taskDetail,
+                    $statusStr,
+                    $manager->name,
+                ],
+            ]);
+        }
+    }
+
+
+    /**
      * Notify assignees that a task has started.
      */
     public static function notifyTaskStart(Task $task)

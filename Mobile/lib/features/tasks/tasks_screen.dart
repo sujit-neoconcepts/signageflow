@@ -67,6 +67,18 @@ class _TasksScreenState extends State<TasksScreen> {
               !['completed', 'verified', 'closed'].contains(task['my_status']),
         )
         .length;
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final overdue = _tasks
+        .where(
+          (task) =>
+              task['my_status'] != 'viewer' &&
+              !['completed', 'verified', 'closed'].contains(task['my_status']) &&
+              task['due_date'] != null &&
+              task['due_date'].toString().isNotEmpty &&
+              parseDMY(task['due_date'].toString()) != null &&
+              parseDMY(task['due_date'].toString())!.isBefore(today),
+        )
+        .length;
     return RefreshIndicator(
       onRefresh: _load,
       child: CustomScrollView(
@@ -76,7 +88,11 @@ class _TasksScreenState extends State<TasksScreen> {
               padding: const EdgeInsets.fromLTRB(18, 8, 18, 14),
               child: Column(
                 children: [
-                  _HeroMetrics(total: _tasks.length, active: active),
+                  _HeroMetrics(
+                    total: _tasks.length,
+                    active: active,
+                    overdue: overdue,
+                  ),
                   const SizedBox(height: 14),
                   TextField(
                     controller: _search,
@@ -98,11 +114,10 @@ class _TasksScreenState extends State<TasksScreen> {
                           [
                             'all',
                             'pending',
-                            'accepted',
                             'in_progress',
+                            'over_due',
+                            'viewer',
                             'completed',
-                            'verified',
-                            'closed',
                           ].map((status) {
                             return Padding(
                               padding: const EdgeInsets.only(right: 8),
@@ -167,6 +182,9 @@ class _TasksScreenState extends State<TasksScreen> {
                 );
               },
             ),
+          SliverPadding(
+            padding: EdgeInsets.only(bottom: 110 + MediaQuery.of(context).padding.bottom),
+          ),
         ],
       ),
     );
@@ -174,15 +192,20 @@ class _TasksScreenState extends State<TasksScreen> {
 }
 
 class _HeroMetrics extends StatelessWidget {
-  const _HeroMetrics({required this.total, required this.active});
+  const _HeroMetrics({
+    required this.total,
+    required this.active,
+    required this.overdue,
+  });
 
   final int total;
   final int active;
+  final int overdue;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
         gradient: const LinearGradient(
@@ -203,11 +226,15 @@ class _HeroMetrics extends StatelessWidget {
           Expanded(
             child: _Metric(label: 'Assigned', value: '$total'),
           ),
-          Container(width: 1, height: 52, color: Colors.white24),
+          Container(width: 1, height: 42, color: Colors.white24),
           Expanded(
             child: _Metric(label: 'Active', value: '$active'),
           ),
-          Container(width: 1, height: 52, color: Colors.white24),
+          Container(width: 1, height: 42, color: Colors.white24),
+          Expanded(
+            child: _Metric(label: 'Overdue', value: '$overdue'),
+          ),
+          Container(width: 1, height: 42, color: Colors.white24),
           Expanded(
             child: _Metric(label: 'Done', value: '${total - active}'),
           ),
@@ -227,19 +254,25 @@ class _Metric extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 26,
-            fontWeight: FontWeight.w900,
+        FittedBox(
+          child: Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontWeight: FontWeight.w700,
+        const SizedBox(height: 2),
+        FittedBox(
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],
@@ -256,15 +289,37 @@ class TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final priority = task['priority'] as String? ?? 'medium';
+    final isCompleted = ['completed', 'verified', 'closed'].contains(task['my_status']);
+    final isViewer = task['my_status'] == 'viewer';
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final isOverdue = !isViewer &&
+        !isCompleted &&
+        task['due_date'] != null &&
+        task['due_date'].toString().isNotEmpty &&
+        parseDMY(task['due_date'].toString()) != null &&
+        parseDMY(task['due_date'].toString())!.isBefore(today);
+
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isOverdue ? const Color(0xFFFEF2F2) : Colors.white,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(
+            color: isOverdue ? Colors.red.shade300 : const Color(0xFFE2E8F0),
+            width: isOverdue ? 1.8 : 1.0,
+          ),
+          boxShadow: isOverdue
+              ? [
+                  BoxShadow(
+                    color: Colors.red.withValues(alpha: .08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,6 +355,11 @@ class TaskCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
+                if (isOverdue)
+                  const AppPill(
+                    text: 'OVERDUE',
+                    color: Colors.red,
+                  ),
                 AppPill(
                   text: labelFor(task['my_status'] ?? 'viewer'),
                   color: statusColorFor(task['my_status']),
@@ -310,7 +370,7 @@ class TaskCard extends StatelessWidget {
                 ),
                 AppPill(
                   text: 'Due ${task['due_date'] ?? '-'}',
-                  color: Colors.blueGrey,
+                  color: isOverdue ? Colors.red.shade700 : Colors.blueGrey,
                 ),
                 if (task['need_expense'] == true)
                   const AppPill(text: 'Expense', color: Colors.teal),
@@ -356,8 +416,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       _error = null;
     });
     try {
-      final data = await widget.api.getJson('/tasks/${widget.task['id']}');
-      setState(() => _detail = data);
+       final data = await widget.api.getJson('/tasks/${widget.task['id']}');
+      setState(() {
+        _detail = data;
+        if (data['my_status'] != null) {
+          widget.task['my_status'] = data['my_status'];
+        }
+      });
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -561,7 +626,7 @@ class _ActionPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final myStatus = summary['my_status'] as String? ?? '';
     if (summary['is_assignee'] != true ||
-        ['verified', 'closed'].contains(myStatus)) {
+        ['completed', 'verified', 'closed'].contains(myStatus)) {
       return const SizedBox.shrink();
     }
     final startRaw = summary['start_date_raw'] as String?;
@@ -639,7 +704,19 @@ class _CompleteTaskSheetState extends State<CompleteTaskSheet> {
   final _enquiry = TextEditingController();
   final _sales = TextEditingController();
   final List<File> _files = [];
+  final _recorder = AudioRecorder();
+  bool _recording = false;
   bool _saving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _recorder.dispose();
+    _comment.dispose();
+    _enquiry.dispose();
+    _sales.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickFiles() async {
     final result = await FilePicker.platform.pickFiles(allowMultiple: true);
@@ -650,8 +727,32 @@ class _CompleteTaskSheetState extends State<CompleteTaskSheet> {
     }
   }
 
+  Future<void> _toggleRecord() async {
+    if (_recording) {
+      final path = await _recorder.stop();
+      if (path != null) setState(() => _files.add(File(path)));
+      setState(() => _recording = false);
+      return;
+    }
+    if (!await _recorder.hasPermission()) {
+      widget.snack('Microphone permission is required.', error: true);
+      return;
+    }
+    final dir = await getTemporaryDirectory();
+    final path =
+        '${dir.path}/voice_note_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    await _recorder.start(
+      const RecordConfig(encoder: AudioEncoder.aacLc),
+      path: path,
+    );
+    setState(() => _recording = true);
+  }
+
   Future<void> _submit() async {
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     try {
       await widget.api.multipart('/tasks/${widget.taskId}/status', {
         'status': 'completed',
@@ -663,7 +764,7 @@ class _CompleteTaskSheetState extends State<CompleteTaskSheet> {
       await widget.onChanged();
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      widget.snack(e.toString().replaceFirst('Exception: ', ''), error: true);
+      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -680,7 +781,7 @@ class _CompleteTaskSheetState extends State<CompleteTaskSheet> {
         left: 18,
         right: 18,
         top: 18,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 18,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 18 + MediaQuery.of(context).padding.bottom,
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -719,20 +820,56 @@ class _CompleteTaskSheetState extends State<CompleteTaskSheet> {
               decoration: const InputDecoration(labelText: 'Work summary'),
             ),
             const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: _pickFiles,
-              icon: const Icon(Icons.attach_file_rounded),
-              label: Text(
-                _files.isEmpty
-                    ? 'Attach files'
-                    : '${_files.length} file(s) attached',
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pickFiles,
+                    icon: const Icon(Icons.attach_file_rounded),
+                    label: Text(
+                      _files.isEmpty
+                          ? 'Attach files'
+                          : '${_files.length} file(s)',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _toggleRecord,
+                    icon: Icon(
+                      _recording ? Icons.stop_rounded : Icons.mic_rounded,
+                      color: _recording ? Colors.red : null,
+                    ),
+                    label: Text(_recording ? 'Stop Rec' : 'Voice Note'),
+                  ),
+                ),
+              ],
             ),
+             if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
-            FilledButton.icon(
+             FilledButton.icon(
               onPressed: _saving ? null : _submit,
-              icon: const Icon(Icons.send_rounded),
-              label: const Text('Submit'),
+              icon: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.send_rounded),
+              label: Text(_saving ? 'Submitting...' : 'Submit'),
             ),
           ],
         ),
@@ -773,10 +910,10 @@ class _ExpensePanelState extends State<ExpensePanel> {
   final _amount = TextEditingController();
   final _details = TextEditingController();
   final _jobDetails = TextEditingController();
-  String _type = 'Expense';
+  final _type = 'Expense';
   String? _category;
   DateTime _date = DateTime.now();
-  final Set<String> _doneBy = {};
+  String? _selectedDoneBy;
   bool _saving = false;
 
   @override
@@ -795,7 +932,7 @@ class _ExpensePanelState extends State<ExpensePanel> {
         'exp_cate': _category,
         'details': _details.text,
         'job_details': _jobDetails.text,
-        'doneby': _doneBy.toList(),
+        'doneby': _selectedDoneBy != null ? [_selectedDoneBy!] : [],
         'job_no': widget.taskTitle,
       });
       _amount.clear();
@@ -884,18 +1021,6 @@ class _ExpensePanelState extends State<ExpensePanel> {
             ),
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
-              initialValue: _type,
-              items: ['Expense', 'Deposit']
-                  .map(
-                    (value) =>
-                        DropdownMenuItem(value: value, child: Text(value)),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _type = value!),
-              decoration: const InputDecoration(labelText: 'Type'),
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
               initialValue: _category,
               items: categories
                   .map(
@@ -915,23 +1040,20 @@ class _ExpensePanelState extends State<ExpensePanel> {
             ),
             const SizedBox(height: 10),
             if (doneByOptions.isNotEmpty) ...[
-              const Text(
-                'Done By',
-                style: TextStyle(fontWeight: FontWeight.w800, color: appInk),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: doneByOptions.map((name) {
-                  return FilterChip(
-                    label: Text(name),
-                    selected: _doneBy.contains(name),
-                    onSelected: (selected) => setState(() {
-                      selected ? _doneBy.add(name) : _doneBy.remove(name);
-                    }),
-                  );
-                }).toList(),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedDoneBy,
+                items: [
+                  const DropdownMenuItem<String>(
+                    value: null,
+                    child: Text('Select Done By'),
+                  ),
+                  ...doneByOptions.map(
+                    (name) =>
+                        DropdownMenuItem(value: name, child: Text(name)),
+                  ),
+                ],
+                onChanged: (value) => setState(() => _selectedDoneBy = value),
+                decoration: const InputDecoration(labelText: 'Done By'),
               ),
               const SizedBox(height: 10),
             ],
@@ -1063,14 +1185,33 @@ class _CommentsPanelState extends State<CommentsPanel> {
                   const SizedBox(height: 6),
                   Text(item['comment'] ?? ''),
                   ...((item['files'] as List?) ?? []).map(
-                    (file) => TextButton.icon(
-                      onPressed: () => widget.api.downloadAndOpen(
-                        file['download_url'],
-                        file['file_name'],
-                      ),
-                      icon: const Icon(Icons.attachment_rounded),
-                      label: Text(file['file_name']),
-                    ),
+                    (file) {
+                      final name = (file['file_name'] as String? ?? '').toLowerCase();
+                      final isAudio = name.contains('voice_note') ||
+                          name.endsWith('.m4a') ||
+                          name.endsWith('.mp3') ||
+                          name.endsWith('.wav') ||
+                          name.endsWith('.aac') ||
+                          name.endsWith('.caf') ||
+                          name.endsWith('.webm');
+                      return TextButton.icon(
+                        onPressed: () => widget.api.downloadAndOpen(
+                          file['download_url'],
+                          file['file_name'],
+                        ),
+                        icon: Icon(
+                          isAudio ? Icons.play_circle_outline_rounded : Icons.attachment_rounded,
+                          color: isAudio ? Colors.teal : Colors.blueGrey,
+                        ),
+                        label: Text(
+                          isAudio ? 'Play Voice Note' : file['file_name'],
+                          style: TextStyle(
+                            fontWeight: isAudio ? FontWeight.w800 : FontWeight.normal,
+                            color: isAudio ? Colors.teal.shade800 : null,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -1107,9 +1248,18 @@ class _CommentsPanelState extends State<CommentsPanel> {
             ),
             const SizedBox(height: 10),
             FilledButton.icon(
-              onPressed: _saving || _comment.text.trim().isEmpty ? null : _post,
-              icon: const Icon(Icons.send_rounded),
-              label: const Text('Post Comment'),
+              onPressed: _saving || !(_comment.text.trim().isNotEmpty || _files.isNotEmpty) ? null : _post,
+              icon: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.send_rounded),
+              label: Text(_saving ? 'Posting...' : 'Post Comment'),
             ),
           ],
         ],
