@@ -70,7 +70,7 @@ const submitform = () => {
         <CardBox>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <FormField label="Name" help="" :error="form.errors.name">
-              <FormControl name="name" v-model="form.name" required />
+              <FormControl name="name" v-model="form.name" :readonly="!!props.formdata.id" required />
             </FormField>
             <FormField label="Email" help="" :error="form.errors.email">
               <FormControl name="eemail" v-model="form.email" autocomplete="new-email" required />

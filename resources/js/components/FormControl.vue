@@ -76,6 +76,8 @@ const inputElClass = computed(() => {
     const base = [
         "px-3 py-1 max-w-full focus:ring focus:outline-none border-gray-700 rounded w-full",
         "dark:placeholder-gray-400",
+        "disabled:bg-gray-100 dark:disabled:bg-slate-700/50 disabled:text-gray-500 disabled:cursor-not-allowed",
+        "read-only:bg-gray-100 dark:read-only:bg-slate-700/50 read-only:text-gray-500",
         computedType.value === "textarea" ? "h-24" : "h-10",
         props.borderless ? "border-0" : "border",
         props.color ? props.color : (props.transparent ? "bg-transparent" : "bg-white dark:bg-slate-800"),

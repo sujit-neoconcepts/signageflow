@@ -343,7 +343,7 @@ class UserController extends Controller
             return redirect()->back()->withErrors(['roles' => 'The super-admin role cannot be assigned.'])->withInput();
         }
 
-        $user->name = $request->name;
+        // Name is read-only in edit mode and cannot be updated.
         $user->email = $request->email;
         $user->phone = $request->phone;
         $user->twofa = $request->twofa ? 1 : 0;
