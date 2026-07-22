@@ -62,15 +62,26 @@ class ConsumableInternalNameGroupReportController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        $resourceData->getCollection()->transform(function ($item) {
+        $pageGroupIds = $resourceData->getCollection()->pluck('id')->filter()->toArray();
+        $pageGroups = collect();
+        $weightedPrices = [];
+        if (! empty($pageGroupIds)) {
+            $pageGroups = ConsumableInternalNameGroup::whereIn('id', $pageGroupIds)->with('items')->get();
+            $weightedPrices = ConsumableInternalNameGroup::getWeightedUnitPrices($pageGroups);
+        }
+
+        $resourceData->getCollection()->transform(function ($item) use ($weightedPrices, $pageGroups) {
             // Disable Eloquent's dynamic appends to prevent N+1 queries during serialization
             $item->setAppends([]);
 
-            if (isset($item->avg_unit_price)) {
-                $item->avg_unit_price = number_format((float) $item->avg_unit_price, 2, '.', '');
-            } else {
-                $item->avg_unit_price = '0.00';
-            }
+            $g = $pageGroups->firstWhere('id', $item->id);
+            $first = $g ? $g->items->first() : null;
+            $margin = $first ? (float) $first->openStockMarginPercent : 0.00;
+            $weightedPrice = $weightedPrices[$item->id] ?? 0.00;
+            $avgWithMargin = $weightedPrice * (1 + $margin / 100);
+
+            $item->avg_unit_price = number_format((float) $avgWithMargin, 2, '.', '');
+
             return $item;
         });
 
@@ -78,7 +89,7 @@ class ConsumableInternalNameGroupReportController extends Controller
 
         return Inertia::render('Admin/IndexView', ['resourceData' => $resourceData, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) {
             $table->withGlobalSearch();
-            
+
             $table->column('group_name', 'Group Name', sortable: true);
             $table->column('unitName', 'Unit Name', sortable: true);
             $table->column('unitAltName', 'Unit Alt Name', sortable: true);

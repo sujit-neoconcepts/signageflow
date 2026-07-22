@@ -81,14 +81,18 @@ class ConsumableInternalNameGroupController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        $resourceData->getCollection()->transform(function ($item) {
+        $pageGroupIds = $resourceData->getCollection()->pluck('id')->filter()->toArray();
+        $weightedPrices = [];
+        if (! empty($pageGroupIds)) {
+            $pageGroups = ConsumableInternalNameGroup::whereIn('id', $pageGroupIds)->with('items')->get();
+            $weightedPrices = ConsumableInternalNameGroup::getWeightedUnitPrices($pageGroups);
+        }
+
+        $resourceData->getCollection()->transform(function ($item) use ($weightedPrices) {
             $item->setAppends([]);
 
-            if (isset($item->unitPrice)) {
-                $item->unitPrice = number_format((float) $item->unitPrice, 2, '.', '');
-            } else {
-                $item->unitPrice = '0.00';
-            }
+            $weightedPrice = $weightedPrices[$item->id] ?? 0.00;
+            $item->unitPrice = number_format((float) $weightedPrice, 2, '.', '');
 
             if (isset($item->openStockMarginPercent)) {
                 $item->openStockMarginPercent = number_format((float) $item->openStockMarginPercent, 2, '.', '');
@@ -352,10 +356,53 @@ class ConsumableInternalNameGroupController extends Controller
             ->orderBy('name')
             ->get();
 
-        $formattedItems = $items->map(function ($item) {
+        $itemNames = $items->pluck('name')->filter()->toArray();
+
+        $pur0Map = [];
+        $pur1Map = [];
+        $outMap = [];
+
+        if (! empty($itemNames)) {
+            $pur0Map = \App\Models\Purchase::select('pur_pr_detail_int', DB::raw('IFNULL(SUM(pur_qty_int), 0) as qtysum'))
+                ->where('entry_type', 0)
+                ->whereIn('pur_pr_detail_int', $itemNames)
+                ->groupBy('pur_pr_detail_int')
+                ->pluck('qtysum', 'pur_pr_detail_int');
+
+            $pur1Map = \App\Models\Purchase::select('pur_pr_detail_int', DB::raw('IFNULL(SUM(pur_qty_int), 0) as qtysum'))
+                ->where('entry_type', 1)
+                ->whereIn('pur_pr_detail_int', $itemNames)
+                ->groupBy('pur_pr_detail_int')
+                ->pluck('qtysum', 'pur_pr_detail_int');
+
+            $outMap = \App\Models\Outward::select('out_product', DB::raw('IFNULL(SUM(out_qty), 0) as qtysum'))
+                ->whereIn('out_product', $itemNames)
+                ->groupBy('out_product')
+                ->pluck('qtysum', 'out_product');
+        }
+
+        $totalGroupStock = 0;
+        $weightedPriceSum = 0;
+        $weightedStockSum = 0;
+
+        $formattedItems = $items->map(function ($item) use ($pur0Map, $pur1Map, $outMap, &$totalGroupStock, &$weightedPriceSum, &$weightedStockSum) {
+            $qtyPur0 = (float) ($pur0Map[$item->name] ?? 0);
+            $qtyPur1 = (float) ($pur1Map[$item->name] ?? 0);
+            $qtyOut = (float) ($outMap[$item->name] ?? 0);
+            $currentStock = $qtyPur1 + $qtyPur0 - $qtyOut;
+
+            $totalGroupStock += $currentStock;
+            $unitPrice = (float) $item->unitPrice;
+
+            if ($currentStock > 0 && $unitPrice > 0) {
+                $weightedPriceSum += $currentStock * $unitPrice;
+                $weightedStockSum += $currentStock;
+            }
+
             return [
                 'id' => $item->id,
                 'name' => $item->name,
+                'currentStock' => number_format((float) $currentStock, 2, '.', ''),
                 'unitPrice' => number_format((float) $item->unitPrice, 2, '.', ''),
                 'unitName' => $item->unitName,
                 'unitAltName' => $item->unitAltName,
@@ -364,8 +411,14 @@ class ConsumableInternalNameGroupController extends Controller
             ];
         });
 
-        // Calculate average price and margin for the brief info
-        $averagePrice = $items->isEmpty() ? 0.00 : $items->avg('unitPrice');
+        if ($weightedStockSum > 0) {
+            $weightedUnitPrice = $weightedPriceSum / $weightedStockSum;
+        } else {
+            // Display 0.00 for 0 total stock for now as requested.
+            // Non-zero average if needed: $items->where('unitPrice', '>', 0)->avg('unitPrice') ?? 0.00
+            $weightedUnitPrice = 0.00;
+        }
+
         $margin = $items->isEmpty() ? 0.00 : ($items->first()->openStockMarginPercent ?? 0.00);
         $firstItem = $items->first();
 
@@ -374,13 +427,15 @@ class ConsumableInternalNameGroupController extends Controller
                 ['label' => 'Group Name', 'value' => $group->name],
                 ['label' => 'Unit', 'value' => $firstItem ? $firstItem->unitName : '-'],
                 ['label' => 'Alt Unit', 'value' => $firstItem ? $firstItem->unitAltName : '-'],
-                ['label' => 'Average Price', 'value' => number_format((float) $averagePrice, 2, '.', '')],
+                ['label' => 'Average Price', 'value' => number_format((float) $weightedUnitPrice, 2, '.', '')],
                 ['label' => 'Margin %', 'value' => number_format((float) $margin, 2, '.', '')],
+                ['label' => 'Current Stock', 'value' => number_format((float) $totalGroupStock, 2, '.', '')],
             ],
         ];
 
         $columns = [
             ['key' => 'name', 'label' => 'Name', 'align' => 'left'],
+            ['key' => 'currentStock', 'label' => 'Current Stock', 'align' => 'right'],
             ['key' => 'unitPrice', 'label' => 'Unit Price', 'align' => 'right'],
             ['key' => 'unitName', 'label' => 'Unit Name', 'align' => 'left'],
             ['key' => 'unitAltName', 'label' => 'Unit Alt Name', 'align' => 'left'],
