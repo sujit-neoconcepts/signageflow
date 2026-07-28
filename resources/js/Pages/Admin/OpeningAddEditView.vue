@@ -70,15 +70,19 @@ onBeforeMount(() => {
             }
             for (const opkey in props.resourceNeo.formInfoMulti
                 .pur_pr_detail_int.options) {
-                if (
+                const opt =
                     props.resourceNeo.formInfoMulti.pur_pr_detail_int.options[
                         opkey
-                    ].id == props.formdata["pur_pr_id"]
+                    ];
+                if (
+                    opt.id == props.formdata["pur_pr_id"] ||
+                    opt.label == props.formdata["multi"][index]["pur_pr_detail_int"]
                 ) {
-                    tepm["pur_pr_detail_int"] =
-                        props.resourceNeo.formInfoMulti.pur_pr_detail_int.options[
-                            opkey
-                        ];
+                    tepm["pur_pr_detail_int"] = opt;
+                    if (opt.data && opt.data.internal_name_group && !tepm["pur_internal_name_group"]) {
+                        tepm["pur_internal_name_group"] = opt.data.internal_name_group;
+                    }
+                    break;
                 }
             }
             form["multi"].push(tepm);

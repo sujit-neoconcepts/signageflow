@@ -67,6 +67,7 @@ class OpeningController extends Controller
                         }
                         if ($key === 'pur_internal_name_group') {
                             $query->orWhere('cing.name', 'LIKE', "%{$value}%");
+
                             continue;
                         }
                         $query->orWhere($key, 'LIKE', "%{$value}%");
@@ -101,7 +102,7 @@ class OpeningController extends Controller
             array_diff(array_keys($formInfo), []),
             array_diff(array_keys($formInfoMulti), ['pur_internal_name_group']),
             [
-                \Spatie\QueryBuilder\AllowedSort::field('pur_internal_name_group', 'cing.name')
+                \Spatie\QueryBuilder\AllowedSort::field('pur_internal_name_group', 'cing.name'),
             ]
         );
 
@@ -244,7 +245,7 @@ class OpeningController extends Controller
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
             $savedArray[$key] = $request->{$key};
         }
-        foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate', 'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty']) as $key) {
+        foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate', 'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty', 'pur_internal_name_group']) as $key) {
             $attributeNames['multi.*.'.$key] = $formInfoMulti[$key]['label'];
             isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.'.$key] = $formInfoMulti[$key]['vRule'];
         }
@@ -253,7 +254,7 @@ class OpeningController extends Controller
         $savedArray['pur_date'] = $savedArray['received_date'] = date('Y-m-d', strtotime($request->pur_date));
 
         foreach ($request->multi as $ml) {
-            foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate', 'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty']) as $key) {
+            foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate', 'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty', 'pur_internal_name_group']) as $key) {
                 $savedArray[$key] = $ml[$key];
             }
             $savedArray['pur_pr_detail_int'] = isset($ml['pur_pr_detail_int']['label']) ? trim($ml['pur_pr_detail_int']['label']) : null;
@@ -283,7 +284,11 @@ class OpeningController extends Controller
      */
     public function edit($purchase_id)
     {
-        $purchase = Purchase::find($purchase_id);
+        $purchase = Purchase::select('purchases.*', 'cing.name as pur_internal_name_group')
+            ->leftJoin('consumable_internal_names as cin', 'cin.name', '=', 'purchases.pur_pr_detail_int')
+            ->leftJoin('consumable_internal_name_groups as cing', 'cing.id', '=', 'cin.consumable_internal_name_group_id')
+            ->where('purchases.id', $purchase_id)
+            ->firstOrFail();
         $formdata = $purchase;
         $temp = [];
         $formInfoMulti = Purchase::formInfoMulti();
@@ -347,7 +352,7 @@ class OpeningController extends Controller
             $attributeNames[$key] = $formInfo[$key]['label'];
             isset($formInfo[$key]['vRule']) && $validateRule[$key] = $formInfo[$key]['vRule'];
         }
-        foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate',  'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty']) as $key) {
+        foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate',  'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty', 'pur_internal_name_group']) as $key) {
             $attributeNames['multi.*.'.$key] = $formInfoMulti[$key]['label'];
             isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.'.$key] = $formInfoMulti[$key]['vRule'];
         }
@@ -357,7 +362,7 @@ class OpeningController extends Controller
         }
         $purchase->pur_date = $purchase->received_date = date('Y-m-d', strtotime($request->pur_date));
         foreach ($request->multi as $ml) {
-            foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate',  'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty']) as $key) {
+            foreach (array_diff(array_keys($formInfoMulti), ['pur_pr_detail', 'pur_pr_hsn', 'pur_qty', 'pur_qty_alt', 'pur_unit', 'pur_unit_alt', 'pur_unit_conv_rate', 'pur_rate',  'pur_gst_amnt', 'pur_amnt_total', 'last_rate', 'unit_rate', 'available_qty', 'pur_internal_name_group']) as $key) {
                 $purchase->{$key} = $ml[$key];
             }
             $purchase->pur_pr_detail_int = isset($ml['pur_pr_detail_int']['label']) ? trim($ml['pur_pr_detail_int']['label']) : null;

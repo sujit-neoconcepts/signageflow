@@ -205,16 +205,28 @@ class Product extends Model
             $in = $purSub[$alldata->name] ?? 0;
             $out = $outSub[$alldata->name] ?? 0;
 
-            $alldata->available_qty = $in - $out;
-            $alldata->last_rate = $lastRates[$alldata->name] ?? 0;
-            $alldata->unit_rate = $alldata->unitPrice ?? 0;
-
             $lastPurchase = $lastPurchases[$alldata->name] ?? null;
-            $alldata->last_incharge = $lastPurchase ? $lastPurchase->pur_incharge : '';
-            $alldata->last_location = $lastPurchase ? $lastPurchase->pur_loc : '';
-            $alldata->internal_name_group = $alldata->group ? $alldata->group->name : '';
 
-            $allOpt[] = ['id' => $minIds[$alldata->name] ?? null, 'label' => $alldata->name, 'data' => $alldata];
+            // Build a plain array instead of passing the Eloquent model.
+            // Passing the full model causes N+1 queries during JSON serialization
+            // because the eager-loaded group (ConsumableInternalNameGroup) has
+            // $appends that trigger expensive accessor queries per instance.
+            $data = [
+                'name' => $alldata->name,
+                'unitPrice' => $alldata->unitPrice,
+                'unitName' => $alldata->unitName,
+                'unitAltName' => $alldata->unitAltName,
+                'openStockUnit' => $alldata->openStockUnit,
+                'openStockMarginPercent' => $alldata->openStockMarginPercent,
+                'available_qty' => $in - $out,
+                'last_rate' => $lastRates[$alldata->name] ?? 0,
+                'unit_rate' => $alldata->unitPrice ?? 0,
+                'last_incharge' => $lastPurchase ? $lastPurchase->pur_incharge : '',
+                'last_location' => $lastPurchase ? $lastPurchase->pur_loc : '',
+                'internal_name_group' => $alldata->group ? $alldata->group->name : '',
+            ];
+
+            $allOpt[] = ['id' => $minIds[$alldata->name] ?? null, 'label' => $alldata->name, 'data' => (object) $data];
         }
 
         return $allOpt;
