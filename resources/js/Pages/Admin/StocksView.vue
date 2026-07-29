@@ -142,8 +142,11 @@ onMounted(() => {
 const isModalTranActive = ref(false);
 const transaDetailsLive = ref([]);
 const selectedProductName = ref("");
-const showditail = async (pname) => {
+const selectedStockItem = ref(null);
+
+const showditail = async (pname, item = null) => {
     selectedProductName.value = pname;
+    selectedStockItem.value = item;
     isModalTranActive.value = true;
     transaDetailsLive.value = [];
     await axios
@@ -154,6 +157,59 @@ const showditail = async (pname) => {
             transaDetailsLive.value = response.data;
         });
 };
+
+const transactionSummary = computed(() => {
+    let openingQty = 0;
+    let openingQtyAlt = 0;
+    let purchaseQty = 0;
+    let purchaseQtyAlt = 0;
+    let outwardQty = 0;
+    let outwardQtyAlt = 0;
+    let mainUnit = "";
+    let altUnit = "";
+
+    (transaDetailsLive.value || []).forEach((row) => {
+        if (row.pur_pr_detail_int) {
+            if (!mainUnit && row.pur_unint_int) mainUnit = row.pur_unint_int;
+            if (!altUnit && row.pur_unint_int_alt) altUnit = row.pur_unint_int_alt;
+
+            if (row.entry_type == 1) {
+                openingQty += Number(row.pur_qty_int || 0);
+                openingQtyAlt += Number(row.pur_qty_int_alt || 0);
+            } else {
+                purchaseQty += Number(row.pur_qty_int || 0);
+                purchaseQtyAlt += Number(row.pur_qty_int_alt || 0);
+            }
+        } else {
+            if (!mainUnit && row.out_qty_unit) mainUnit = row.out_qty_unit;
+            if (!altUnit && row.out_qty_unit_alt) altUnit = row.out_qty_unit_alt;
+
+            outwardQty += Number(row.out_qty || 0);
+            outwardQtyAlt += Number(row.out_qty_alt || 0);
+        }
+    });
+
+    const balanceQty = openingQty + purchaseQty - outwardQty;
+    const balanceQtyAlt = openingQtyAlt + purchaseQtyAlt - outwardQtyAlt;
+
+    const formatNum = (num) => {
+        return Number.isInteger(num) ? num : Number(num.toFixed(3));
+    };
+
+    return {
+        openingQty: formatNum(openingQty),
+        openingQtyAlt: formatNum(openingQtyAlt),
+        purchaseQty: formatNum(purchaseQty),
+        purchaseQtyAlt: formatNum(purchaseQtyAlt),
+        outwardQty: formatNum(outwardQty),
+        outwardQtyAlt: formatNum(outwardQtyAlt),
+        balanceQty: formatNum(balanceQty),
+        balanceQtyAlt: formatNum(balanceQtyAlt),
+        mainUnit: mainUnit || selectedStockItem.value?.pr_int_unit || "",
+        altUnit: altUnit || selectedStockItem.value?.pr_int_unit_alt || "",
+        totalCount: transaDetailsLive.value.length,
+    };
+});
 
 const getStockDetails = (stockId) => {
     const stock = props.resourceData.data.find((item) => item.id === stockId);
@@ -230,7 +286,7 @@ const getMaxQuantity = (stockId) => {
                     <template #cell(pr_detail_int)="{ item: moduledata }">
                         <span
                             class="cursor-pointer hover:text-blue-600"
-                            @click="showditail(moduledata.pr_detail_int)"
+                            @click="showditail(moduledata.pr_detail_int, moduledata)"
                             >{{ moduledata.pr_detail_int }}
                         </span>
                     </template>
@@ -336,12 +392,74 @@ const getMaxQuantity = (stockId) => {
             <div
                 class="lg:max-h-[calc(100vh-280px)] overflow-y-auto relative"
             >
-                <div class="mb-4 bg-gray-100 dark:bg-slate-800 p-4 rounded-lg flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-blue-600 dark:text-blue-400">
-                        {{ selectedProductName }}
-                    </h2>
-                    <div class="text-sm text-gray-500 dark:text-gray-400">
-                        Total Transactions: {{ transaDetailsLive.length }}
+                <div class="mb-4 bg-gray-50 dark:bg-slate-800/80 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm space-y-4">
+                    <div class="flex flex-wrap justify-between items-center gap-2 pb-3 border-b border-gray-200 dark:border-slate-700">
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-xl font-bold text-blue-600 dark:text-blue-400">
+                                {{ selectedProductName }}
+                            </h2>
+                            <span v-if="selectedStockItem?.groupinfo_name" class="text-xs px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 font-medium">
+                                {{ selectedStockItem.groupinfo_name }}
+                                <template v-if="selectedStockItem.groupinfo_sname"> &rsaquo; {{ selectedStockItem.groupinfo_sname }}</template>
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold px-3 py-1 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-full">
+                                Total Transactions: {{ transactionSummary.totalCount }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-center">
+                        <div class="p-3 bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 shadow-xs">
+                            <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">Opening Qty</div>
+                            <div class="text-base font-bold text-gray-800 dark:text-gray-100 mt-1">
+                                {{ transactionSummary.openingQty }} <span v-if="transactionSummary.mainUnit" class="text-xs font-normal text-gray-500">{{ transactionSummary.mainUnit }}</span>
+                            </div>
+                            <div v-if="transactionSummary.openingQtyAlt" class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                Alt: {{ transactionSummary.openingQtyAlt }} {{ transactionSummary.altUnit }}
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 shadow-xs">
+                            <div class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Purchases (In)</div>
+                            <div class="text-base font-bold text-emerald-700 dark:text-emerald-300 mt-1">
+                                {{ transactionSummary.purchaseQty }} <span v-if="transactionSummary.mainUnit" class="text-xs font-normal text-gray-500">{{ transactionSummary.mainUnit }}</span>
+                            </div>
+                            <div v-if="transactionSummary.purchaseQtyAlt" class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                Alt: {{ transactionSummary.purchaseQtyAlt }} {{ transactionSummary.altUnit }}
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 shadow-xs">
+                            <div class="text-xs text-amber-600 dark:text-amber-400 font-medium">Outward (Out)</div>
+                            <div class="text-base font-bold text-amber-700 dark:text-amber-300 mt-1">
+                                {{ transactionSummary.outwardQty }} <span v-if="transactionSummary.mainUnit" class="text-xs font-normal text-gray-500">{{ transactionSummary.mainUnit }}</span>
+                            </div>
+                            <div v-if="transactionSummary.outwardQtyAlt" class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                Alt: {{ transactionSummary.outwardQtyAlt }} {{ transactionSummary.altUnit }}
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-blue-50/70 dark:bg-blue-950/40 rounded-lg border border-blue-200 dark:border-blue-800/50 shadow-xs">
+                            <div class="text-xs text-blue-600 dark:text-blue-400 font-semibold">Net Balance Qty</div>
+                            <div class="text-base font-bold text-blue-700 dark:text-blue-300 mt-1">
+                                {{ transactionSummary.balanceQty }} <span v-if="transactionSummary.mainUnit" class="text-xs font-normal text-blue-500">{{ transactionSummary.mainUnit }}</span>
+                            </div>
+                            <div v-if="transactionSummary.balanceQtyAlt" class="text-xs text-blue-500/80 dark:text-blue-400/70 mt-0.5">
+                                Alt: {{ transactionSummary.balanceQtyAlt }} {{ transactionSummary.altUnit }}
+                            </div>
+                        </div>
+
+                        <div v-if="selectedStockItem?.stock_value !== undefined" class="p-3 bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 shadow-xs">
+                            <div class="text-xs text-purple-600 dark:text-purple-400 font-medium">Stock Value</div>
+                            <div class="text-base font-bold text-purple-700 dark:text-purple-300 mt-1">
+                                ₹{{ selectedStockItem.stock_value ?? '0.00' }}
+                            </div>
+                            <div v-if="selectedStockItem.stock_unit_price" class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                Rate: ₹{{ selectedStockItem.stock_unit_price }}
+                            </div>
+                        </div>
                     </div>
                 </div>
             <table>
@@ -403,14 +521,14 @@ const getMaxQuantity = (stockId) => {
                         {{
                             data.pur_pr_detail_int
                                 ? data.pur_unint_int
-                                : data.out_qty_alt
+                                : data.out_qty_unit
                         }}
                     </td>
                     <td>
                         {{
                             data.pur_pr_detail_int
                                 ? data.pur_qty_int_alt
-                                : data.out_qty_unit_alt
+                                : data.out_qty_alt
                         }}
                     </td>
                     <td>

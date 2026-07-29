@@ -396,8 +396,10 @@ class StocksController extends Controller
         // Merge the collections
         $merged = $subq1->merge($subq3);
 
-        // Sort by created_at
-        $sorted = $merged->sortByDesc('created_at');
+        // Sort by transaction date (pur_date / out_date), fallback to created_at
+        $sorted = $merged->sortByDesc(function ($item) {
+            return $item->pur_date ?? $item->out_date ?? $item->created_at;
+        });
 
         // If you need the sorted result as a fresh collection
         $sorted = $sorted->values();
