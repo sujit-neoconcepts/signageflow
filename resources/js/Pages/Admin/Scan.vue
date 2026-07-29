@@ -188,6 +188,45 @@ const onChangeFunc = async (index, fkey) => {
 };
 
 const valdateform = () => {
+    const $toast = useToast();
+    for (let index = 0; index < form["multi"].length; index++) {
+        const item = form["multi"][index];
+        const outQty = parseFloat(item.out_qty);
+
+        if (isNaN(outQty) || outQty <= 0) {
+            $toast.open({
+                message: `Please enter a valid Quantity for line item ${index + 1}.`,
+                type: "error",
+                position: "top-right",
+                duration: 5000,
+            });
+            return false;
+        }
+
+        let balanceQty = null;
+        if (item.out_product?.data?.current_stock !== undefined && item.out_product?.data?.current_stock !== null) {
+            balanceQty = parseFloat(item.out_product.data.current_stock);
+        } else if (item.balance !== undefined && item.balance !== null && item.balance !== "") {
+            const parsed = parseFloat(String(item.balance).trim().split(" ")[0]);
+            if (!isNaN(parsed)) {
+                balanceQty = parsed;
+            }
+        }
+
+        if (balanceQty !== null && outQty > balanceQty + 0.0001) {
+            const productName =
+                typeof item.out_product === "object"
+                    ? (item.out_product.label || item.out_product.name)
+                    : item.out_product || `Line item ${index + 1}`;
+            $toast.open({
+                message: `Quantity (${outQty}) cannot be more than Balance (${balanceQty}) for ${productName}.`,
+                type: "error",
+                position: "top-right",
+                duration: 5000,
+            });
+            return false;
+        }
+    }
     return true;
 };
 

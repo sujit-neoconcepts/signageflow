@@ -226,29 +226,29 @@ class OutwardController extends Controller
      */
     private function getAllProductsData()
     {
+        $latestPurchasesSubQuery = Purchase::selectRaw('MAX(id) as max_pur_id')
+            ->groupBy('pur_pr_detail_int');
+
+        if (! (Auth::user()->can('all') || Auth::user()->can('outward_add_for_all'))) {
+            $latestPurchasesSubQuery->where('pur_incharge', Auth::user()->name);
+        }
+
         $query = Purchase::select(
             'purchases.pur_pr_detail_int',
-            DB::raw('MAX(purchases.pur_pr_id) as pur_pr_id'),
-            DB::raw('MAX(purchases.pur_unint_int) as pur_unint_int'),
-            DB::raw('MAX(purchases.pur_unint_int_alt) as pur_unint_int_alt'),
-            DB::raw('MAX(purchases.pur_qty_int) as pur_qty_int'),
-            DB::raw('MAX(purchases.pur_qty_int_alt) as pur_qty_int_alt'),
+            'purchases.pur_pr_id',
+            'purchases.pur_unint_int',
+            'purchases.pur_unint_int_alt',
+            'purchases.pur_qty_int',
+            'purchases.pur_qty_int_alt',
             'consumable_internal_names.unitPrice as pur_unit_price',
             'consumable_internal_names.unitName',
             'consumable_internal_names.unitAltName'
         )
+            ->joinSub($latestPurchasesSubQuery, 'latest_purchases', 'purchases.id', '=', 'latest_purchases.max_pur_id')
             ->leftJoin('consumable_internal_names', 'consumable_internal_names.name', '=', 'purchases.pur_pr_detail_int')
             ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
             ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-            // ->where('pgroups.sgroup', 'Stock Item')
-            // ->inFinancialYear()
-            ->groupBy('purchases.pur_pr_detail_int', 'consumable_internal_names.unitPrice', 'consumable_internal_names.unitName', 'consumable_internal_names.unitAltName')
             ->orderBy('purchases.pur_pr_detail_int');
-
-        // If user doesn't have full access, filter by their name
-        if (! (Auth::user()->can('all') || Auth::user()->can('outward_add_for_all'))) {
-            $query->where('purchases.pur_incharge', Auth::user()->name);
-        }
 
         $products = $query->get();
 
@@ -268,6 +268,38 @@ class OutwardController extends Controller
         }
 
         return $allOpt;
+    }
+
+    /**
+     * Check if requested outward quantity is within available stock balance
+     */
+    public static function checkStockAvailability($productName, $incharge, $location, $requestedQty, $excludeOutwardId = null)
+    {
+        $totalIn = Purchase::where('pur_pr_detail_int', $productName)
+            ->where('pur_incharge', $incharge)
+            ->where('pur_loc', $location)
+            ->sum('pur_qty_int');
+
+        $outwardQuery = Outward::where('out_product', $productName)
+            ->where('out_incharge', $incharge)
+            ->where('out_loc', $location);
+
+        if ($excludeOutwardId) {
+            $outwardQuery->where('id', '!=', $excludeOutwardId);
+        }
+
+        $totalOut = $outwardQuery->sum('out_qty');
+        $availableStock = (float) ($totalIn - $totalOut);
+
+        if ((float) $requestedQty > ($availableStock + 0.0001)) {
+            return [
+                'valid' => false,
+                'available' => $availableStock,
+                'message' => "Quantity ({$requestedQty}) cannot be more than available Balance ({$availableStock}) for {$productName} at {$location} ({$incharge}).",
+            ];
+        }
+
+        return ['valid' => true, 'available' => $availableStock];
     }
 
     /**
@@ -296,6 +328,22 @@ class OutwardController extends Controller
         }
 
         $request->validate($validateRule, [], $attributeNames);
+
+        // Validate stock availability for each line item
+        foreach ($request->multi as $ml) {
+            $productName = is_array($ml['out_product'] ?? null) ? ($ml['out_product']['label'] ?? '') : ($ml['out_product'] ?? '');
+            $incharge = is_array($ml['out_incharge'] ?? null) ? ($ml['out_incharge']['label'] ?? '') : ($ml['out_incharge'] ?? '');
+            $location = is_array($ml['out_loc'] ?? null) ? ($ml['out_loc']['label'] ?? '') : ($ml['out_loc'] ?? '');
+            $requestedQty = (float) ($ml['out_qty'] ?? 0);
+
+            if ($productName && $incharge && $location) {
+                $check = static::checkStockAvailability($productName, $incharge, $location, $requestedQty);
+                if (! $check['valid']) {
+                    return redirect()->back()->withErrors(['out_qty' => $check['message']])->withInput();
+                }
+            }
+        }
+
         $savedArray['out_date'] = date('Y-m-d', strtotime($request->out_date));
         DB::beginTransaction();
         try {
@@ -383,6 +431,22 @@ class OutwardController extends Controller
             isset($formInfoMulti[$key]['vRule']) && $validateRule['multi.*.'.$key] = $formInfoMulti[$key]['vRule'];
         }
         $request->validate($validateRule, [], $attributeNames);
+
+        // Validate stock availability for each line item (excluding current outward record)
+        foreach ($request->multi as $ml) {
+            $productName = is_array($ml['out_product'] ?? null) ? ($ml['out_product']['label'] ?? '') : ($ml['out_product'] ?? '');
+            $incharge = is_array($ml['out_incharge'] ?? null) ? ($ml['out_incharge']['label'] ?? '') : ($ml['out_incharge'] ?? '');
+            $location = is_array($ml['out_loc'] ?? null) ? ($ml['out_loc']['label'] ?? '') : ($ml['out_loc'] ?? '');
+            $requestedQty = (float) ($ml['out_qty'] ?? 0);
+
+            if ($productName && $incharge && $location) {
+                $check = static::checkStockAvailability($productName, $incharge, $location, $requestedQty, $outward->id);
+                if (! $check['valid']) {
+                    return redirect()->back()->withErrors(['out_qty' => $check['message']])->withInput();
+                }
+            }
+        }
+
         foreach (array_diff(array_keys($formInfo), []) as $key) {
             $outward->{$key} = $request->{$key};
         }
@@ -547,48 +611,7 @@ class OutwardController extends Controller
      */
     public function getAllProducts(Request $request)
     {
-        $query = Purchase::select(
-            'purchases.pur_pr_detail_int',
-            DB::raw('MAX(purchases.pur_pr_id) as pur_pr_id'),
-            DB::raw('MAX(purchases.pur_unint_int) as pur_unint_int'),
-            DB::raw('MAX(purchases.pur_unint_int_alt) as pur_unint_int_alt'),
-            DB::raw('MAX(purchases.pur_qty_int) as pur_qty_int'),
-            DB::raw('MAX(purchases.pur_qty_int_alt) as pur_qty_int_alt'),
-            'consumable_internal_names.unitPrice as pur_unit_price',
-            'consumable_internal_names.unitName',
-            'consumable_internal_names.unitAltName'
-        )
-            ->leftJoin('consumable_internal_names', 'consumable_internal_names.name', '=', 'purchases.pur_pr_detail_int')
-            ->leftJoin('products', 'products.id', '=', 'purchases.pur_pr_id')
-            ->leftJoin('pgroups', 'pgroups.id', '=', 'products.groupinfo')
-            // ->where('pgroups.sgroup', 'Stock Item')
-            // ->inFinancialYear()
-            ->groupBy('purchases.pur_pr_detail_int', 'consumable_internal_names.unitPrice', 'consumable_internal_names.unitName', 'consumable_internal_names.unitAltName')
-            ->orderBy('purchases.pur_pr_detail_int');
-
-        // If user doesn't have full access, filter by their name
-        if (! (Auth::user()->can('all') || Auth::user()->can('outward_add_for_all'))) {
-            $query->where('purchases.pur_incharge', Auth::user()->name);
-        }
-
-        $products = $query->get();
-
-        $allOpt = [];
-        foreach ($products as $product) {
-            $allOpt[] = [
-                'id' => $product->pur_pr_id,
-                'label' => $product->pur_pr_detail_int,
-                'data' => [
-                    'pur_unint_int' => $product->unitName ?? $product->pur_unint_int,
-                    'pur_unint_int_alt' => $product->unitAltName ?? $product->pur_unint_int_alt,
-                    'pur_qty_int' => $product->pur_qty_int,
-                    'pur_qty_int_alt' => $product->pur_qty_int_alt,
-                    'pur_unit_price' => $product->pur_unit_price,
-                ],
-            ];
-        }
-
-        return $allOpt;
+        return $this->getAllProductsData();
     }
 
     /**
