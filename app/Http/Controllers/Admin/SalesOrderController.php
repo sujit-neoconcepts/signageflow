@@ -66,8 +66,8 @@ class SalesOrderController extends Controller
         $perPage = request()->query('perPage') ?? 10;
 
         $query = SalesOrder::select('sales_orders.*', 'clients.cl_name as client_name')
-            ->leftJoin('clients', 'clients.id', '=', 'sales_orders.client_id')
-            ->inFinancialYear();
+            ->leftJoin('clients', 'clients.id', '=', 'sales_orders.client_id');
+            //->inFinancialYear();
 
         $resourceData = QueryBuilder::for($query)
             ->defaultSort('-order_date')
