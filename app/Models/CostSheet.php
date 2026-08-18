@@ -21,9 +21,7 @@ class CostSheet extends Model
             $unitPrice = 0;
 
             if ($composition->section === 'raw_material' && $composition->group) {
-                $basePrice = $composition->group->unitPrice ?? 0;
-                $consumableMargin = $composition->group->openStockMarginPercent ?? 0;
-                $unitPrice = $basePrice * (1 + $consumableMargin / 100);
+                $unitPrice = $composition->group->unitPrice ?? 0;
             } elseif ($composition->section === 'custom_cost') {
                 $unitPrice = $composition->custom_unit_price ?? 0;
             } elseif ($composition->childCostSheet) {

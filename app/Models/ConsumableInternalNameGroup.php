@@ -104,7 +104,7 @@ class ConsumableInternalNameGroup extends Model
             }
 
             $weightedSum = 0;
-            $totalStock = 0;
+            $totalWeight = 0;
 
             foreach ($items as $item) {
                 $unitPrice = (float) $item->unitPrice;
@@ -117,17 +117,14 @@ class ConsumableInternalNameGroup extends Model
                 $qtyOut = (float) ($outMap[$item->name] ?? 0);
                 $stock = $qtyPur1 + $qtyPur0 - $qtyOut;
 
-                if ($stock > 0) {
-                    $weightedSum += $stock * $unitPrice;
-                    $totalStock += $stock;
-                }
+                $weight = $stock > 0 ? $stock : 1.0;
+                $weightedSum += $weight * $unitPrice;
+                $totalWeight += $weight;
             }
 
-            if ($totalStock > 0) {
-                $result[$g->id] = (float) ($weightedSum / $totalStock);
+            if ($totalWeight > 0) {
+                $result[$g->id] = (float) ($weightedSum / $totalWeight);
             } else {
-                // Total stock is 0: display 0.00 as requested.
-                // (If non-zero arithmetic average is ever needed: (float) ($items->where('unitPrice', '>', 0)->avg('unitPrice') ?? 0.00))
                 $result[$g->id] = 0.00;
             }
         }

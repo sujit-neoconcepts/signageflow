@@ -120,15 +120,13 @@ const fetchCompositions = async () => {
             const childCostSheet = c.child_cost_sheet || c.childCostSheet;
 
             if (section === "raw_material") {
-                const basePrice = Number(group?.unitPrice || 0);
-                const margin    = Number(group?.openStockMarginPercent || 0);
                 rows.value.raw_material.push({
                     id:                                 c.id,
                     selectedItem:                       group,
                     consumable_internal_name_group_id:  c.consumable_internal_name_group_id,
                     child_cost_sheet_id:                null,
                     unit:                               c.unit,
-                    unitPrice:                          basePrice * (1 + margin / 100),
+                    unitPrice:                          Number(group?.unitPrice || 0),
                     quantity:                           c.quantity,
                     margin:                             c.margin || 0,
                 });
@@ -207,9 +205,7 @@ const handleRawMaterialChange = (row, selected) => {
         row.consumable_internal_name_group_id = selected.id;
         row.child_cost_sheet_id               = null;
         row.unit                              = selected.unitName;
-        const base   = Number(selected.unitPrice || 0);
-        const marg   = Number(selected.openStockMarginPercent || 0);
-        row.unitPrice = base * (1 + marg / 100);
+        row.unitPrice                         = Number(selected.unitPrice || 0);
     } else {
         row.consumable_internal_name_group_id = null;
         row.unit      = "";
@@ -419,7 +415,7 @@ const getCostSheetUnitPrice = (item) => {
                                                 <div class="flex justify-between text-gray-500 mt-0.5">
                                                     <span>{{ option.unitName }} / {{ option.unitAltName || '-' }}</span>
                                                     <span class="text-blue-600 font-semibold">
-                                                        ₹{{ option.unitPrice }} (+{{ option.openStockMarginPercent }}%)
+                                                        ₹{{ fmt(option.unitPrice) }}
                                                     </span>
                                                 </div>
                                             </div>

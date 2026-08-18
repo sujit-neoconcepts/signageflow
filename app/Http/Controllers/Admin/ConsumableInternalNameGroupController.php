@@ -383,9 +383,9 @@ class ConsumableInternalNameGroupController extends Controller
 
         $totalGroupStock = 0;
         $weightedPriceSum = 0;
-        $weightedStockSum = 0;
+        $totalWeight = 0;
 
-        $formattedItems = $items->map(function ($item) use ($pur0Map, $pur1Map, $outMap, &$totalGroupStock, &$weightedPriceSum, &$weightedStockSum) {
+        $formattedItems = $items->map(function ($item) use ($pur0Map, $pur1Map, $outMap, &$totalGroupStock, &$weightedPriceSum, &$totalWeight) {
             $qtyPur0 = (float) ($pur0Map[$item->name] ?? 0);
             $qtyPur1 = (float) ($pur1Map[$item->name] ?? 0);
             $qtyOut = (float) ($outMap[$item->name] ?? 0);
@@ -394,9 +394,10 @@ class ConsumableInternalNameGroupController extends Controller
             $totalGroupStock += $currentStock;
             $unitPrice = (float) $item->unitPrice;
 
-            if ($currentStock > 0 && $unitPrice > 0) {
-                $weightedPriceSum += $currentStock * $unitPrice;
-                $weightedStockSum += $currentStock;
+            if ($unitPrice > 0) {
+                $weight = $currentStock > 0 ? $currentStock : 1.0;
+                $weightedPriceSum += $weight * $unitPrice;
+                $totalWeight += $weight;
             }
 
             return [
@@ -411,11 +412,9 @@ class ConsumableInternalNameGroupController extends Controller
             ];
         });
 
-        if ($weightedStockSum > 0) {
-            $weightedUnitPrice = $weightedPriceSum / $weightedStockSum;
+        if ($totalWeight > 0) {
+            $weightedUnitPrice = $weightedPriceSum / $totalWeight;
         } else {
-            // Display 0.00 for 0 total stock for now as requested.
-            // Non-zero average if needed: $items->where('unitPrice', '>', 0)->avg('unitPrice') ?? 0.00
             $weightedUnitPrice = 0.00;
         }
 
