@@ -52,6 +52,21 @@ const openCompositionModal = (item) => {
     isCompositionModalActive.value = true;
 };
 
+const hasComposition = (item) => {
+    if (item?.compositions_count !== undefined && item?.compositions_count !== null) {
+        return Number(item.compositions_count) > 0;
+    }
+    if (Array.isArray(item?.compositions)) {
+        return item.compositions.length > 0;
+    }
+    return false;
+};
+
+const handleCompositionSaved = () => {
+    isCompositionModalActive.value = false;
+    router.reload({ preserveState: true, preserveScroll: true });
+};
+
 const deleteRecord = () => {
     if (delselect.value != 0) {
         router.delete(
@@ -216,7 +231,11 @@ const checkConditions = (item, conditions) => {
                                             actionClasses.button,
                                             'w-auto',
                                         ]"
-                                        color="warning"
+                                        :color="
+                                            hasComposition(dItem)
+                                                ? 'success'
+                                                : 'warning'
+                                        "
                                         :icon="mdiViewList"
                                         small
                                         :label="
@@ -333,7 +352,7 @@ const checkConditions = (item, conditions) => {
             v-model="isCompositionModalActive" 
             :costSheetId="selectedCostSheetId" 
             :costSheet="selectedCostSheet"
-            @saved="isCompositionModalActive = false"
+            @saved="handleCompositionSaved"
         />
     </LayoutAuthenticated>
 </template>
