@@ -28,6 +28,7 @@ abstract class BaseCostSheetController extends Controller
         $this->middleware("can:{$permissionKey}_create", ['only' => ['create', 'store', 'importView', 'import', 'importWithCompositionView', 'importWithComposition']]);
         $this->middleware("can:{$permissionKey}_delete", ['only' => ['destroy', 'bulkDestroy']]);
         $this->middleware("can:{$permissionKey}_edit", ['only' => ['edit', 'update']]);
+        $this->middleware("can:{$permissionKey}_export", ['only' => ['exportWithComposition']]);
     }
 
     abstract protected function resourceName(): string;
@@ -78,6 +79,14 @@ abstract class BaseCostSheetController extends Controller
         }
         if (\Auth::user()->can($this->permissionKey().'_export')) {
             $resourceNeo['bulkActions']['csvExport'] = [];
+            $resourceNeo['bulkActions']['customs'] = [
+                [
+                    'label' => 'Export with Composition',
+                    'icon' => 'M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M12,19L8,15H11V11H13V15H16L12,19M13,9V3.5L18.5,9H13Z',
+                    'action' => 'get',
+                    'function' => $this->resourceName().'.exportWithComposition',
+                ],
+            ];
         }
         $resourceNeo['extraMainLinks'] = [
             [
@@ -474,9 +483,10 @@ abstract class BaseCostSheetController extends Controller
         ];
 
         $sampleData = [
-            ['name' => 'Acrylic Sign Board', 'qty_unit' => $qtyUnit1, 'alt_units' => $altUnit, 'rate' => '1200.00', 'comp_section' => 'raw_material', 'comp_group_name' => $groupName, 'comp_child_name' => '', 'comp_quantity' => '2.5', 'comp_margin' => '10'],
-            ['name' => 'Acrylic Sign Board', 'qty_unit' => $qtyUnit1, 'alt_units' => $altUnit, 'rate' => '1200.00', 'comp_section' => 'signage', 'comp_group_name' => '', 'comp_child_name' => $childName, 'comp_quantity' => '5', 'comp_margin' => '0'],
-            ['name' => 'Steel Frame', 'qty_unit' => $qtyUnit1, 'alt_units' => '', 'rate' => '850.00', 'comp_section' => '', 'comp_group_name' => '', 'comp_child_name' => '', 'comp_quantity' => '', 'comp_margin' => ''],
+            ['name' => 'Acrylic Sign Board', 'qty_unit' => $qtyUnit1, 'alt_units' => $altUnit, 'rate' => '1200.00', 'comp_section' => 'raw_material', 'comp_group_name' => $groupName, 'comp_child_name' => '', 'comp_price' => '', 'comp_quantity' => '2.5', 'comp_margin' => '10'],
+            ['name' => 'Acrylic Sign Board', 'qty_unit' => $qtyUnit1, 'alt_units' => $altUnit, 'rate' => '1200.00', 'comp_section' => 'custom_cost', 'comp_group_name' => '', 'comp_child_name' => 'Laser Cutting Charge', 'comp_price' => '250.00', 'comp_quantity' => '1', 'comp_margin' => '5'],
+            ['name' => 'Acrylic Sign Board', 'qty_unit' => $qtyUnit1, 'alt_units' => $altUnit, 'rate' => '1200.00', 'comp_section' => 'signage', 'comp_group_name' => '', 'comp_child_name' => $childName, 'comp_price' => '', 'comp_quantity' => '5', 'comp_margin' => '0'],
+            ['name' => 'Steel Frame', 'qty_unit' => $qtyUnit1, 'alt_units' => '', 'rate' => '850.00', 'comp_section' => '', 'comp_group_name' => '', 'comp_child_name' => '', 'comp_price' => '', 'comp_quantity' => '', 'comp_margin' => ''],
         ];
 
         $importRoute = $this->resourceName().'.importWithCompositionStore';
@@ -500,7 +510,7 @@ abstract class BaseCostSheetController extends Controller
             ]);
         }
 
-        $records = array_map('str_getcsv', file($path));
+        $records = array_map(fn ($line) => str_getcsv($line, ',', '"', '\\'), file($path));
         if (empty($records)) {
             return redirect()->back()->with([
                 'message' => 'Import failed! The uploaded file is empty.',
@@ -529,7 +539,7 @@ abstract class BaseCostSheetController extends Controller
         $allUnits = \App\Models\Munit::pluck('name')->toArray();
         $allUnitsLookup = array_flip($allUnits);
         $groupLookup = \App\Models\ConsumableInternalNameGroup::pluck('id', 'name')->toArray();
-        $validSections = ['raw_material', 'signage', 'cabinet', 'letters'];
+        $validSections = ['raw_material', 'custom_cost', 'signage', 'cabinet', 'letters'];
 
         // ── Pass 1: Validate and group rows by cost sheet name ───────
         $errors = [];
@@ -591,7 +601,8 @@ abstract class BaseCostSheetController extends Controller
                     $errors[] = "Row {$rowNumber}: comp_section '{$section}' is invalid. Must be one of: ".implode(', ', $validSections).'.';
                 } else {
                     $compGroupName = trim($data['comp_group_name'] ?? '');
-                    $compChildName = trim($data['comp_child_name'] ?? '');
+                    $compChildName = trim($data['comp_child_name'] ?? $data['custom_name'] ?? '');
+                    $compPrice = trim($data['comp_price'] ?? $data['price'] ?? '');
                     $compQty = $data['comp_quantity'] ?? 0;
                     $compMargin = $data['comp_margin'] ?? 0;
 
@@ -608,6 +619,13 @@ abstract class BaseCostSheetController extends Controller
                         } elseif (! isset($groupLookup[$compGroupName])) {
                             $errors[] = "Row {$rowNumber}: comp_group_name '{$compGroupName}' does not exist in Internal Name Group master.";
                         }
+                    } elseif ($section === 'custom_cost') {
+                        if (empty($compChildName)) {
+                            $errors[] = "Row {$rowNumber}: comp_child_name (item name) is required for custom_cost section.";
+                        }
+                        if ($compPrice !== '' && (! is_numeric($compPrice) || (float) $compPrice < 0)) {
+                            $errors[] = "Row {$rowNumber}: comp_price/price must be a non-negative number.";
+                        }
                     } else {
                         if (empty($compChildName)) {
                             $errors[] = "Row {$rowNumber}: comp_child_name is required for {$section} section.";
@@ -620,8 +638,9 @@ abstract class BaseCostSheetController extends Controller
                         'section' => $section,
                         'comp_group_name' => $compGroupName,
                         'comp_child_name' => $compChildName,
+                        'comp_price' => $compPrice !== '' ? (float) $compPrice : 0.0,
                         'comp_quantity' => (float) $compQty,
-                        'comp_margin' => $compMargin !== '' ? (float) $compMargin : 0,
+                        'comp_margin' => $compMargin !== '' ? (float) $compMargin : 0.0,
                         'row' => $rowNumber,
                     ];
                 }
@@ -638,12 +657,12 @@ abstract class BaseCostSheetController extends Controller
         }
 
         // ── Pass 2: Resolve child cost sheet names to IDs ────────────
-        // We need to resolve comp_child_name to cost sheet IDs.
-        // Child cost sheets may reference each other, so collect all names first.
+        // We need to resolve comp_child_name to cost sheet IDs (for signage, cabinet, letters).
+        // Custom costs and raw materials do not need cost sheet ID lookup.
         $allChildNames = [];
         foreach ($grouped as $entry) {
             foreach ($entry['compositions'] as $comp) {
-                if ($comp['section'] !== 'raw_material' && ! empty($comp['comp_child_name'])) {
+                if ($comp['section'] !== 'raw_material' && $comp['section'] !== 'custom_cost' && ! empty($comp['comp_child_name'])) {
                     $allChildNames[] = $comp['comp_child_name'];
                 }
             }
@@ -711,6 +730,22 @@ abstract class BaseCostSheetController extends Controller
                                 $firstInternal = \App\Models\ConsumableInternalName::where('consumable_internal_name_group_id', $groupId)->first();
                                 $unit = $firstInternal ? $firstInternal->unitName : null;
                             }
+
+                            $costSheet->compositions()->create([
+                                'section' => 'raw_material',
+                                'consumable_internal_name_group_id' => $groupId,
+                                'unit' => $unit,
+                                'quantity' => $comp['comp_quantity'],
+                                'margin' => $comp['comp_margin'],
+                            ]);
+                        } elseif ($comp['section'] === 'custom_cost') {
+                            $costSheet->compositions()->create([
+                                'section' => 'custom_cost',
+                                'custom_name' => $comp['comp_child_name'],
+                                'custom_unit_price' => $comp['comp_price'],
+                                'quantity' => $comp['comp_quantity'],
+                                'margin' => $comp['comp_margin'],
+                            ]);
                         } else {
                             // Look up child cost sheet (may have been created in this import)
                             $childId = $childLookup[$comp['comp_child_name']] ?? ($createdSheets[$comp['comp_child_name']]->id ?? null);
@@ -718,16 +753,15 @@ abstract class BaseCostSheetController extends Controller
                                 $child = CostSheet::find($childId);
                                 $unit = $child ? $child->qty_unit : null;
                             }
-                        }
 
-                        $costSheet->compositions()->create([
-                            'section' => $comp['section'],
-                            'consumable_internal_name_group_id' => $groupId,
-                            'child_cost_sheet_id' => $childId,
-                            'unit' => $unit,
-                            'quantity' => $comp['comp_quantity'],
-                            'margin' => $comp['comp_margin'],
-                        ]);
+                            $costSheet->compositions()->create([
+                                'section' => $comp['section'],
+                                'child_cost_sheet_id' => $childId,
+                                'unit' => $unit,
+                                'quantity' => $comp['comp_quantity'],
+                                'margin' => $comp['comp_margin'],
+                            ]);
+                        }
                         $compositionCount++;
                     }
                 }
@@ -753,5 +787,106 @@ abstract class BaseCostSheetController extends Controller
                 'msg_type' => 'danger',
             ]);
         }
+    }
+
+    public function exportWithComposition(Request $request)
+    {
+        $ids = $request->input('ids');
+        if (is_string($ids)) {
+            $ids = array_filter(explode(',', $ids), fn ($id) => is_numeric(trim($id)));
+        } elseif (is_array($ids)) {
+            $ids = array_filter($ids, fn ($id) => is_numeric($id));
+        } else {
+            $ids = [];
+        }
+
+        $query = CostSheet::where('prod_type', $this->prodType())
+            ->with([
+                'compositions.group',
+                'compositions.childCostSheet',
+            ])
+            ->orderBy('name');
+
+        if (! empty($ids)) {
+            $query->whereIn('id', $ids);
+        }
+
+        $costSheets = $query->get();
+
+        $filename = $this->resourceName().'_with_composition_'.date('Y-m-d_His').'.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        $columns = [
+            'name',
+            'qty_unit',
+            'alt_units',
+            'rate',
+            'comp_section',
+            'comp_group_name',
+            'comp_child_name',
+            'comp_price',
+            'comp_quantity',
+            'comp_margin',
+        ];
+
+        $callback = function () use ($costSheets, $columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns, ',', '"', '\\');
+
+            foreach ($costSheets as $costSheet) {
+                if ($costSheet->compositions->isEmpty()) {
+                    fputcsv($file, [
+                        $costSheet->name,
+                        $costSheet->qty_unit,
+                        $costSheet->alt_units ?? '',
+                        $costSheet->rate,
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                    ], ',', '"', '\\');
+                } else {
+                    foreach ($costSheet->compositions as $comp) {
+                        $groupName = '';
+                        $childName = '';
+                        $price = '';
+                        if ($comp->section === 'raw_material') {
+                            $groupName = $comp->group?->name ?? '';
+                        } elseif ($comp->section === 'custom_cost') {
+                            $childName = $comp->custom_name ?? '';
+                            $price = $comp->custom_unit_price ?? '0';
+                        } else {
+                            $childName = $comp->childCostSheet?->name ?? ($comp->custom_name ?? '');
+                        }
+
+                        fputcsv($file, [
+                            $costSheet->name,
+                            $costSheet->qty_unit,
+                            $costSheet->alt_units ?? '',
+                            $costSheet->rate,
+                            $comp->section ?? '',
+                            $groupName,
+                            $childName,
+                            $price,
+                            $comp->quantity ?? '',
+                            $comp->margin ?? '0',
+                        ], ',', '"', '\\');
+                    }
+                }
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

@@ -151,6 +151,8 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::post('signageCostSheet-import', [SignageCostSheetController::class, 'import']);
     Route::get('signageCostSheet-import-with-composition', [SignageCostSheetController::class, 'importWithCompositionView'])->name('signageCostSheet.importWithComposition');
     Route::post('signageCostSheet-import-with-composition', [SignageCostSheetController::class, 'importWithComposition'])->name('signageCostSheet.importWithCompositionStore');
+    Route::get('signageCostSheet-export-with-composition', [SignageCostSheetController::class, 'exportWithComposition'])->name('signageCostSheet.exportWithComposition');
+    Route::post('signageCostSheet-export-with-composition', [SignageCostSheetController::class, 'exportWithComposition'])->name('signageCostSheet.exportWithCompositionPost');
     Route::post('signageCostSheet-quick-store', [SignageCostSheetController::class, 'quickStore'])->name('signageCostSheet.quickStore');
     Route::resource('signageCostSheet', SignageCostSheetController::class)
         ->parameters(['signageCostSheet' => 'costSheet']);
@@ -159,6 +161,8 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::post('cabinetCostSheet-import', [CabinetCostSheetController::class, 'import']);
     Route::get('cabinetCostSheet-import-with-composition', [CabinetCostSheetController::class, 'importWithCompositionView'])->name('cabinetCostSheet.importWithComposition');
     Route::post('cabinetCostSheet-import-with-composition', [CabinetCostSheetController::class, 'importWithComposition'])->name('cabinetCostSheet.importWithCompositionStore');
+    Route::get('cabinetCostSheet-export-with-composition', [CabinetCostSheetController::class, 'exportWithComposition'])->name('cabinetCostSheet.exportWithComposition');
+    Route::post('cabinetCostSheet-export-with-composition', [CabinetCostSheetController::class, 'exportWithComposition'])->name('cabinetCostSheet.exportWithCompositionPost');
     Route::post('cabinetCostSheet-quick-store', [CabinetCostSheetController::class, 'quickStore'])->name('cabinetCostSheet.quickStore');
     Route::resource('cabinetCostSheet', CabinetCostSheetController::class)
         ->parameters(['cabinetCostSheet' => 'costSheet']);
@@ -167,6 +171,8 @@ Route::prefix('admin')->middleware(['auth', '2fa'])->group(function () {
     Route::post('lettersCostSheet-import', [LettersCostSheetController::class, 'import']);
     Route::get('lettersCostSheet-import-with-composition', [LettersCostSheetController::class, 'importWithCompositionView'])->name('lettersCostSheet.importWithComposition');
     Route::post('lettersCostSheet-import-with-composition', [LettersCostSheetController::class, 'importWithComposition'])->name('lettersCostSheet.importWithCompositionStore');
+    Route::get('lettersCostSheet-export-with-composition', [LettersCostSheetController::class, 'exportWithComposition'])->name('lettersCostSheet.exportWithComposition');
+    Route::post('lettersCostSheet-export-with-composition', [LettersCostSheetController::class, 'exportWithComposition'])->name('lettersCostSheet.exportWithCompositionPost');
     Route::post('lettersCostSheet-quick-store', [LettersCostSheetController::class, 'quickStore'])->name('lettersCostSheet.quickStore');
     Route::resource('lettersCostSheet', LettersCostSheetController::class)
         ->parameters(['lettersCostSheet' => 'costSheet']);

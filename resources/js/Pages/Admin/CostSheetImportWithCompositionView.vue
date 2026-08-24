@@ -176,6 +176,7 @@ const downloadSample = () => {
                             <p>• Upload a CSV file containing cost sheet data <strong>with composition rows</strong></p>
                             <p>• Each CSV row represents one composition line. Rows with the same <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">name</code> are grouped into one cost sheet</p>
                             <p>• For <strong>raw_material</strong> compositions, fill <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">comp_group_name</code> (must match an existing Internal Name Group)</p>
+                            <p>• For <strong>custom_cost</strong> compositions, fill <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">comp_child_name</code> (item name) and <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">comp_price</code> (unit price)</p>
                             <p>• For <strong>signage / cabinet / letters</strong> compositions, fill <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">comp_child_name</code> (must match an existing cost sheet name)</p>
                             <p>• To create a cost sheet <strong>without compositions</strong>, leave all <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">comp_*</code> columns empty (see "Steel Frame" in sample)</p>
                             <p>• Download the sample CSV below to see the correct format</p>
@@ -292,9 +293,10 @@ const downloadSample = () => {
                 <div class="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-300">
                     <strong>Column Guide:</strong>
                     <span class="font-mono">name</span>, <span class="font-mono">qty_unit</span>, <span class="font-mono">alt_units</span>, <span class="font-mono">rate</span> — Cost Sheet fields (repeated per composition row).
-                    <span class="font-mono">comp_section</span> — One of: raw_material, signage, cabinet, letters.
+                    <span class="font-mono">comp_section</span> — One of: raw_material, custom_cost, signage, cabinet, letters.
                     <span class="font-mono">comp_group_name</span> — Internal Name Group (for raw_material).
-                    <span class="font-mono">comp_child_name</span> — Child cost sheet name (for signage/cabinet/letters).
+                    <span class="font-mono">comp_child_name</span> — Child cost sheet name (for signage/cabinet/letters) or Custom Item Name (for custom_cost).
+                    <span class="font-mono">comp_price</span> — Unit price (required for custom_cost).
                     <span class="font-mono">comp_quantity</span>, <span class="font-mono">comp_margin</span> — Composition quantity and margin %.
                 </div>
             </CardBox>
