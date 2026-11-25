@@ -35,26 +35,15 @@ return [
 
     'mailers' => [
         'mailjet' => [
+            'transport' => 'smtp',
+            'host' => env('MAILJET_HOST', 'in-v3.mailjet.com'),
+            'port' => env('MAILJET_PORT', 587),
+            'encryption' => env('MAILJET_ENCRYPTION', 'tls'),
+            'username' => env('MAILJET_APIKEY'),
+            'password' => env('MAILJET_APISECRET'),
+            'timeout' => null,
             'key' => env('MAILJET_APIKEY'),
             'secret' => env('MAILJET_APISECRET'),
-            'transactional' => [
-                'call' => true,
-                'options' => [
-                    'url' => 'api.mailjet.com',
-                    'version' => 'v3.1',
-                    'call' => true,
-                    'secured' => true,
-                ],
-            ],
-            'common' => [
-                'call' => true,
-                'options' => [
-                    'url' => 'api.mailjet.com',
-                    'version' => 'v3',
-                    'call' => true,
-                    'secured' => true,
-                ],
-            ],
         ],
         'smtp' => [
             'transport' => 'smtp',

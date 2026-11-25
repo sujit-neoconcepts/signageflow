@@ -127,7 +127,7 @@ class _TaskHomeState extends State<TaskHome> {
     final titles = ['Home', 'Tasks', 'Expenses'];
 
     return Scaffold(
-      extendBody: true,
+      extendBody: false,
       appBar: AppBar(
         titleSpacing: 0,
         title: Column(
@@ -239,7 +239,7 @@ class _TaskHomeState extends State<TaskHome> {
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
-          margin: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+          margin: const EdgeInsets.fromLTRB(16, 4, 16, 10),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
@@ -251,7 +251,7 @@ class _TaskHomeState extends State<TaskHome> {
               BoxShadow(
                 color: Color(0x0E000000),
                 blurRadius: 18,
-                offset: Offset(0, -4), // project shadow upwards to separate from body content
+                offset: Offset(0, -4),
               ),
               BoxShadow(
                 color: Color(0x06000000),
@@ -261,6 +261,7 @@ class _TaskHomeState extends State<TaskHome> {
             ],
           ),
           child: NavigationBar(
+            height: 66,
             selectedIndex: _index,
             backgroundColor: Colors.transparent,
             indicatorColor: appAccent.withValues(alpha: .14),

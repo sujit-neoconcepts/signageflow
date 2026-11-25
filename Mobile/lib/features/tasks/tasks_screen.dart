@@ -187,8 +187,8 @@ class TasksScreenState extends State<TasksScreen> {
                 );
               },
             ),
-          SliverPadding(
-            padding: EdgeInsets.only(bottom: 110 + MediaQuery.of(context).padding.bottom),
+          const SliverPadding(
+            padding: EdgeInsets.only(bottom: 24),
           ),
         ],
       ),

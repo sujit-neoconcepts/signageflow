@@ -215,7 +215,7 @@ class ExpensesScreenState extends State<ExpensesScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
-        padding: EdgeInsets.fromLTRB(18, 8, 18, 110 + MediaQuery.of(context).padding.bottom),
+        padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
         children: [
           Container(
             padding: const EdgeInsets.all(18),

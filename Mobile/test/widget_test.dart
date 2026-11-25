@@ -73,7 +73,7 @@ void main() {
 
     // Initial load calls /tasks for Home and Tasks inside IndexedStack.
     final initialCalls = api.tasksCalls;
-    expect(find.text('Active Tasks'), findsOneWidget);
+    expect(find.text('Tasks Overview'), findsOneWidget);
 
     // Simulate backend update: 1 completed + 1 newly assigned active task.
     api.taskRows = [
