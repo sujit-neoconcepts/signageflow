@@ -18,10 +18,10 @@ class HomeDashboardScreen extends StatefulWidget {
   final VoidCallback onOpenExpenses;
 
   @override
-  State<HomeDashboardScreen> createState() => _HomeDashboardScreenState();
+  State<HomeDashboardScreen> createState() => HomeDashboardScreenState();
 }
 
-class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
+class HomeDashboardScreenState extends State<HomeDashboardScreen> {
   int _taskCount = 0;
   int _activeTaskCount = 0;
   int _overdueTaskCount = 0;
@@ -35,7 +35,10 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     _load();
   }
 
+  Future<void> refresh() => _load();
+
   Future<void> _load() async {
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -53,6 +56,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       } catch (_) {}
 
       final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+      if (!mounted) return;
       setState(() {
         _taskCount = taskRows.length;
         _activeTaskCount = taskRows
@@ -82,6 +86,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         _expenseSummary = (expenses['summary'] as Map<String, dynamic>?) ?? {};
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _loading = false);

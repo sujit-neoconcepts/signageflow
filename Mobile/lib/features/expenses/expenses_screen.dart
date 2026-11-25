@@ -12,10 +12,10 @@ class ExpensesScreen extends StatefulWidget {
   final ApiClient api;
 
   @override
-  State<ExpensesScreen> createState() => _ExpensesScreenState();
+  State<ExpensesScreen> createState() => ExpensesScreenState();
 }
 
-class _ExpensesScreenState extends State<ExpensesScreen> {
+class ExpensesScreenState extends State<ExpensesScreen> {
   final _search = TextEditingController();
   List<dynamic> _expenses = [];
   Map<String, dynamic> _summary = {};
@@ -36,7 +36,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     _load();
   }
 
+  Future<void> refresh() => _load();
+
   Future<void> _load() async {
+    if (!mounted) return;
     setState(() {
       _page = 1;
       _loading = true;

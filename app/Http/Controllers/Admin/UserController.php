@@ -49,12 +49,21 @@ class UserController extends Controller
                 });
             });
         });
+        $roleFilter = AllowedFilter::callback('role', function ($query, $value) {
+            $roleIds = Collection::wrap($value)->filter()->all();
+            if (! empty($roleIds)) {
+                $query->whereHas('roles', function ($q) use ($roleIds) {
+                    $q->whereIn('roles.id', $roleIds);
+                });
+            }
+        });
+
         $perPage = request()->query('perPage') ?? 10;
         $users = QueryBuilder::for($query)
             ->with('roles')
             ->defaultSort('name')
             ->allowedSorts(['name', 'email', 'phone'])
-            ->allowedFilters(['name', 'email', 'phone', $globalSearch])
+            ->allowedFilters(['name', 'email', 'phone', $roleFilter, $globalSearch])
             ->paginate($perPage)
             ->withQueryString();
 
@@ -69,7 +78,9 @@ class UserController extends Controller
             $this->resourceNeo['bulkActions']['csvExport'] = [];
         }
 
-        return Inertia::render('Admin/UserIndexView', ['users' => $users, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) {
+        $roles = Role::orderBy('name')->pluck('name', 'id')->toArray();
+
+        return Inertia::render('Admin/UserIndexView', ['users' => $users, 'resourceNeo' => $this->resourceNeo])->table(function (InertiaTable $table) use ($roles) {
             $table->withGlobalSearch()
                 ->column('name', 'Name', searchable: true, sortable: true)
                 ->column('email', 'Email', searchable: true, sortable: true)
@@ -77,6 +88,7 @@ class UserController extends Controller
                 ->column('role_name', 'Role', searchable: false, sortable: false)
 
                 ->column(label: 'Actions')
+                ->selectFilter(key: 'role', label: 'Role', options: $roles, noFilterOptionLabel: 'All')
                 ->perPageOptions([10, 15, 30, 50, 100]);
         });
     }

@@ -1,6 +1,8 @@
 # SignageFlow Mobile
 
-Flutter Android/iOS app for SignageFlow My Tasks and task expenses.
+Flutter Android/iOS app for SignageFlow My Tasks, fieldwork tracking, voice notes, and task/general expenses.
+
+> 📖 **Comprehensive Guide**: See **[GUIDE.md](GUIDE.md)** for the complete User Manual and Developer Architecture Specification covering all features, workflows, REST APIs, business automation rules, and deployment procedures.
 
 ## Configuration
 

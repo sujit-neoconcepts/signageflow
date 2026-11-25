@@ -24,6 +24,9 @@ class _TaskHomeState extends State<TaskHome> {
   int _index = 0;
   int _unreadCount = 0;
   StreamSubscription? _fcmSubscription;
+  final _homeKey = GlobalKey<HomeDashboardScreenState>();
+  final _tasksKey = GlobalKey<TasksScreenState>();
+  final _expensesKey = GlobalKey<ExpensesScreenState>();
 
   @override
   void initState() {
@@ -93,16 +96,33 @@ class _TaskHomeState extends State<TaskHome> {
     ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
   }
 
+  void _selectTab(int index) {
+    setState(() => _index = index);
+    _fetchUnreadCount();
+    switch (index) {
+      case 0:
+        _homeKey.currentState?.refresh();
+        break;
+      case 1:
+        _tasksKey.currentState?.refresh();
+        break;
+      case 2:
+        _expensesKey.currentState?.refresh();
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
       HomeDashboardScreen(
+        key: _homeKey,
         api: widget.api,
-        onOpenTasks: () => setState(() => _index = 1),
-        onOpenExpenses: () => setState(() => _index = 2),
+        onOpenTasks: () => _selectTab(1),
+        onOpenExpenses: () => _selectTab(2),
       ),
-      TasksScreen(api: widget.api),
-      ExpensesScreen(api: widget.api),
+      TasksScreen(key: _tasksKey, api: widget.api),
+      ExpensesScreen(key: _expensesKey, api: widget.api),
     ];
     final titles = ['Home', 'Tasks', 'Expenses'];
 
@@ -207,7 +227,7 @@ class _TaskHomeState extends State<TaskHome> {
         currentIndex: _index,
         onSelect: (index) {
           Navigator.pop(context);
-          setState(() => _index = index);
+          _selectTab(index);
         },
         onLogout: _logout,
         api: widget.api,
@@ -244,7 +264,7 @@ class _TaskHomeState extends State<TaskHome> {
             selectedIndex: _index,
             backgroundColor: Colors.transparent,
             indicatorColor: appAccent.withValues(alpha: .14),
-            onDestinationSelected: (index) => setState(() => _index = index),
+            onDestinationSelected: _selectTab,
             destinations: const [
               NavigationDestination(
                 icon: Icon(Icons.space_dashboard_outlined),

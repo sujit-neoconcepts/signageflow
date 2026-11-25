@@ -17,10 +17,10 @@ class TasksScreen extends StatefulWidget {
   final ApiClient api;
 
   @override
-  State<TasksScreen> createState() => _TasksScreenState();
+  State<TasksScreen> createState() => TasksScreenState();
 }
 
-class _TasksScreenState extends State<TasksScreen> {
+class TasksScreenState extends State<TasksScreen> {
   final _search = TextEditingController();
   List<dynamic> _tasks = [];
   Map<String, dynamic> _meta = {};
@@ -34,7 +34,10 @@ class _TasksScreenState extends State<TasksScreen> {
     _load();
   }
 
+  Future<void> refresh() => _load();
+
   Future<void> _load() async {
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -48,11 +51,13 @@ class _TasksScreenState extends State<TasksScreen> {
         if (_meta.isEmpty) widget.api.getJson('/tasks/meta'),
       ]);
       final page = results.first['tasks'] as Map<String, dynamic>;
+      if (!mounted) return;
       setState(() {
         _tasks = page['data'] as List<dynamic>;
         if (results.length > 1) _meta = results[1];
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _loading = false);
