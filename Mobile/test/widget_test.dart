@@ -50,6 +50,44 @@ class _FakeApiClient extends ApiClient {
     if (path == '/notifications') {
       return {'unread_count': 0};
     }
+    if (path == '/hrms/attendance/today') {
+      return {
+        'employee': {'id': 1, 'emp_code': 'E001', 'full_name': 'Test User', 'selfie_required': false},
+        'shift': {'code': 'GS', 'name': 'General Shift', 'start_time': '09:30', 'end_time': '18:30'},
+        'today_summary': {'status': 'not_punched'},
+        'punches': [],
+      };
+    }
+    if (path == '/hrms/attendance/history') {
+      return {'days': []};
+    }
+    if (path == '/hrms/attendance/requests') {
+      return {'requests': []};
+    }
+    if (path == '/hrms/leave/summary') {
+      return {'financial_year': '2026-2027', 'balances': [], 'holidays': []};
+    }
+    if (path == '/hrms/leave/requests') {
+      return {'requests': []};
+    }
+    if (path == '/hrms/payslips') {
+      return {
+        'data': [
+          {
+            'id': 1,
+            'run_code': 'PR-M-STAFF-202611-ABCD',
+            'period_label': 'Nov 2026',
+            'period_start': '2026-11-01',
+            'period_end': '2026-11-30',
+            'payable_days': 30.0,
+            'gross_earnings': 50000.0,
+            'total_deductions': 5000.0,
+            'net_wages': 45000.0,
+            'download_url': '/hrms/payslips/1/download',
+          }
+        ]
+      };
+    }
     return {};
   }
 }
@@ -103,5 +141,16 @@ void main() {
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
     expect(api.tasksCalls, initialCalls + 2);
+
+    // Visit HRMS via bottom nav -> should render Attendance self-service.
+    await tester.tap(find.text('HRMS'));
+    await tester.pumpAndSettle();
+    expect(find.text('Today Clocking'), findsOneWidget);
+
+    // Switch to Payslips tab
+    await tester.tap(find.text('Payslips'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nov 2026'), findsOneWidget);
+    expect(find.text('₹45000.00'), findsOneWidget);
   });
 }

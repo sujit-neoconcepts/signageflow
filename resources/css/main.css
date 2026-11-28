@@ -4,6 +4,7 @@
 */
 
 @import "tailwindcss";
+@source "../../packages/signageflow/hrms/resources/js/**/*.vue";
 
 @import "./_checkbox-radio-switch.css";
 @import "./_progress.css";

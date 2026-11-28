@@ -18,6 +18,7 @@
         "phpoffice/phpspreadsheet": "^4.4",
         "protonemedia/inertiajs-tables-laravel-query-builder": "@dev",
         "rap2hpoutre/laravel-log-viewer": "^2.3",
+        "signageflow/hrms": "@dev",
         "spatie/laravel-permission": "^6.0",
         "spatie/laravel-query-builder": "^6.0",
         "tightenco/ziggy": "^2.5"
@@ -83,6 +84,10 @@
         {
             "type": "path",
             "url": "./packages/protonemedia/inertiajs-tables-laravel-query-builder"
+        },
+        {
+            "type": "path",
+            "url": "./packages/signageflow/hrms"
         }
     ]
 }

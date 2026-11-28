@@ -25,7 +25,10 @@ class AuthController extends Controller
             ]);
         }
 
-        if (! $user->can('task_MyTasksList') && ! $user->can('expense_list')) {
+        $hasHrmsEmployee = class_exists(\SignageFlow\Hrms\Models\Employee::class)
+            && \SignageFlow\Hrms\Models\Employee::active()->where('user_id', $user->id)->exists();
+
+        if (! $user->can('task_MyTasksList') && ! $user->can('expense_list') && ! $hasHrmsEmployee && ! $user->can('hrmsAttendance_self') && ! $user->can('hrmsLeave_self')) {
             abort(403, 'You do not have mobile app access.');
         }
 
@@ -40,6 +43,10 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'permissions' => [
                     'expense_back_date_entry' => $user->can('expense_back_date_entry'),
+                    'hrms_enabled' => $hasHrmsEmployee || $user->can('hrmsAttendance_self') || $user->can('hrmsLeave_self'),
+                    'hrms_attendance' => $hasHrmsEmployee || $user->can('hrmsAttendance_self'),
+                    'hrms_leave' => $hasHrmsEmployee || $user->can('hrmsLeave_self'),
+                    'hrms_payslips' => $hasHrmsEmployee || $user->can('hrmsPayroll_selfPayslip'),
                 ],
             ],
         ]);

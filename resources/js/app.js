@@ -13,13 +13,20 @@ const appName =
 
 const pinia = createPinia();
 
+const hostPages = import.meta.glob("./Pages/**/*.vue");
+const hrmsPages = import.meta.glob("../../packages/signageflow/hrms/resources/js/Pages/**/*.vue");
+
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
-    resolve: (name) =>
-        resolvePageComponent(
-            `./Pages/${name}.vue`,
-            import.meta.glob("./Pages/**/*.vue")
-        ),
+    resolve: (name) => {
+        if (name.startsWith("Hrms/")) {
+            return resolvePageComponent(
+                `../../packages/signageflow/hrms/resources/js/Pages/${name}.vue`,
+                hrmsPages
+            );
+        }
+        return resolvePageComponent(`./Pages/${name}.vue`, hostPages);
+    },
     setup({ el, App, props, plugin }) {
         return createApp({ render: () => h(App, props) })
             .use(plugin)

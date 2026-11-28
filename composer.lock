@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "19250e35233855e07fdc29ea98299bf1",
+    "content-hash": "d85883a497be54d45759221136b563ba",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -3386,7 +3386,7 @@
         },
         {
             "name": "protonemedia/inertiajs-tables-laravel-query-builder",
-            "version": "dev-jtsflow",
+            "version": "dev-staging",
             "dist": {
                 "type": "path",
                 "url": "./packages/protonemedia/inertiajs-tables-laravel-query-builder",
@@ -4264,6 +4264,50 @@
                 "source": "https://github.com/MyIntervals/PHP-CSS-Parser/tree/v8.9.0"
             },
             "time": "2025-07-11T13:20:48+00:00"
+        },
+        {
+            "name": "signageflow/hrms",
+            "version": "dev-staging",
+            "dist": {
+                "type": "path",
+                "url": "./packages/signageflow/hrms",
+                "reference": "4775a49ad7412cfa2c903dfb8b51ea33773ee401"
+            },
+            "require": {
+                "barryvdh/laravel-dompdf": "^3.1",
+                "illuminate/support": "^12.0",
+                "inertiajs/inertia-laravel": "^2.0",
+                "php": "^8.2",
+                "phpoffice/phpspreadsheet": "^4.4",
+                "spatie/laravel-permission": "^6.0",
+                "spatie/laravel-query-builder": "^6.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "SignageFlow\\Hrms\\HrmsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "SignageFlow\\Hrms\\": "src/",
+                    "SignageFlow\\Hrms\\Database\\Seeders\\": "database/seeders/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "SignageFlow\\Hrms\\Tests\\": "tests/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Full-stack HRMS (Core, Attendance, Leave, Payroll, Compliance) package for SignageFlow",
+            "transport-options": {
+                "relative": true
+            }
         },
         {
             "name": "spatie/laravel-package-tools",
@@ -10018,7 +10062,8 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "protonemedia/inertiajs-tables-laravel-query-builder": 20
+        "protonemedia/inertiajs-tables-laravel-query-builder": 20,
+        "signageflow/hrms": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

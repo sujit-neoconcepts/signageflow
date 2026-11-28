@@ -28,6 +28,12 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>SignageFlow records voice notes for task comments.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SignageFlow uses your location to verify attendance clock-in and clock-out geofencing.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>SignageFlow uses the camera for optional attendance selfie verification.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SignageFlow accesses photos to attach leave or task documents.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -166,5 +166,9 @@ class UnifiedPermissionSeeder extends Seeder
             ]
         );
         $executiveUser2->assignRole($executiveRole);
+
+        if (class_exists(\SignageFlow\Hrms\Database\Seeders\HrmsPermissionSeeder::class)) {
+            $this->call(\SignageFlow\Hrms\Database\Seeders\HrmsPermissionSeeder::class);
+        }
     }
 }

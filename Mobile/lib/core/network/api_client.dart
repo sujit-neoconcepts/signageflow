@@ -79,6 +79,28 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> multipartSingleFile(
+    String path,
+    Map<String, String> fields,
+    String fileField,
+    File? file,
+  ) async {
+    try {
+      final request = http.MultipartRequest('POST', uri(path))
+        ..headers.addAll(headers)
+        ..fields.addAll(fields);
+      if (file != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath(fileField, file.path),
+        );
+      }
+      final response = await http.Response.fromStream(await request.send());
+      return _decode(response);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   Future<void> downloadAndOpen(String url, String fileName) async {
     try {
       Uri parsedUri = Uri.parse(url);

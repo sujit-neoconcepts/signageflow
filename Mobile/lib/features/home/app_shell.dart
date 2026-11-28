@@ -7,6 +7,7 @@ import '../../core/network/api_client.dart';
 import '../../core/services/notification_service.dart';
 import '../auth/login_screen.dart';
 import '../expenses/expenses_screen.dart';
+import '../hrms/hrms_hub_screen.dart';
 import '../tasks/tasks_screen.dart';
 import 'home_dashboard_screen.dart';
 import 'notifications_screen.dart';
@@ -27,6 +28,7 @@ class _TaskHomeState extends State<TaskHome> {
   final _homeKey = GlobalKey<HomeDashboardScreenState>();
   final _tasksKey = GlobalKey<TasksScreenState>();
   final _expensesKey = GlobalKey<ExpensesScreenState>();
+  final _hrmsKey = GlobalKey<HrmsHubScreenState>();
 
   @override
   void initState() {
@@ -109,6 +111,9 @@ class _TaskHomeState extends State<TaskHome> {
       case 2:
         _expensesKey.currentState?.refresh();
         break;
+      case 3:
+        _hrmsKey.currentState?.refresh();
+        break;
     }
   }
 
@@ -123,8 +128,9 @@ class _TaskHomeState extends State<TaskHome> {
       ),
       TasksScreen(key: _tasksKey, api: widget.api),
       ExpensesScreen(key: _expensesKey, api: widget.api),
+      HrmsHubScreen(key: _hrmsKey, api: widget.api),
     ];
-    final titles = ['Home', 'Tasks', 'Expenses'];
+    final titles = ['Home', 'Tasks', 'Expenses', 'HRMS'];
 
     return Scaffold(
       extendBody: false,
@@ -282,6 +288,11 @@ class _TaskHomeState extends State<TaskHome> {
                 selectedIcon: Icon(Icons.receipt_long_rounded),
                 label: 'Expenses',
               ),
+              NavigationDestination(
+                icon: Icon(Icons.badge_outlined),
+                selectedIcon: Icon(Icons.badge_rounded),
+                label: 'HRMS',
+              ),
             ],
           ),
         ),
@@ -371,6 +382,13 @@ class AppDrawer extends StatelessWidget {
             currentIndex: currentIndex,
             icon: Icons.receipt_long_rounded,
             title: 'Expenses',
+            onTap: onSelect,
+          ),
+          _DrawerTile(
+            index: 3,
+            currentIndex: currentIndex,
+            icon: Icons.badge_rounded,
+            title: 'HRMS Self-Service',
             onTap: onSelect,
           ),
           const Divider(height: 28, indent: 20, endIndent: 20),

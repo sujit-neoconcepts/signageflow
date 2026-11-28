@@ -10,7 +10,12 @@
 
         <!-- Scripts -->
         @routes
-        @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
+        @php
+            $inertiaPagePath = str_starts_with($page['component'], 'Hrms/')
+                ? "packages/signageflow/hrms/resources/js/Pages/{$page['component']}.vue"
+                : "resources/js/Pages/{$page['component']}.vue";
+        @endphp
+        @vite(['resources/js/app.js', $inertiaPagePath])
         @inertiaHead
     </head>
     <body class="font-sans antialiased">
